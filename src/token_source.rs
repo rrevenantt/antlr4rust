@@ -7,16 +7,37 @@ use std::cell::RefCell;
 
 pub trait TokenSource {
     fn next_token(&mut self) -> Box<Token>;
-    fn skip(&mut self);
-    fn more(&mut self);
     fn get_line(&self) -> isize;
     fn get_char_position_in_line(&self) -> isize;
-    fn get_input_stream(&self) -> &RefCell<Box<CharStream>>;
+    fn get_input_stream(&mut self) -> &mut dyn CharStream;
     fn get_source_name(&self) -> String {
-        let input = self.get_input_stream();
-        let temp = input.borrow();
-        temp.get_source_name()
+//        let input = self.get_input_stream();
+//        input.get_source_name()
+        unimplemented!()
     }
     //    fn set_token_factory<'c: 'b>(&mut self, f: &'c TokenFactory);
     fn get_token_factory(&self) -> &TokenFactory;
 }
+
+impl<T> TokenSource for &mut T where T: TokenSource {
+    fn next_token(&mut self) -> Box<Token> {
+        (**self).next_token()
+    }
+
+    fn get_line(&self) -> isize {
+        (**self).get_line()
+    }
+
+    fn get_char_position_in_line(&self) -> isize {
+        (**self).get_char_position_in_line()
+    }
+
+    fn get_input_stream(&mut self) -> &mut CharStream {
+        (**self).get_input_stream()
+    }
+
+    fn get_token_factory(&self) -> &TokenFactory {
+        (**self).get_token_factory()
+    }
+}
+

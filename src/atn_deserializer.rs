@@ -20,8 +20,9 @@ use crate::transition::*;
 use std::any::Any;
 use std::mem;
 use std::io::{stdout, Write};
-use crate::lexer_action::LexerAction;
+use crate::lexer_action::*;
 use crate::int_stream::EOF;
+use crate::lexer_action::LexerAction::*;
 
 lazy_static! {
     static ref BASE_SERIALIZED_UUID: Uuid =
@@ -75,7 +76,14 @@ impl ATNDeserializer {
     }
 
     pub fn deserialize(&self, data: Chars) -> ATN {
-        let mut data = data.clone().map(|ch| ch as isize - 2);
+        let mut data = data.clone()
+            .map(|ch| {
+                let mut ch = ch as isize;
+                // decode surrogates
+                ch = if ch > 0xFFFF { ch - 0x3000 } else { ch };
+                ch -= 2;
+                ch
+            });
 
         self.check_version(data.next().unwrap() + 2);
 
@@ -185,15 +193,16 @@ impl ATNDeserializer {
         }
 
         let num_non_greedy = data.next().unwrap();
-        println!("num_non_greedy {}", num_non_greedy);
+        //println!("num_non_greedy {}", num_non_greedy);
         for _ in 0..num_non_greedy {
             let st = data.next().unwrap() as usize;
             if let ATNStateType::DecisionState {
-                nongreedy: mut ng, ..
-            } = atn.states.get(st).unwrap().get_state_type()
+                nongreedy: ng, ..
+            } = atn.states[st].get_state_type_mut()
             {
-                ng = true
+                *ng = true
             }
+
         }
 
         //if (supportsPrecedencePredicates)
@@ -228,8 +237,8 @@ impl ATNDeserializer {
                 atn.rule_to_token_type.push(token_type);
             }
         }
-        println!("rule_to_token_type {:?}", atn.rule_to_token_type);
-        println!("rule_to_start_state {:?}", atn.rule_to_start_state);
+        //println!("rule_to_token_type {:?}", atn.rule_to_token_type);
+        //println!("rule_to_start_state {:?}", atn.rule_to_start_state);
 
         atn.rule_to_stop_state.resize(nrules, 0);
         for i in 0..atn.states.len() {
@@ -292,7 +301,7 @@ impl ATNDeserializer {
         sets: &Vec<IntervalSet>,
     ) {
         let nedges = data.next().unwrap();
-        println!("transitions {}", nedges);
+        //println!("transitions {}", nedges);
         for _i in 0..nedges {
             let src = data.next().unwrap() as usize;
             let trg = data.next().unwrap() as usize;
@@ -302,17 +311,17 @@ impl ATNDeserializer {
             let arg3 = data.next().unwrap();
 
             let transition = self.edge_factory(atn, ttype, src, trg, arg1, arg2, arg3, sets);
-            println!("created transition from {} {:?}", src, transition);
+//            println!("created transition from {} {:?}", src, transition);
             atn.states.get_mut(src).unwrap().add_transition(transition);
         }
 
-
-        for atn_state in &atn.states {
-            for i in atn_state.get_transitions() {
-                match i.get_serialization_type() {
+        let mut new_tr = Vec::new();
+        for i in &atn.states {
+            for tr in i.get_transitions() {
+                match tr.get_serialization_type() {
                     TransitionType::TRANSITION_RULE => {
-                        println!("TRANSITION_RULE");
-                        let tr = i.as_ref();
+//                        println!("TRANSITION_RULE");
+                        let tr = tr.as_ref();
                         let tr = unsafe { cast::<RuleTransition>(tr) };
                         let target = atn.states.get(tr.get_target()).unwrap();
 
@@ -335,15 +344,16 @@ impl ATNDeserializer {
                             target: tr.follow_state,
                             outermost_precedence_return: outermost_prec_return,
                         };
-                        //                        atn.states
-                        //                            .get_mut(atn.rule_to_stop_state[target.get_rule_index()])
-                        //                            .unwrap()
-                        //                            .add_transition(Box::new(return_tr));
+                        new_tr.push((atn.rule_to_stop_state[target.get_rule_index()], Box::new(return_tr)));
                     }
                     _ => continue,
                 }
             }
         }
+        new_tr.drain(..).for_each(
+            |(state, tr)|
+                atn.states[state].add_transition(tr)
+        );
 
         for i in 0..atn.states.len() {
             let atn_state = atn.states.get(i).unwrap();
@@ -498,7 +508,7 @@ impl ATNDeserializer {
                 target,
                 is_ctx_dependent: arg3 != 0,
                 rule_index: arg1,
-                predIndex: arg2,
+                pred_index: arg2,
             }),
             TRANSITION_ATOM => Box::new(AtomTransition {
                 target,
@@ -598,16 +608,26 @@ impl ATNDeserializer {
 
             _ => panic!("invalid ATN state type"),
         };
-        println!("created state {} {:?}", state_number, state.state_type);
+//        println!("created state {} {:?}", state_number, state.state_type);
         Box::new(state)
     }
 
     fn lexer_action_factory(
         &self,
-        typeIndex: isize,
+        action_type: isize,
         data1: isize,
         data2: isize,
-    ) -> Box<LexerAction> {
-        unimplemented!()
+    ) -> LexerAction {
+        match action_type {
+            LEXER_ACTION_TYPE_CHANNEL => LexerChannelAction(data1),
+            LEXER_ACTION_TYPE_CUSTOM => LexerCustomAction { rule_index: data1, action_index: data2 },
+            LEXER_ACTION_TYPE_MODE => LexerModeAction(data1),
+            LEXER_ACTION_TYPE_MORE => LexerMoreAction,
+            LEXER_ACTION_TYPE_POP_MODE => LexerPopModeAction,
+            LEXER_ACTION_TYPE_PUSH_MODE => LexerPushModeAction(data1),
+            LEXER_ACTION_TYPE_SKIP => LexerSkipAction,
+            LEXER_ACTION_TYPE_TYPE => LexerTypeAction(data1),
+            _ => panic!("invalid action type {}", action_type)
+        }
     }
 }

@@ -144,16 +144,16 @@ impl PredictionContext {
     //}
     //
     //impl PredictionContext for BasePredictionContext{
-    pub fn get_parent(&self, index: usize) -> Option<&PredictionContext> {
+    pub fn take_parent(&mut self, index: usize) -> Option<PredictionContext> {
         match self {
             PredictionContext::Singleton(singleton) => {
                 assert_eq!(index, 0);
-                singleton.parent_ctx.as_deref()
+                singleton.parent_ctx.take()
             }
             PredictionContext::Array(array) => {
-                array.parents[index].as_deref()
+                array.parents[index].take()
             }
-        }
+        }.map(|x| *x)
     }
 
     pub fn get_return_state(&self, index: usize) -> isize {

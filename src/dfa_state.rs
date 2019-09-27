@@ -2,6 +2,7 @@ use crate::atn_config_set::ATNConfigSet;
 use std::hash::{Hash, Hasher};
 use murmur3::murmur3_32::MurmurHasher;
 use crate::lexer_atn_simulator::{MAX_DFA_EDGE, MIN_DFA_EDGE};
+use crate::lexer_action_executor::LexerActionExecutor;
 
 pub struct PredPrediction {
     alt: isize,
@@ -19,7 +20,7 @@ pub struct DFAState {
     pub is_accept_state: bool,
 
     pub prediction: isize,
-    //    lexer_action_executor: * LexerActionExecutor,
+    pub lexer_action_executor: Option<Box<LexerActionExecutor>>,
     pub requires_full_context: bool,
     //    predicates: Vec < PredPrediction > ,
 }
@@ -50,6 +51,7 @@ impl DFAState {
             edges: Vec::with_capacity((MAX_DFA_EDGE - MIN_DFA_EDGE + 1) as usize),
             is_accept_state: false,
             prediction: 0,
+            lexer_action_executor: None,
             requires_full_context: false,
             //        predicates: Vec::new(),
         }

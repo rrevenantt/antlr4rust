@@ -38,17 +38,17 @@ const _SYMBOLIC_NAMES: [Option<&'static str>; 6] = [
     None, None, None, None, Some("TEXT"), Some("STRING")
 ];
 lazy_static! {
-//	static ref VOCABULARY :Vocabulary = VocabularyImpl::new(_LITERAL_NAMES, _SYMBOLIC_NAMES);
-    static ref _shared_context_cache: Arc<PredictionContextCache> = Arc::new(PredictionContextCache::new());
-}
+	    static ref _shared_context_cache: Arc<PredictionContextCache> = Arc::new(PredictionContextCache::new());
+	//	static ref VOCABULARY :Vocabulary = VocabularyImpl::new(_LITERAL_NAMES, _SYMBOLIC_NAMES);
+	}
 //}
 
 pub struct CSVParser {
     base: BaseParser,
-    _sharedContextCache: Box<PredictionContextCache>,
+    _shared_context_cache: Box<PredictionContextCache>,
     ctx: Option<Box<dyn RuleContext>>,
     err_handler: Box<dyn ErrorStrategy>,
-    //		new PredictionContextCache();
+
 }
 
 impl CSVParser {
@@ -61,7 +61,8 @@ impl CSVParser {
     pub fn set_error_strategy(&mut self, strategy: Box<dyn ErrorStrategy>) {
         self.err_handler = strategy
     }
-//	pub fn get_vocabulary() -> &Vocabulary {&VOCABULARY }
+
+    //pub fn get_vocabulary() -> &Vocabulary {&VOCABULARY }
 
 
     pub fn new(input: Box<dyn TokenStream>) -> Self {
@@ -74,144 +75,55 @@ impl CSVParser {
                     _shared_context_cache.clone(),
                 ),
             ),
-            _sharedContextCache: Box::new(PredictionContextCache::new()),
+            _shared_context_cache: Box::new(PredictionContextCache::new()),
             ctx: None,
             err_handler: Box::new(DefaultErrorStrategy::new()),
         }
     }
 }
 
-//pub struct CsvFileContext  {
-////	base:BaseRuleContext,
-//}
-//
-//
-//impl CsvFileContext {
-//    //	pub fn hdr() -> HdrContext {
-////		getRuleContext(HdrContext.class,0)
-////	}
-////	pub fn rows() ->  Vec<RowContext>{
-////		getRuleContexts(RowContext.class)
-////	}
-////	pub fn row(i: usize) -> RowContext{
-////		getRuleContext(RowContext.class,i);
-////	}
-//    pub fn new(parent: Box<dyn RuleContext>, invoking_state: isize) -> Box<dyn RuleContext> {
-//        Box::new(BaseRuleContext {
-//            parent_ctx: Some(Box::new(parent)),
-//            invoking_state,
-//            rule_index: 0
-//        })
-//    }
-////	}
-//}
-//
-//impl<T:RuleContext> TryFrom<T> for CsvFileContext{
-//    type Error = ();
-//
-//    fn try_from(value: T) -> Result<Self, Self::Error> {
-//        unimplemented!()
-//    }
-//}
-//
-//impl CustomRuleContext for CsvFileContext{
-//	fn get_rule_index(&self) -> usize { RULE_csvFile }
-//}
 
 pub trait csvFile {
-    fn csvFile(&mut self) -> Result<(), ANTLRError>;
+    fn csvFile(&mut self) -> Result<()/*CsvFileContext*/, ANTLRError>;
 }
 
 impl csvFile for CSVParser {
-    fn csvFile(&mut self) -> Result<(), ANTLRError> {
+    fn csvFile(&mut self) -> Result<()/*CsvFileContext*/, ANTLRError> {
+        //let _localctx: CsvFileContext  = CsvFileContext::new(_ctx, get_state());
         let mut _localctx = BaseRuleContext::new(self.ctx.take(), self.base.get_state());
         self.ctx = Some(_localctx);
         let mut _localctx = self.ctx.as_deref_mut().unwrap();
         self.base.enter_rule(_localctx, 0, RULE_csvFile);
-        let mut _la = -1;
+        let mut _la: isize;
         let result: Result<(), ANTLRError> = try {
             self.base.enter_outer_alt(_localctx, 1);
             {
                 self.base.set_state(8);
-                self.hdr()?;
+                self.hdr();
                 self.base.set_state(10);
-                self.err_handler.sync(&mut self.base)?;
+                self.err_handler.sync(&mut self.base);
                 _la = self.base.input.la(1);
                 loop {
                     {
                         {
                             self.base.set_state(9);
-                            self.row()?;
+                            self.row();
                         }
                     }
                     self.base.set_state(12);
-                    self.err_handler.sync(&mut self.base)?;
+                    self.err_handler.sync(&mut self.base);
                     _la = self.base.input.la(1);
-                    if !(((_la) & !0x3f) == 0 && ((1usize << _la) & ((1usize << T__0) | (1usize << T__1) | (1usize << T__2) | (1usize << TEXT) | (1usize << STRING))) != 0) { break; }
+                    if !(((_la) & !0x3f) == 0 && ((1usize << _la) & ((1usize << T__0) | (1usize << T__1) | (1usize << T__2) | (1usize << TEXT) | (1usize << STRING))) != 0) { break }
                 }
             }
         };
-        match result
-            {
-                Ok(_) => {}
-                Err(ref re) => {
-//                _localctx.exception = re;
-                    self.err_handler.report_error(&mut self.base, re);
-                    self.err_handler.recover(&mut self.base, re);
-                }
+        match result {
+            Ok(_) => {},
+            Err(ref re) => {
+                //_localctx.exception = re;
+                self.err_handler.report_error(&mut self.base, re);
+                self.err_handler.recover(&mut self.base, re);
             }
-        self.base.exit_rule(&mut self.ctx);
-
-        Ok(())
-    }
-}
-
-//pub struct HdrContext  {
-//	base:ParserRuleContext,
-//
-//
-//}
-//
-//
-//impl HdrContext{
-//
-//	pub fn row() -> RowContext {
-//		getRuleContext(RowContext.class,0)
-//	}
-//	pub fn n(parent:ParserRuleContext, invokingState :usize) {
-//		 Self {base:super(parent, invokingState)
-// }
-//	}
-//	pub fn getRuleIndex() -> usize { RULE_hdr }
-//}
-
-pub trait hdr {
-    fn hdr(&mut self) -> Result<(), ANTLRError>;
-}
-
-impl hdr for CSVParser {
-    fn hdr(&mut self) -> Result<(), ANTLRError> {
-        let _localctx = BaseRuleContext::new(self.ctx.take(), self.base.get_state());
-        self.ctx = Some(_localctx);
-        let mut _localctx = self.ctx.as_deref_mut().unwrap();
-        self.base.enter_rule(_localctx, 2, RULE_hdr);
-        {
-            let result: Result<(), ANTLRError> = try {
-                self.base.enter_outer_alt(_localctx, 1);
-                {
-                    self.base.set_state(14);
-                    self.row()?;
-                }
-            };
-            match result
-                {
-                    Ok(_) => {}
-                    Err(ref re) => {
-//				_localctx.exception = re;
-                        self.err_handler.report_error(&mut self.base, re);
-                        self.err_handler.recover(&mut self.base, re);
-                    }
-                }
         }
         self.base.exit_rule(&mut self.ctx);
 
@@ -219,114 +131,110 @@ impl hdr for CSVParser {
     }
 }
 
-//pub struct RowContext  {
-//	base:ParserRuleContext,
-//
-//
-//}
-//
-//
-//impl RowContext{
-//
-//	pub fn fields() ->  Vec<FieldContext>{
-//		getRuleContexts(FieldContext.class)
-//	}
-//	pub fn field(i: usize) -> FieldContext{
-//		getRuleContext(FieldContext.class,i);
-//	}
-//	pub fn n(parent:ParserRuleContext, invokingState :usize) {
-//		 Self {base:super(parent, invokingState)
-// }
-//	}
-//	pub fn getRuleIndex() -> usize { RULE_row }
-//}
 
-pub trait row {
-    fn row(&mut self) -> Result<(), ANTLRError>;
+pub trait hdr {
+    fn hdr(&mut self) -> Result<()/*HdrContext*/, ANTLRError>;
 }
 
-impl row for CSVParser {
-    fn row(&mut self) -> Result<(), ANTLRError> {
-        let _localctx = BaseRuleContext::new(self.ctx.take(), self.base.get_state());
+impl hdr for CSVParser {
+    fn hdr(&mut self) -> Result<()/*HdrContext*/, ANTLRError> {
+        //let _localctx: HdrContext  = HdrContext::new(_ctx, get_state());
+        let mut _localctx = BaseRuleContext::new(self.ctx.take(), self.base.get_state());
         self.ctx = Some(_localctx);
         let mut _localctx = self.ctx.as_deref_mut().unwrap();
-        self.base.enter_rule(_localctx, 4, RULE_row);
-        let mut _la = -1;
+        self.base.enter_rule(_localctx, 2, RULE_hdr);
         let result: Result<(), ANTLRError> = try {
             self.base.enter_outer_alt(_localctx, 1);
             {
-                self.base.set_state(16);
-                self.field()?;
-                self.base.set_state(21);
-                self.err_handler.sync(&mut self.base)?;
-                _la = self.base.input.la(1);
-                while _la == T__0 {
-                    {
-                        {
-                            self.base.set_state(17);
-                            self.base.match_token(T__0, self.err_handler.as_mut())?;
-                            self.base.set_state(18);
-                            self.field()?;
-                        }
-                    }
-                    self.base.set_state(23);
-                    self.err_handler.sync(&mut self.base)?;
-                    _la = self.base.input.la(1);
-                }
-                self.base.set_state(25);
-                self.err_handler.sync(&mut self.base)?;
-                _la = self.base.input.la(1);
-                if _la == T__1 {
-                    {
-                        self.base.set_state(24);
-                        self.base.match_token(T__1, self.err_handler.as_mut())?;
-                    }
-                }
-
-                self.base.set_state(27);
-                self.base.match_token(T__2, self.err_handler.as_mut())?;
+                self.base.set_state(14);
+                self.row();
             }
         };
-        match result
-            {
-                Ok(_) => {}
-                Err(ref re) => {
-//				_localctx.exception = re;
-                    self.err_handler.report_error(&mut self.base, re);
-                    self.err_handler.recover(&mut self.base, re);
-                }
+        match result {
+            Ok(_) => {},
+            Err(ref re) => {
+                //_localctx.exception = re;
+                self.err_handler.report_error(&mut self.base, re);
+                self.err_handler.recover(&mut self.base, re);
             }
+        }
         self.base.exit_rule(&mut self.ctx);
 
         Ok(())
     }
 }
 
-//pub struct FieldContext  {
-//	base:ParserRuleContext,
-//
-//
-//}
-//
-//
-//impl FieldContext{
-//
-//	pub fn TEXT() -> TerminalNode { getToken(CSVParser.TEXT, 0) }
-//	pub fn STRING() -> TerminalNode { getToken(CSVParser.STRING, 0) }
-//	pub fn n(parent:ParserRuleContext, invokingState :usize) {
-//		 Self {base:super(parent, invokingState)
-// }
-//	}
-//	pub fn getRuleIndex() -> usize { RULE_field }
-//}
+
+pub trait row {
+    fn row(&mut self) -> Result<()/*RowContext*/, ANTLRError>;
+}
+
+impl row for CSVParser {
+    fn row(&mut self) -> Result<()/*RowContext*/, ANTLRError> {
+        //let _localctx: RowContext  = RowContext::new(_ctx, get_state());
+        let mut _localctx = BaseRuleContext::new(self.ctx.take(), self.base.get_state());
+        self.ctx = Some(_localctx);
+        let mut _localctx = self.ctx.as_deref_mut().unwrap();
+        self.base.enter_rule(_localctx, 4, RULE_row);
+        let mut _la: isize;
+        let result: Result<(), ANTLRError> = try {
+            self.base.enter_outer_alt(_localctx, 1);
+            {
+                self.base.set_state(16);
+                self.field();
+                self.base.set_state(21);
+                self.err_handler.sync(&mut self.base);
+                _la = self.base.input.la(1);
+                while _la == T__0 {
+                    {
+                        {
+                            self.base.set_state(17);
+                            self.base.match_token(T__0, self.err_handler.as_mut());
+                            self.base.set_state(18);
+                            self.field();
+                        }
+                    }
+                    self.base.set_state(23);
+                    self.err_handler.sync(&mut self.base);
+                    _la = self.base.input.la(1);
+                }
+                self.base.set_state(25);
+                self.err_handler.sync(&mut self.base);
+                _la = self.base.input.la(1);
+                if _la == T__1 {
+                    {
+                        self.base.set_state(24);
+                        self.base.match_token(T__1, self.err_handler.as_mut());
+                    }
+                }
+
+                self.base.set_state(27);
+                self.base.match_token(T__2, self.err_handler.as_mut());
+            }
+        };
+        match result {
+            Ok(_) => {},
+            Err(ref re) => {
+                //_localctx.exception = re;
+                self.err_handler.report_error(&mut self.base, re);
+                self.err_handler.recover(&mut self.base, re);
+            }
+        }
+        self.base.exit_rule(&mut self.ctx);
+
+        Ok(())
+    }
+}
+
 
 pub trait field {
-    fn field(&mut self) -> Result<(), ANTLRError>;
+    fn field(&mut self) -> Result<()/*FieldContext*/, ANTLRError>;
 }
 
 impl field for CSVParser {
-    fn field(&mut self) -> Result<(), ANTLRError> {
-        let _localctx = BaseRuleContext::new(self.ctx.take(), self.base.get_state());
+    fn field(&mut self) -> Result<()/*FieldContext*/, ANTLRError> {
+        //let _localctx: FieldContext  = FieldContext::new(_ctx, get_state());
+        let mut _localctx = BaseRuleContext::new(self.ctx.take(), self.base.get_state());
         self.ctx = Some(_localctx);
         let mut _localctx = self.ctx.as_deref_mut().unwrap();
         self.base.enter_rule(_localctx, 6, RULE_field);
@@ -358,19 +266,17 @@ impl field for CSVParser {
                     {}
                 }
 
-                _ =>
-                    Err(ANTLRError::NoAltError(NoViableAltError::new()))?
+                _ => Err(ANTLRError::NoAltError(NoViableAltError::new()))?
             }
         };
-        match result
-            {
-                Ok(_) => {}
-                Err(ref re) => {
-//				_localctx.exception = re;
-                    self.err_handler.report_error(&mut self.base, re);
-                    self.err_handler.recover(&mut self.base, re);
-                }
+        match result {
+            Ok(_) => {},
+            Err(ref re) => {
+                //_localctx.exception = re;
+                self.err_handler.report_error(&mut self.base, re);
+                self.err_handler.recover(&mut self.base, re);
             }
+        }
         self.base.exit_rule(&mut self.ctx);
 
         Ok(())
@@ -392,6 +298,7 @@ lazy_static! {
         Arc::new(dfa)
     };
 }
+
 
 
 const _serializedATN: &'static str =

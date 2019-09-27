@@ -2,7 +2,7 @@ use crate::token_source::TokenSource;
 use crate::char_stream::CharStream;
 use crate::token::Token;
 
-use crate::token::BaseToken;
+use crate::token::OwningToken;
 
 lazy_static! {
     pub static ref CommonTokenFactoryDEFAULT: Box<TokenFactory> =
@@ -12,9 +12,8 @@ lazy_static! {
 pub trait TokenFactory: Sync {
     fn create(
         &self,
-        source: Option<(Box<TokenSource>, Box<CharStream>)>,
+        source: Option<&mut CharStream>,
         ttype: isize,
-        text: String,
         channel: isize,
         start: isize,
         stop: isize,
@@ -30,24 +29,23 @@ pub struct CommonTokenFactory {
 impl TokenFactory for CommonTokenFactory {
     fn create(
         &self,
-        _source: Option<(Box<TokenSource>, Box<CharStream>)>,
+        source: Option<&mut CharStream>,
         ttype: isize,
-        text: String,
         channel: isize,
         start: isize,
         stop: isize,
         line: isize,
         column: isize,
     ) -> Box<Token> {
-        Box::new(BaseToken {
+        Box::new(OwningToken {
             token_type: ttype,
-            channel: channel,
-            start: start,
-            stop: stop,
+            channel,
+            start,
+            stop,
             token_index: -1,
-            line: line,
-            column: column,
-            text: text,
+            line,
+            column,
+            text: source.map(|x| x.get_text(start, stop)).unwrap_or(String::new()),
             readOnly: false,
         })
     }

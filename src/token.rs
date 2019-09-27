@@ -1,6 +1,6 @@
 use crate::token_source::TokenSource;
 use crate::char_stream::CharStream;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::fmt::Formatter;
 use std::fmt::Result;
 
@@ -20,23 +20,20 @@ pub trait Token: Debug {
     fn get_line(&self) -> isize;
     fn get_column(&self) -> isize;
 
-    fn get_text(&self) -> String;
+    fn get_text(&self) -> &str;
     fn set_text(&self, text: String);
 
     fn get_token_index(&self) -> isize;
-    fn set_token_index(&self, v: isize);
+    fn set_token_index(&mut self, v: isize);
 
     fn get_token_source(&self) -> &TokenSource;
     fn get_input_stream(&self) -> &CharStream;
+
+    fn to_owned(&self) -> OwningToken;
 }
 
-//impl Debug for Token {
-//    fn fmt(&self, _f: &mut Formatter) -> Result {
-//        unimplemented!()
-//    }
-//}
-#[derive(Debug)]
-pub struct BaseToken {
+#[derive(Debug, Clone)]
+pub struct OwningToken {
     //    source: Option<(Box<TokenSource>,Box<CharStream>)>,
     pub token_type: isize,
     pub channel: isize,
@@ -49,7 +46,26 @@ pub struct BaseToken {
     pub readOnly: bool,
 }
 
-impl Token for BaseToken {
+impl Display for OwningToken {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let txt = if self.token_type == TOKEN_EOF { "<EOF>" } else { &self.text };
+        let txt = txt.replace("\n", "\\n");
+        let txt = txt.replace("\r", "\\r");
+        let txt = txt.replace("\t", "\\t");
+        f.write_fmt(format_args!("[@{},{}:{}='{}',<{}>{},{}:{}]",
+                                 self.token_index,
+                                 self.start,
+                                 self.stop,
+                                 txt,
+                                 self.token_type,
+                                 if self.channel > 0 { self.channel.to_string() } else { String::new() },
+                                 self.line,
+                                 self.column
+        ))
+    }
+}
+
+impl Token for OwningToken {
     fn get_channel(&self) -> isize {
         self.channel
     }
@@ -82,8 +98,8 @@ impl Token for BaseToken {
         self.token_index
     }
 
-    fn set_token_index(&self, _v: isize) {
-        unimplemented!()
+    fn set_token_index(&mut self, _v: isize) {
+        self.token_index = _v
     }
 
     fn get_token_source(&self) -> &TokenSource {
@@ -94,17 +110,21 @@ impl Token for BaseToken {
         unimplemented!()
     }
 
-    fn get_text(&self) -> String {
-        unimplemented!()
+    fn get_text(&self) -> &str {
+        &self.text
     }
 
     fn set_text(&self, _text: String) {
         unimplemented!()
     }
+
+    fn to_owned(&self) -> OwningToken {
+        self.clone()
+    }
 }
 
 pub struct CommonToken {
-    base: BaseToken,
+    base: OwningToken,
 }
 
 impl CommonToken {

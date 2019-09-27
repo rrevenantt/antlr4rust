@@ -4,6 +4,8 @@ use std::collections::{HashMap, HashSet};
 use crate::prediction_context::{MurmurHasherBuilder, PredictionContext};
 use std::hash::{Hash, Hasher};
 use std::cmp::max;
+use std::cell::Cell;
+use murmur3::murmur3_32::MurmurHasher;
 
 //pub trait ATNConfigSet:Sync+Send{
 //    fn hash(&self) ->isize;
@@ -46,11 +48,11 @@ use std::cmp::max;
 
 #[derive(Eq, PartialEq)]
 pub struct ATNConfigSet {
-    cached_hash: isize,
+    cached_hash: u64,
 
     config_lookup: HashMap<u64, usize>,
 
-    configs: Vec<Box<dyn ATNConfig>>,
+    configs: Vec<Box<ATNConfig>>,
 
     //    conflicting_alts: * BitSet,
     dips_into_outer_context: bool,
@@ -66,14 +68,18 @@ pub struct ATNConfigSet {
 
 impl Hash for ATNConfigSet {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.configs.hash(state);
+//        if self.cached_hash.get() == 0  {
+        self.configs.hash(state)
+//        }
+
+//        state.write_u64(self.cached_hash.get())
     }
 }
 
 impl ATNConfigSet {
     pub fn new_base_atnconfig_set(full_ctx: bool) -> ATNConfigSet {
         ATNConfigSet {
-            cached_hash: -1,
+            cached_hash: 0,
             config_lookup: HashMap::new(),
             configs: vec![],
             dips_into_outer_context: false,
@@ -103,14 +109,18 @@ impl ATNConfigSet {
     //impl ATNConfigSet for BaseATNConfigSet {
 
     //    fn add(&self, config: ATNConfig, mergeCache: * DoubleDict) -> bool { unimplemented!() }
-    fn atn_config_local_hash(config: &dyn ATNConfig) -> u64 {
-        let mut hashcode = 7;
-        hashcode = 31 * hashcode + config.get_state();
-        hashcode = 31 * hashcode + config.get_alt() as usize;
+    fn atn_config_local_hash(config: &ATNConfig) -> u64 {
+        let mut hashcode = 7u64;
+        hashcode = 31 * hashcode + config.get_state() as u64;
+        hashcode = 31 * hashcode + config.get_alt() as u64;
+        let mut hasher = MurmurHasher::default();
+        config.get_context().hash(&mut hasher);
+        hashcode = 31 * hashcode + hasher.finish();
+
         //todo semantic context
 //        hashcode = 31* hashcode + config
 
-        hashcode as u64
+        hashcode
     }
 
     pub fn add_cached(
@@ -120,6 +130,9 @@ impl ATNConfigSet {
     ) -> bool {
         assert!(!self.read_only);
         //todo semantic context
+        if config.get_semantic_context().is_some() {
+            self.has_semantic_context = true
+        }
 
         if config.get_reaches_into_outer_context() > 0 {
             self.dips_into_outer_context = true
@@ -147,7 +160,7 @@ impl ATNConfigSet {
             existing.set_context(Box::new(merged));
         } else {
             self.config_lookup.insert(hash, self.configs.len());
-            self.cached_hash = -1;
+            self.cached_hash = 0;
             self.configs.push(config);
         }
         true

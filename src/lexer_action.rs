@@ -1,75 +1,103 @@
-use crate::lexer::Lexer;
+use crate::lexer::{Lexer, BaseLexer};
 use std::hash::Hash;
+use crate::recognizer::Recognizer;
+use crate::char_stream::CharStream;
+//use std::mem::discriminant;
+//use std::intrinsics::discriminant_value;
 
-const lexer_action_type_channel: isize = 0;
-const LexerActionTypeCustom: isize = 1;
-const LexerActionTypeMode: isize = 2;
-const LexerActionTypeMore: isize = 3;
-const LexerActionTypePopMode: isize = 4;
-const LexerActionTypePushMode: isize = 5;
-const LexerActionTypeSkip: isize = 6;
-const LexerActionTypeType: isize = 7;
+pub const LEXER_ACTION_TYPE_CHANNEL: isize = 0;
+pub const LEXER_ACTION_TYPE_CUSTOM: isize = 1;
+pub const LEXER_ACTION_TYPE_MODE: isize = 2;
+pub const LEXER_ACTION_TYPE_MORE: isize = 3;
+pub const LEXER_ACTION_TYPE_POP_MODE: isize = 4;
+pub const LEXER_ACTION_TYPE_PUSH_MODE: isize = 5;
+pub const LEXER_ACTION_TYPE_SKIP: isize = 6;
+pub const LEXER_ACTION_TYPE_TYPE: isize = 7;
 
-pub enum LexerActionType {
-    /**
-     * The type of a {@link LexerChannelAction} action.
-     */
-    CHANNEL = 0,
-    /**
-     * The type of a {@link LexerCustomAction} action.
-     */
-    CUSTOM,
-    /**
-     * The type of a {@link LexerModeAction} action.
-     */
-    MODE,
-    /**
-     * The type of a {@link LexerMoreAction} action.
-     */
-    MORE,
-    /**
-     * The type of a {@link LexerPopModeAction} action.
-     */
-    POP_MODE,
-    /**
-     * The type of a {@link LexerPushModeAction} action.
-     */
-    PUSH_MODE,
-    /**
-     * The type of a {@link LexerSkipAction} action.
-     */
-    SKIP,
-    /**
-     * The type of a {@link LexerTypeAction} action.
-     */
-    TYPE,
+//pub enum LexerActionType {
+//    /**
+//     * The type of a {@link LexerChannelAction} action.
+//     */
+//    CHANNEL = 0,
+//    /**
+//     * The type of a {@link LexerCustomAction} action.
+//     */
+//    CUSTOM,
+//    /**
+//     * The type of a {@link LexerModeAction} action.
+//     */
+//    MODE,
+//    /**
+//     * The type of a {@link LexerMoreAction} action.
+//     */
+//    MORE,
+//    /**
+//     * The type of a {@link LexerPopModeAction} action.
+//     */
+//    POP_MODE,
+//    /**
+//     * The type of a {@link LexerPushModeAction} action.
+//     */
+//    PUSH_MODE,
+//    /**
+//     * The type of a {@link LexerSkipAction} action.
+//     */
+//    SKIP,
+//    /**
+//     * The type of a {@link LexerTypeAction} action.
+//     */
+//    TYPE,
+//}
+
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+pub enum LexerAction {
+    LexerChannelAction(isize),
+    LexerCustomAction {
+        rule_index: isize,
+        action_index: isize,
+    },
+    LexerModeAction(isize),
+    LexerMoreAction,
+    LexerPopModeAction,
+    LexerPushModeAction(isize),
+    LexerSkipAction,
+    LexerTypeAction(isize),
+    LexerIndexedCustomAction {
+        offset: isize,
+        action: Box<LexerAction>,
+    },
 }
 
-pub trait LexerAction: Send + Sync {
-    fn get_action_type(&self) -> isize;
-    fn get_is_position_dependent(&self) -> bool;
-    fn execute(&self, lexer: &Lexer);
-}
-
-#[derive(Eq, PartialEq, Hash)]
-pub struct BaseLexerAction {
-    action_type: isize,
-    is_position_dependent: bool,
-}
-
-impl LexerAction for BaseLexerAction {
+impl LexerAction {
     fn get_action_type(&self) -> isize {
         unimplemented!()
+//        unsafe {discriminant_value(self)} as isize
     }
-
-    fn get_is_position_dependent(&self) -> bool {
-        unimplemented!()
+    pub fn is_position_dependent(&self) -> bool {
+        match self {
+            LexerAction::LexerCustomAction { .. } |
+            LexerAction::LexerIndexedCustomAction { .. } => true,
+            _ => false
+        }
     }
-
-    fn execute(&self, lexer: &Lexer) {
-        unimplemented!()
+    pub(crate) fn execute(&self, lexer: &mut BaseLexer, recog: &mut dyn Recognizer) {
+        match self {
+            &LexerAction::LexerChannelAction(channel) => lexer.set_channel(channel),
+            &LexerAction::LexerCustomAction { rule_index, action_index } => {
+                recog.action(None, rule_index, action_index, lexer);
+            },
+            &LexerAction::LexerModeAction(mode) => lexer.set_mode(mode),
+            &LexerAction::LexerMoreAction => lexer.more(),
+            &LexerAction::LexerPopModeAction => { lexer.pop_mode(); },
+            &LexerAction::LexerPushModeAction(mode) => lexer.push_mode(mode),
+            &LexerAction::LexerSkipAction => lexer.skip(),
+            &LexerAction::LexerTypeAction(ty) => lexer.set_type(ty),
+            &LexerAction::LexerIndexedCustomAction { ref action, .. } => action.execute(lexer, recog),
+        }
     }
 }
+
+
 //
 //impl BaseLexerAction {
 //    fn new_base_lexer_action(action isize) -> * BaseLexerAction { unimplemented!() }

@@ -1,15 +1,17 @@
 use crate::recognizer::Recognizer;
 use crate::errors::ANTLRError;
+use crate::lexer::{Lexer, BaseLexer};
+use crate::token::OwningToken;
 
 pub trait ErrorListener {
     fn syntax_error(
-        &self,
-        recognizer: &Recognizer,
-        offendingSymbol: char,
+        &mut self,
+        recognizer: &BaseLexer,
+        offending_symbol: Option<&OwningToken>,
         line: isize,
         column: isize,
-        msg: String,
-        e: ANTLRError,
+        msg: &str,
+        e: &ANTLRError,
     );
     //    fn report_ambiguity(recognizer: Parser, dfa: * DFA, startIndex: isize, stopIndex: isize, exact: bool, ambigAlts: * BitSet, configs: ATNConfigSet)
     //    fn report_attempting_full_context(&self, recognizer: Parser, dfa: * DFA, startIndex: isize, stopIndex: isize, conflictingAlts: * BitSet, configs: ATNConfigSet);
@@ -18,6 +20,12 @@ pub trait ErrorListener {
 
 #[derive(Debug)]
 pub struct DefaultErrorListener {}
+
+impl ErrorListener for DefaultErrorListener {
+    fn syntax_error(&mut self, recognizer: &BaseLexer, offending_symbol: Option<&OwningToken>, line: isize, column: isize, msg: &str, e: &ANTLRError) {
+        eprintln!("line {}:{} {}", line, column, msg);
+    }
+}
 /*
 impl DefaultErrorListener {
     fn new_default_error_listener() -> * DefaultErrorListener { unimplemented!() }

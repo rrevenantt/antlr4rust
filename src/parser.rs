@@ -1,4 +1,4 @@
-use crate::recognizer::{Recognizer, BaseRecognizer};
+use crate::recognizer::Recognizer;
 use crate::token_stream::TokenStream;
 use crate::common_token_factory::TokenFactory;
 use crate::token::{Token, TOKEN_EOF};
@@ -12,7 +12,7 @@ use crate::error_strategy::ErrorStrategy;
 use crate::rule_context::RuleContext;
 use std::mem;
 
-pub trait Parser: Recognizer {
+pub trait Parser {
     fn get_interpreter(&self) -> &mut ParserATNSimulator;
 
     //    fn get_token_stream<T>(&self) -> &dyn TokenStream<T>;
@@ -30,16 +30,20 @@ pub trait Parser: Recognizer {
     fn notify_error_listeners(&self, msg: String, offendingToken: &dyn Token, err: ANTLRError);
     fn is_expected_token(&self, symbol: isize) -> bool;
     fn get_precedence(&self) -> isize;
+
+    fn get_state(&self) -> isize;
+    fn set_state(&mut self, v: isize);
 //    fn get_rule_invocation_stack(&self, c: ParserRuleContext) -> Vec<String>;
 }
 
 pub struct BaseParser {
-    base: BaseRecognizer,
+//    base: BaseRecognizer,
 
     pub(crate) interpreter: ParserATNSimulator,
     build_parse_trees: bool,
-    matched_eof: bool,
+    pub(crate) matched_eof: bool,
 
+    state: isize,
     pub(crate) input: Box<dyn TokenStream>,
 //    precedence_stack: IntStack,
 
@@ -49,6 +53,15 @@ pub struct BaseParser {
 }
 
 impl Parser for BaseParser {
+    fn get_state(&self) -> isize {
+        self.state
+    }
+
+    fn set_state(&mut self, v: isize) {
+        self.state = v;
+    }
+
+
     fn get_interpreter(&self) -> &mut ParserATNSimulator {
         unimplemented!()
     }
@@ -107,10 +120,11 @@ impl Parser for BaseParser {
 impl BaseParser {
     pub(crate) fn new_base_parser(input: Box<dyn TokenStream>, interpreter: ParserATNSimulator) -> BaseParser {
         BaseParser {
-            base: BaseRecognizer::new_base_recognizer(),
+//            base: BaseRecognizer::new_base_recognizer(),
             interpreter,
             build_parse_trees: false,
             matched_eof: false,
+            state: 0,
             input,
             _syntax_errors: 0,
         }
@@ -207,26 +221,3 @@ impl BaseParser {
 //    fn set_trace(&self, trace: * TraceListener) { unimplemented!() }
 }
 
-
-impl Recognizer for BaseParser {
-    fn get_state(&self) -> isize {
-        self.base.get_state()
-    }
-
-    fn set_state(&mut self, v: isize) {
-        self.base.set_state(v)
-    }
-
-    fn add_error_listener(&mut self, listener: Box<dyn ErrorListener>) {
-        self.base.add_error_listener(listener)
-    }
-
-    fn remove_error_listeners(&self) {
-        self.base.remove_error_listeners()
-    }
-
-    fn get_error_listener_dispatch(&self) -> Box<dyn ErrorListener> {
-        self.base.get_error_listener_dispatch()
-    }
-}
- 

@@ -1,10 +1,10 @@
 use crate::interval_set::IntervalSet;
 
-use crate::semantic_context::PrecedencePredicate;
 use crate::atn_state::ATNStateRef;
 use std::mem;
 use crate::lexer::{LEXER_MAX_CHAR_VALUE, LEXER_MIN_CHAR_VALUE};
 use std::fmt::Debug;
+use crate::semantic_context::SemanticContext;
 
 const TransitionNames: [&'static str; 11] = [
     "INVALID",
@@ -56,11 +56,11 @@ pub trait Transition: Sync + Send + Debug {
     }
     fn get_serialization_type(&self) -> TransitionType;
     fn matches(&self, symbol: isize, minVocabSymbol: isize, maxVocabSymbol: isize) -> bool;
-    fn get_predicate(&self) -> Option<PrecedencePredicate> {
+    fn get_predicate(&self) -> Option<SemanticContext> {
         None
     }
     fn get_reachable_target(&self, symbol: isize) -> Option<ATNStateRef> {
-        println!("reachable target called on {:?}", self);
+//        println!("reachable target called on {:?}", self);
         if self.matches(symbol, LEXER_MIN_CHAR_VALUE, LEXER_MAX_CHAR_VALUE) {
             return Some(self.get_target());
         }
@@ -319,7 +319,7 @@ pub struct PredicateTransition {
     pub target: ATNStateRef,
     pub is_ctx_dependent: bool,
     pub rule_index: isize,
-    pub predIndex: isize,
+    pub pred_index: isize,
 }
 
 impl Transition for PredicateTransition {

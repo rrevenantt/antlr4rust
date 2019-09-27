@@ -120,7 +120,7 @@ impl ErrorStrategy for DefaultErrorStrategy {
     }
 
     fn report_match(&mut self, recognizer: &mut Parser) {
-        println!("matched token succesfully {}", recognizer.get_input_stream().la(1))
+        //println!("matched token succesfully {}", recognizer.get_input_stream().la(1))
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::int_stream::{IntStream, IterWrapper};
-use crate::token::{Token, TOKEN_EOF};
+use crate::token::{Token, TOKEN_EOF, OwningToken};
 use crate::token_source::TokenSource;
 use crate::interval_set::Interval;
 use crate::rule_context::RuleContext;
@@ -19,6 +19,20 @@ pub trait TokenStream: IntStream {
     fn get_text_from_tokens(&self, a: &Token, b: &Token) -> String;
 }
 
+pub struct TokenIter<'a, T: TokenStream>(&'a mut T, bool);
+
+impl<'a, T: TokenStream> Iterator for TokenIter<'a, T> {
+    type Item = OwningToken;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.1 { return None }
+        let result = self.0.lt(1).to_owned();
+        self.0.consume();
+        if result.get_token_type() == TOKEN_EOF { self.1 = true; }
+        Some(result)
+    }
+}
+
 
 pub struct UnbufferedTokenStream<T: TokenSource> {
     token_source: T,
@@ -31,6 +45,10 @@ pub struct UnbufferedTokenStream<T: TokenSource> {
 impl<T: TokenSource> UnbufferedTokenStream<T> {
     pub fn iter(&mut self) -> IterWrapper<Self> {
         IterWrapper(self)
+    }
+
+    pub fn token_iter(&mut self) -> TokenIter<Self> {
+        TokenIter(self, false)
     }
 
     pub fn new(source: T) -> Self {
@@ -55,7 +73,9 @@ impl<T: TokenSource> UnbufferedTokenStream<T> {
             if self.tokens.len() > 0 && self.tokens.last().unwrap().get_token_type() == TOKEN_EOF {
                 return i;
             }
-            self.tokens.push(self.token_source.next_token());
+            let mut token = self.token_source.next_token();
+            token.set_token_index(self.index());
+            self.tokens.push(token);
         }
 
         need

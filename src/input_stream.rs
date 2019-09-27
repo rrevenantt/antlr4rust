@@ -8,23 +8,25 @@ use crate::errors::ANTLRError;
 use std::result;
 use std::str::Chars;
 use std::fmt::Write;
+use std::convert::TryFrom;
+use std::iter::FromIterator;
+use std::cmp::min;
 
 pub struct InputStream {
     name: String,
     index: isize,
     data: Vec<isize>,
-    size: isize,
+//    size: isize,
 }
 
 impl InputStream {
     pub fn new(data: String) -> InputStream {
-        let len = data.len() as isize;
         let data = data.chars().map(|ch| ch as isize).collect();
         InputStream {
             name: "<empty>".to_string(),
             index: 0,
             data,
-            size: len,
+//            size: len,
         }
     }
 
@@ -45,23 +47,23 @@ impl InputStream {
 }
 
 impl CharStream for InputStream {
-    fn get_text(&self, _start: isize, _stop: isize) -> &str {
-//        self.data.as_slice()[_start as usize.._stop as usize]
-        unimplemented!()
+    fn get_text(&self, _start: isize, _stop: isize) -> String {
+        let stop = min(self.data.len(), (_stop + 1) as usize);
+        String::from_iter(self.data[_start as usize..stop].iter().map(|x| char::try_from(*x as u32).unwrap()))
     }
 
     fn get_text_from_tokens(&self, _start: &Token, _stop: &Token) -> &str {
         unimplemented!()
     }
 
-    fn get_text_from_interval(&self, i: &Interval) -> &str {
+    fn get_text_from_interval(&self, i: &Interval) -> String {
         self.get_text(i.a, i.b)
     }
 }
 
 impl IntStream for InputStream {
     fn consume(&mut self) -> result::Result<(), ANTLRError> {
-        if self.index >= self.size {
+        if self.index >= self.size() {
             return Err(ANTLRError::IllegalStateError("cannot consume EOF".into()));
         }
         self.index += 1;
@@ -72,7 +74,6 @@ impl IntStream for InputStream {
         if offset == 0 {
             return 0;
         }
-
         if offset < 0 {
             offset += 1; // e.g., translate LA(-1) to use offset i=0; then data[p+0-1]
             if (self.index + offset - 1) < 0 {
@@ -80,7 +81,7 @@ impl IntStream for InputStream {
             }
         }
 
-        if (self.index + offset - 1) >= self.size {
+        if (self.index + offset - 1) >= self.size() {
             //System.out.println("char LA("+i+")=EOF; p="+p);
             return crate::int_stream::EOF;
         }
@@ -104,14 +105,14 @@ impl IntStream for InputStream {
             self.index = index
         }
 
-        index = index.min(self.size);
+        index = index.min(self.size());
         while self.index < index {
             self.consume();
         }
     }
 
     fn size(&self) -> isize {
-        self.size
+        self.data.len() as isize
     }
 
     fn get_source_name(&self) -> String {

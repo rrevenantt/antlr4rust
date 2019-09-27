@@ -1,25 +1,22 @@
 # antlr4rust
-ANTLR4 runtime for Rust programming laguage 
+ANTLR4 runtime for Rust programming language 
 
 # Implementation status
 
-Heavy WIP, not very useful yet
+WIP, not quite useful yet
 
-- [ ] Lexer
+- [X] Lexer
   - [X] general implementation
-  - [ ] advanced features (modes, actions, etc.)
-  - [ ] API rework
-  - [ ] Documentation
-  - [ ] Full testing with ANTLR4 test suit
+  - [X] advanced features (modes, actions, etc.)
+  - [X] Full testing with ANTLR4 test suit (couple of corner cases remaining though)
 - [ ] Parser
   - [X] general implementation
   - [ ] LL*
   - [ ] recovery
   - [ ] syntax tree
-  - [ ] API rework
-  - [ ] Documentation
   - [ ] Full testing with ANTLR4 test suit
-- [ ] parser generator - WIP
+- [ ] Documentation
+- [ ] API stabilization 
 
 # Licence
 

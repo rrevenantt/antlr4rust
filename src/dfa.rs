@@ -9,6 +9,8 @@ use crate::atn::ATN;
 use crate::prediction_context::MurmurHasherBuilder;
 use std::pin::Pin;
 use std::task::RawWaker;
+use crate::dfa_serializer::DFASerializer;
+use std::convert::TryFrom;
 
 pub struct DFA {
     atn_start_state: ATNStateRef,
@@ -19,8 +21,7 @@ pub struct DFA {
     pub states: RwLock<Vec<DFAState>>,
 
     // for faster duplicate search
-    //TODO maybe hashmap for states will be enough
-    // i think DFAState.edges can contain references to its elements
+    // TODO i think DFAState.edges can contain references to its elements
     pub states_map: RwLock<HashMap</*DFAState hash*/ u64, DFAStateRef>>,
     //    states_mu sync.RWMutex
     pub s0: RwLock<Option<Box<DFAStateRef>>>,
@@ -100,7 +101,7 @@ impl DFA {
         unimplemented!()
     }
 
-    fn to_lexer_String(&self) -> String {
-        unimplemented!()
+    pub fn to_lexer_String(&self) -> String {
+        format!("{}", DFASerializer::new(self, &|x| format!("'{}'", char::try_from(x as u32).unwrap())))
     }
 }
