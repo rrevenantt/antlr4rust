@@ -8,6 +8,7 @@ use std::iter::Map;
 use std::sync::Arc;
 use crate::lexer::{Lexer, BaseLexer};
 use crate::char_stream::CharStream;
+use crate::parser_rule_context::ParserRuleContext;
 
 pub trait Recognizer {
     fn get_literal_names(&self) -> &[Option<&str>] {
@@ -20,17 +21,17 @@ pub trait Recognizer {
         &[]
     }
 
-    fn sempred(&mut self, _localctx: Option<&BaseRuleContext>, _ruleIndex: isize, _actionIndex: isize,
+    fn sempred(&mut self, _localctx: Option<&dyn ParserRuleContext>, _ruleIndex: isize, _actionIndex: isize,
                lexer: &mut BaseLexer,
     ) -> bool {
         true
     }
-    fn precpred(&mut self, _localctx: Option<&BaseRuleContext>, _precedence: isize
+    fn precpred(&mut self, _localctx: Option<&dyn ParserRuleContext>, _precedence: isize
                 , lexer: &mut BaseLexer,
     ) -> bool {
         true
     }
-    fn action(&mut self, _localctx: Option<&BaseRuleContext>, rule_index: isize, action_index: isize
+    fn action(&mut self, _localctx: Option<&dyn ParserRuleContext>, rule_index: isize, action_index: isize
               , lexer: &mut BaseLexer,
     ) {}
 

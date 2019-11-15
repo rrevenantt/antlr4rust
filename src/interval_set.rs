@@ -95,8 +95,8 @@ impl IntervalSet {
         }
     }
 
-    fn first(&self) -> isize {
-        unimplemented!()
+    pub fn get_min(&self) -> Option<isize> {
+        self.intervals.first().map(|x| x.a)
     }
 
     pub fn add_one(&mut self, _v: isize) {

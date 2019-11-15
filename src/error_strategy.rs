@@ -23,7 +23,7 @@ pub struct DefaultErrorStrategy {
 
 
 impl DefaultErrorStrategy {
-    pub(crate) fn new() -> DefaultErrorStrategy {
+    pub fn new() -> DefaultErrorStrategy {
         DefaultErrorStrategy {
             error_recovery_mode: false,
             last_error_index: -1,
@@ -70,6 +70,7 @@ impl ErrorStrategy for DefaultErrorStrategy {
 
     fn recover_inline(&mut self, recognizer: &mut Parser) -> Result<&dyn Token, ANTLRError> {
         unimplemented!()
+//        Err(ANTLRError::InputMismatchError())
     }
 
     fn recover(&mut self, recognizer: &mut Parser, e: &ANTLRError) {

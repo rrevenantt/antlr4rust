@@ -8,6 +8,7 @@ use murmur3::murmur3_32::MurmurHasher;
 use crate::atn_config::ATNConfigType::LexerATNConfig;
 use crate::atn_state::ATNStateType::DecisionState;
 use crate::lexer_action_executor::LexerActionExecutor;
+use crate::dfa::ScopeExt;
 
 //pub trait ATNConfig: Sync + Send {
 //    fn get_state(&self) -> ATNStateRef;
@@ -61,9 +62,11 @@ pub struct ATNConfig {
     precedence_filter_suppressed: bool,
     state: ATNStateRef,
     alt: isize,
+    //todo maybe option is unnecesary and PredictionContext::EMPTY would be enough
+    //another todo, maybe make separate shared PredictionContext owning structure since cloning them might be slow
     context: Option<Box<PredictionContext>>,
-    semantic_context: Option<Box<SemanticContext>>,
-    reaches_into_outer_context: isize,
+    pub semantic_context: Option<Box<SemanticContext>>,
+    pub reaches_into_outer_context: isize,
     pub config_type: ATNConfigType,
 }
 
@@ -84,11 +87,18 @@ impl ATNConfig {
         }
     }
 
-    fn new_base_atnconfig7(_old: &ATNConfig) -> ATNConfig {
-        unimplemented!()
+    pub fn default_hash(&self) -> u64 {
+        MurmurHasher::default().convert_with(|mut x| {
+            self.hash(&mut x);
+            x.finish()
+        })
     }
 
-    fn new_base_atnconfig6(
+//    fn new_base_atnconfig7(_old: &ATNConfig) -> ATNConfig {
+//        unimplemented!()
+//    }
+
+    pub fn new(
         state: ATNStateRef,
         alt: isize,
         context: Option<PredictionContext>,
@@ -97,7 +107,7 @@ impl ATNConfig {
             precedence_filter_suppressed: false,
             state,
             alt,
-            context: context.map(|x| Box::new(x)),
+            context: context.map(Box::new),
 //            semantic_context: SemanticContext::empty(),
             semantic_context: None,
             reaches_into_outer_context: 0,
@@ -105,13 +115,15 @@ impl ATNConfig {
         }
     }
 
-    fn new_base_atnconfig5(
-        _state: &ATNState,
-        _alt: isize,
-        _context: &PredictionContext,
-        _semanticContext: &SemanticContext,
+    pub fn new_with_semantic(
+        state: ATNStateRef,
+        alt: isize,
+        context: Option<PredictionContext>,
+        semantic_context: Option<Box<SemanticContext>>,
     ) -> ATNConfig {
-        unimplemented!()
+        let mut new = Self::new(state, alt, context);
+        new.semantic_context = semantic_context;
+        new
     }
 
     fn new_base_atnconfig4(_c: &ATNConfig, _state: &ATNState) -> ATNConfig {
@@ -126,33 +138,33 @@ impl ATNConfig {
         unimplemented!()
     }
 
-    fn new_base_atnconfig2(_c: &ATNConfig, _semanticContext: &SemanticContext) -> ATNConfig {
-        unimplemented!()
-    }
-
-    fn new_base_atnconfig1(
-        _c: &ATNConfig,
-        _state: &ATNState,
-        _context: &PredictionContext,
-    ) -> ATNConfig {
-        unimplemented!()
-    }
-
-    fn new_base_atnconfig(
-        _c: &ATNConfig,
-        _state: &ATNState,
-        _context: &PredictionContext,
-        _semanticContext: &SemanticContext,
-    ) -> ATNConfig {
-        unimplemented!()
-    }
+//    fn new_base_atnconfig2(_c: &ATNConfig, _semanticContext: &SemanticContext) -> ATNConfig {
+//        unimplemented!()
+//    }
+//
+//    fn new_base_atnconfig1(
+//        _c: &ATNConfig,
+//        _state: &ATNState,
+//        _context: &PredictionContext,
+//    ) -> ATNConfig {
+//        unimplemented!()
+//    }
+//
+//    fn new_base_atnconfig(
+//        _c: &ATNConfig,
+//        _state: &ATNState,
+//        _context: &PredictionContext,
+//        _semanticContext: &SemanticContext,
+//    ) -> ATNConfig {
+//        unimplemented!()
+//    }
 
     pub fn new_lexer_atnconfig6(
         _state: ATNStateRef,
         _alt: isize,
         _context: PredictionContext,
     ) -> ATNConfig {
-        let mut atnconfig = ATNConfig::new_base_atnconfig6(_state, _alt, Some(_context));
+        let mut atnconfig = ATNConfig::new(_state, _alt, Some(_context));
         atnconfig.config_type = ATNConfigType::LexerATNConfig {
             lexer_action_executor: None,
             passed_through_non_greedy_decision: false,
@@ -190,6 +202,7 @@ impl ATNConfig {
     }
 
     pub fn cloned_with_new_ctx(&self, target: &ATNState, ctx: Option<PredictionContext>) -> ATNConfig {
+        // todo don't full clone here since prediction context is biggest part
         let mut new = self.cloned(target);
         new.context = ctx.map(Box::new);
 //        if let ATNConfigType::LexerATNConfig { passed_through_non_greedy_decision,.. } = &mut new.config_type{

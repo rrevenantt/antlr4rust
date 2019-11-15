@@ -8,8 +8,10 @@ pub const token_invalid_type: isize = 0;
 pub const TOKEN_EPSILON: isize = -2;
 pub const token_min_user_token_type: isize = 1;
 pub const TOKEN_EOF: isize = -1;
-pub const token_default_channel: isize = 0;
-pub const token_hidden_channel: isize = 1;
+pub const TOKEN_DEFAULT_CHANNEL: isize = 0;
+pub const TOKEN_HIDDEN_CHANNEL: isize = 1;
+pub const HIDDEN: isize = TOKEN_HIDDEN_CHANNEL;
+
 
 pub trait Token: Debug {
     fn get_source(&self) -> Option<(Box<TokenSource>, Box<CharStream>)>;

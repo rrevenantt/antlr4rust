@@ -22,7 +22,7 @@ pub const ATNSTATE_LOOP_END: isize = 12;
 pub const ATNSTATE_INVALID_STATE_NUMBER: isize = -1;
 
 //might be changed later
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum ATNStateType {
     RuleStartState {
         stop_state: ATNStateRef,
@@ -41,7 +41,7 @@ pub enum ATNStateType {
     InvalidState,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum ATNDecisionState {
     StarLoopEntry {
         loop_back_state: ATNStateRef,
@@ -55,7 +55,7 @@ pub enum ATNDecisionState {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum ATNBlockStart {
     BasicBlockStart,
     StarBlockStart,

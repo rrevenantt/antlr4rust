@@ -6,6 +6,9 @@ use std::hash::{Hash, Hasher};
 use std::cmp::max;
 use std::cell::Cell;
 use murmur3::murmur3_32::MurmurHasher;
+use bit_set::BitSet;
+use crate::atn_simulator::{BaseATNSimulator, IATNSimulator};
+use crate::parser_atn_simulator::MergeCache;
 
 //pub trait ATNConfigSet:Sync+Send{
 //    fn hash(&self) ->isize;
@@ -52,9 +55,10 @@ pub struct ATNConfigSet {
 
     config_lookup: HashMap<u64, usize>,
 
-    configs: Vec<Box<ATNConfig>>,
+    pub(crate) configs: Vec<Box<ATNConfig>>,
 
-    //    conflicting_alts: * BitSet,
+    conflicting_alts: BitSet,
+
     dips_into_outer_context: bool,
 
     full_ctx: bool,
@@ -82,6 +86,7 @@ impl ATNConfigSet {
             cached_hash: 0,
             config_lookup: HashMap::new(),
             configs: vec![],
+            conflicting_alts: Default::default(),
             dips_into_outer_context: false,
             full_ctx,
             has_semantic_context: false,
@@ -126,7 +131,7 @@ impl ATNConfigSet {
     pub fn add_cached(
         &mut self,
         mut config: Box<ATNConfig>,
-        merge_cache: Option<&HashMap<(PredictionContext, PredictionContext), PredictionContext>>,
+        merge_cache: Option<&mut MergeCache>,
     ) -> bool {
         assert!(!self.read_only);
         //todo semantic context
@@ -184,7 +189,9 @@ impl ATNConfigSet {
         self.configs.iter().map(|c| c.as_ref())
     }
 
-    //    pub fn optimize_configs(&self, interpreter: &BaseATNSimulator) { unimplemented!() }
+    pub fn optimize_configs(&self, interpreter: &IATNSimulator) {
+        //todo
+    }
 
     pub fn equals(&self, _other: &ATNConfigSet) -> bool {
         unimplemented!()
@@ -231,19 +238,19 @@ impl ATNConfigSet {
     }
 
     pub fn full_context(&self) -> bool {
-        unimplemented!()
+        self.full_ctx
     }
 
-    //    pub fn get_conflicting_alts(&self) -> * BitSet { unimplemented!() }
+    pub fn get_conflicting_alts(&self) -> &BitSet { &self.conflicting_alts }
 
-    //    pub fn set_conflicting_alts(&self, v: * BitSet) { unimplemented!() }
+    pub fn set_conflicting_alts(&mut self, v: BitSet) { self.conflicting_alts = v }
 
     pub fn get_unique_alt(&self) -> isize {
-        unimplemented!()
+        self.unique_alt
     }
 
-    pub fn set_unique_alt(&self, _v: isize) {
-        unimplemented!()
+    pub fn set_unique_alt(&mut self, _v: isize) {
+        self.unique_alt = _v
     }
 
     pub fn get_dips_into_outer_context(&self) -> bool {

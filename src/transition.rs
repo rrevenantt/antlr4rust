@@ -31,7 +31,7 @@ pub const TRANSITION_NOTSET: isize = 8;
 pub const TRANSITION_WILDCARD: isize = 9;
 pub const TRANSITION_PRECEDENCE: isize = 10;
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum TransitionType {
     TRANSITION_EPSILON = 1,
     TRANSITION_RANGE,

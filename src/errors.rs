@@ -39,7 +39,7 @@ pub trait RecognitionError {
 pub struct BaseRecognitionError {
     message: String,
     //    recognizer: Box<Recognizer>,
-    offending_token: Option<Box<Token>>,
+    offending_token: Option<isize>,
     offending_state: isize,
     //    ctx: Box<RuleContext>,
     //    input: Box<IntStream>,
@@ -69,6 +69,7 @@ impl RecognitionError for BaseRecognitionError {
     }
 }
 
+
 #[derive(Debug)]
 pub struct LexerNoViableAltError {
     base: BaseRecognitionError,
@@ -88,8 +89,8 @@ pub struct LexerNoViableAltError {
 #[derive(Debug)]
 pub struct NoViableAltError {
     base: BaseRecognitionError,
-    start_token: Box<Token>,
-    offending_token: Box<Token>,
+//    start_token: Box<Token>,
+//    offending_token: Box<Token>,
     //    ctx: ParserRuleContext,
     //    dead_end_configs: BaseATNConfigSet,
 }

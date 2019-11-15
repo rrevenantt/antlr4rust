@@ -1,20 +1,22 @@
-// Generated from /home/rrevenantt/Downloads/code/lexmagic/XMLLexer.g4 by ANTLR 4.7.1
+// Generated from XMLLexer.g4 by ANTLR 4.7.1
+#![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 
-use crate::atn::ATN;
-use crate::char_stream::CharStream;
-use crate::lexer::{BaseLexer, Lexer};
-use crate::atn_deserializer::ATNDeserializer;
-use crate::dfa::DFA;
-use crate::lexer_atn_simulator::{LexerATNSimulator, ILexerATNSimulator};
-use crate::prediction_context::PredictionContextCache;
-use crate::recognizer::Recognizer;
-use crate::error_listener::ErrorListener;
-use crate::token_source::TokenSource;
-use crate::common_token_factory::TokenFactory;
-use crate::token::Token;
-use crate::rule_context::BaseRuleContext;
+use antlr_rust::atn::ATN;
+use antlr_rust::char_stream::CharStream;
+use antlr_rust::lexer::{BaseLexer, Lexer};
+use antlr_rust::atn_deserializer::ATNDeserializer;
+use antlr_rust::dfa::DFA;
+use antlr_rust::lexer_atn_simulator::{LexerATNSimulator, ILexerATNSimulator};
+use antlr_rust::prediction_context::PredictionContextCache;
+use antlr_rust::recognizer::Recognizer;
+use antlr_rust::error_listener::ErrorListener;
+use antlr_rust::token_source::TokenSource;
+use antlr_rust::common_token_factory::TokenFactory;
+use antlr_rust::token::*;
+use antlr_rust::rule_context::BaseRuleContext;
+use antlr_rust::parser_rule_context::ParserRuleContext;
 
 use std::sync::Arc;
 use std::cell::RefCell;
@@ -42,29 +44,29 @@ pub const PI: isize = 18;
 pub const INSIDE: usize = 1;
 pub const PROC_INSTR: usize = 2;
 pub const channelNames: [&'static str; 0 + 2] = [
-    "DEFAULT_TOKEN_CHANNEL", "HIDDEN"
+	"DEFAULT_TOKEN_CHANNEL", "HIDDEN"
 ];
 
 pub const modeNames: [&'static str; 3] = [
-    "DEFAULT_MODE", "INSIDE", "PROC_INSTR"
+	"DEFAULT_MODE", "INSIDE", "PROC_INSTR"
 ];
 
 pub const ruleNames: [&'static str; 24] = [
-    "COMMENT", "CDATA", "DTD", "EntityRef", "CharRef", "SEA_WS", "OPEN", "XMLDeclOpen",
-    "SPECIAL_OPEN", "TEXT", "CLOSE", "SPECIAL_CLOSE", "SLASH_CLOSE", "SLASH",
-    "EQUALS", "STRING", "Name", "S", "HEXDIGIT", "DIGIT", "NameChar", "NameStartChar",
-    "PI", "IGNORE"
+	"COMMENT", "CDATA", "DTD", "EntityRef", "CharRef", "SEA_WS", "OPEN", "XMLDeclOpen",
+	"SPECIAL_OPEN", "TEXT", "CLOSE", "SPECIAL_CLOSE", "SLASH_CLOSE", "SLASH",
+	"EQUALS", "STRING", "Name", "S", "HEXDIGIT", "DIGIT", "NameChar", "NameStartChar",
+	"PI", "IGNORE"
 ];
 
 pub const _LITERAL_NAMES: [Option<&'static str>; 15] = [
-    None, None, None, None, None, None, None, Some("'<'"), None, None, Some("'>'"),
-    None, Some("'/>'"), Some("'/'"), Some("'='")
+	None, None, None, None, None, None, None, Some("'<'"), None, None, Some("'>'"),
+	None, Some("'/>'"), Some("'/'"), Some("'='")
 ];
 pub const _SYMBOLIC_NAMES: [Option<&'static str>; 19] = [
-    None, Some("COMMENT"), Some("CDATA"), Some("DTD"), Some("EntityRef"),
-    Some("CharRef"), Some("SEA_WS"), Some("OPEN"), Some("XMLDeclOpen"), Some("TEXT"),
-    Some("CLOSE"), Some("SPECIAL_CLOSE"), Some("SLASH_CLOSE"), Some("SLASH"),
-    Some("EQUALS"), Some("STRING"), Some("Name"), Some("S"), Some("PI")
+	None, Some("COMMENT"), Some("CDATA"), Some("DTD"), Some("EntityRef"),
+	Some("CharRef"), Some("SEA_WS"), Some("OPEN"), Some("XMLDeclOpen"), Some("TEXT"),
+	Some("CLOSE"), Some("SPECIAL_CLOSE"), Some("SLASH_CLOSE"), Some("SLASH"),
+	Some("EQUALS"), Some("STRING"), Some("Name"), Some("S"), Some("PI")
 ];
 lazy_static! {
 	    static ref _shared_context_cache: Arc<PredictionContextCache> = Arc::new(PredictionContextCache::new());
@@ -72,23 +74,25 @@ lazy_static! {
 	}
 
 impl<'a> Deref for XMLLexer<'a> {
-    type Target = BaseLexer<'a>;
+	type Target = BaseLexer<'a>;
 
-    fn deref(&self) -> &Self::Target {
-        &self.base
-    }
+	fn deref(&self) -> &Self::Target {
+		&self.base
+	}
 }
 
 impl DerefMut for XMLLexer<'_> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.base
-    }
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.base
+	}
 }
 
 
+
 pub struct XMLLexer<'a> {
-    base: BaseLexer<'a>,
+	base: BaseLexer<'a>,
 //	static { RuntimeMetaData.checkVersion("4.7.1", RuntimeMetaData.VERSION); }
+
 }
 
 impl XMLLexer<'_> {
@@ -115,19 +119,19 @@ impl XMLLexer<'_> {
         "XMLLexer.g4"
     }
 
-    pub fn new(input: Box<dyn CharStream>) -> Self {
-        Self {
-            base: BaseLexer::new_base_lexer(
+	pub fn new(input: Box<dyn CharStream>) -> Self {
+		Self {
+			base: BaseLexer::new_base_lexer(
 				input,
 				LexerATNSimulator::new_lexer_atnsimulator(
 					_ATN.clone(),
 					_decision_to_DFA.clone(),
 					_shared_context_cache.clone(),
-					Box::new(XMLLexerActions {}),
-				),
+					Box::new(XMLLexerActions {})
+				)
 			)
-        }
-    }
+		}
+	}
 }
 
 struct XMLLexerActions {}
@@ -135,50 +139,51 @@ struct XMLLexerActions {}
 impl XMLLexerActions {}
 
 impl Recognizer for XMLLexerActions {
-    fn action(&mut self, _localctx: Option<&BaseRuleContext>, rule_index: isize, action_index: isize,
+	fn action(&mut self, _localctx: Option<&dyn ParserRuleContext>, rule_index: isize, action_index: isize,
 			  lexer: &mut BaseLexer,
 	) {
-        match rule_index {
-            10 =>
-                self.CLOSE_action(_localctx, action_index, lexer),
-            _ => {}
-        }
-    }
-    fn sempred(&mut self, _localctx: Option<&BaseRuleContext>, pred_index: isize, action_index: isize,
+		match rule_index {
+			10 =>
+				self.CLOSE_action(_localctx, action_index, lexer),
+			_ => {}
+		}
+	}
+	fn sempred(&mut self, _localctx: Option<&dyn ParserRuleContext>, rule_index: isize, pred_index: isize,
 			   lexer: &mut BaseLexer,
 	) -> bool {
-        match pred_index {
-            0 =>
-                self.COMMENT_sempred(_localctx, pred_index, lexer),
-            _ => true
-        }
-    }
+		match rule_index {
+			0 =>
+				self.COMMENT_sempred(_localctx, pred_index, lexer),
+			_ => true
+		}
+	}
 }
 
 impl XMLLexerActions {
-    fn CLOSE_action(&mut self, _localctx: Option<&BaseRuleContext>, action_index: isize,
+	fn CLOSE_action(&mut self, _localctx: Option<&dyn ParserRuleContext>, action_index: isize,
 					lexer: &mut BaseLexer,
 	) {
-        match action_index {
-            0 => {
-                lexer.pop_mode();
-            }
+		match action_index {
+			0 => {
+				lexer.pop_mode();
+			},
 
-            _ => {}
-        }
-    }
+			_ => {}
+		}
+	}
 
-    fn COMMENT_sempred(&mut self, _localctx: Option<&BaseRuleContext>, pred_index: isize,
+	fn COMMENT_sempred(&mut self, _localctx: Option<&dyn ParserRuleContext>, pred_index: isize,
 					   lexer: &mut BaseLexer,
 	) -> bool {
-        match pred_index {
-            0 => {
-                true
-            }
-            _ => true
-        }
-    }
+		match pred_index {
+			0 => {
+				true
+			}
+			_ => true
+		}
+	}
 }
+
 
 
 impl TokenSource for XMLLexer<'_> {
@@ -224,7 +229,7 @@ lazy_static! {
 
 
 const _serializedATN: &'static str =
-    "\x03\u{608b}\u{a72a}\u{8133}\u{b9ed}\u{417c}\u{3be7}\u{7786}\u{5964}\x02\
+	"\x03\u{608b}\u{a72a}\u{8133}\u{b9ed}\u{417c}\u{3be7}\u{7786}\u{5964}\x02\
 		\x14\u{e8}\x08\x01\x08\x01\x08\x01\x04\x02\x09\x02\x04\x03\x09\x03\x04\
 		\x04\x09\x04\x04\x05\x09\x05\x04\x06\x09\x06\x04\x07\x09\x07\x04\x08\x09\
 		\x08\x04\x09\x09\x09\x04\x0a\x09\x0a\x04\x0b\x09\x0b\x04\x0c\x09\x0c\x04\

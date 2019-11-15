@@ -1,11 +1,19 @@
 [package]
 name = "antlr-rust"
 version = "0.1.0"
-authors = ["rrevenantt"]
+authors = ["Konstantin Anisimov <rrevenantt@gmail.com>"]
 edition = "2018"
+build = false
 
 [dependencies]
 lazy_static = "1.4.*"
 uuid = "0.6.*"
 byteorder = "1"
 murmur3 = "0.4"
+bit-set = "0.5.*"
+
+[lib]
+
+[[test]]
+name = "my_test"
+path="tests/my_test.rs"

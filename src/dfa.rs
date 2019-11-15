@@ -1,19 +1,38 @@
-use std::collections::{HashMap, HashSet};
 use crate::dfa_state::{DFAState, DFAStateRef};
+use std::collections::{HashMap, HashSet};
 
 use std::sync::{Arc, RwLock};
 
+use crate::atn::ATN;
 use crate::atn_config_set::ATNConfigSet;
 use crate::atn_state::{ATNDecisionState, ATNState, ATNStateRef, ATNStateType};
-use crate::atn::ATN;
+use crate::dfa_serializer::DFASerializer;
 use crate::prediction_context::MurmurHasherBuilder;
+use std::convert::TryFrom;
+use std::ops::Deref;
 use std::pin::Pin;
 use std::task::RawWaker;
-use crate::dfa_serializer::DFASerializer;
-use std::convert::TryFrom;
+
+pub(crate) trait ScopeExt: Sized {
+    fn convert_with<T, F: FnOnce(Self) -> T>(self, f: F) -> T {
+        f(self)
+    }
+    fn run<T, F: FnOnce(&Self) -> T>(&self, f: F) -> T {
+        f(self)
+    }
+
+    fn modify_with<F: FnOnce(&mut Self)>(&mut self, f: F) {
+        f(self)
+    }
+    fn apply<F: FnOnce(&mut Self) -> &mut Self>(&mut self, f: F) -> &mut Self {
+        f(self)
+    }
+}
+
+impl<Any: Sized> ScopeExt for Any {}
 
 pub struct DFA {
-    atn_start_state: ATNStateRef,
+    pub atn_start_state: ATNStateRef,
 
     decision: isize,
 
@@ -24,9 +43,9 @@ pub struct DFA {
     // TODO i think DFAState.edges can contain references to its elements
     pub states_map: RwLock<HashMap</*DFAState hash*/ u64, DFAStateRef>>,
     //    states_mu sync.RWMutex
-    pub s0: RwLock<Option<Box<DFAStateRef>>>,
+    pub s0: RwLock<Option<DFAStateRef>>,
     //    s0_mu sync.RWMutex
-    precedence_dfa: bool,
+    is_precedence_dfa: bool,
 }
 
 //struct DFAStateRef{
@@ -41,7 +60,7 @@ impl DFA {
             //            states_map: RwLock::new(HashMap::new()),
             states_map: RwLock::new(HashMap::new()),
             s0: RwLock::new(None),
-            precedence_dfa: false,
+            is_precedence_dfa: false,
         };
 
         // to indicate null
@@ -54,7 +73,7 @@ impl DFA {
             ..
         } = atn.states[atn_start_state].get_state_type()
         {
-            dfa.precedence_dfa = true;
+            dfa.is_precedence_dfa = true;
             let mut precedence_state = DFAState::new_dfastate(
                 usize::max_value(),
                 Box::new(ATNConfigSet::new_base_atnconfig_set(true)),
@@ -63,22 +82,52 @@ impl DFA {
             precedence_state.is_accept_state = false;
             precedence_state.requires_full_context = false;
 
-            dfa.s0 = RwLock::new(Some(Box::new(precedence_state.state_number)));
+            dfa.s0 = RwLock::new(Some(precedence_state.state_number));
             dfa.states.write().unwrap().push(precedence_state)
         }
         dfa
     }
 
-    fn get_precedence_start_state(&self, _precedence: isize) -> &DFAState {
-        unimplemented!()
+    pub fn get_precedence_start_state(&self, _precedence: isize) -> Option<DFAStateRef> {
+        if !self.is_precedence_dfa {
+            panic!("dfa is supposed to be precedence here");
+        }
+
+        self.s0.read().unwrap()
+            .map(|s0|
+                self.states.read().unwrap()[s0].edges[_precedence as usize]
+            )
     }
 
-    fn set_precedence_start_state(&self, _precedence: isize, _startState: &DFAState) {
-        unimplemented!()
+    pub fn set_precedence_start_state(&self, precedence: isize, _start_state: DFAStateRef) {
+        if !self.is_precedence_dfa {
+            panic!("set_precedence_start_state called for not precedence dfa")
+        }
+
+        if precedence < 0 {
+            return;
+        }
+        let precedence = precedence as usize;
+
+        if let Some(x) = self.s0.write().unwrap().deref() {
+            self.states
+                .write().unwrap()[*x]
+                .edges
+                .modify_with(|edges| {
+                    if edges.len() <= precedence {
+                        edges.resize(precedence + 1, 0);
+                    }
+                    edges[precedence] = _start_state;
+                })
+        }
     }
 
-    fn set_precedence_dfa(&self, _precedenceDfa: bool) {
-        unimplemented!()
+    pub fn is_precedence_dfa(&self) -> bool {
+        self.is_precedence_dfa
+    }
+
+    pub fn set_precedence_dfa(&mut self, precedence_dfa: bool) {
+        self.is_precedence_dfa = precedence_dfa
     }
 
     fn get_s0(&self) -> &DFAState {
@@ -102,6 +151,12 @@ impl DFA {
     }
 
     pub fn to_lexer_String(&self) -> String {
-        format!("{}", DFASerializer::new(self, &|x| format!("'{}'", char::try_from(x as u32).unwrap())))
+        format!(
+            "{}",
+            DFASerializer::new(self, &|x| format!(
+                "'{}'",
+                char::try_from(x as u32).unwrap()
+            ))
+        )
     }
 }

@@ -74,8 +74,8 @@ pub const LEXER_DEFAULT_MODE: isize = 0;
 pub const LEXER_MORE: isize = -2;
 pub const LEXER_SKIP: isize = -3;
 
-pub const lexer_default_token_channel: isize = super::token::token_default_channel;
-pub const lexer_hidden: isize = super::token::token_hidden_channel;
+pub const lexer_default_token_channel: isize = super::token::TOKEN_DEFAULT_CHANNEL;
+pub const lexer_hidden: isize = super::token::TOKEN_HIDDEN_CHANNEL;
 pub const LEXER_MIN_CHAR_VALUE: isize = 0x0000;
 pub const LEXER_MAX_CHAR_VALUE: isize = 0x10FFFF;
 
@@ -178,7 +178,7 @@ impl<'b> BaseLexer<'b> {
             text: "".into(),
             token: None,
             hit_eof: false,
-            channel: super::token::token_default_channel,
+            channel: super::token::TOKEN_DEFAULT_CHANNEL,
             //            token_factory_source_pair: None,
             mode_stack: Vec::new(),
             mode: self::LEXER_DEFAULT_MODE,

@@ -3,10 +3,12 @@ use std::hash::{Hash, Hasher};
 use murmur3::murmur3_32::MurmurHasher;
 use crate::lexer_atn_simulator::{MAX_DFA_EDGE, MIN_DFA_EDGE};
 use crate::lexer_action_executor::LexerActionExecutor;
+use crate::semantic_context::SemanticContext;
 
+#[derive(Eq, PartialEq)]
 pub struct PredPrediction {
-    alt: isize,
-    //    pred: SemanticContext,
+    pub(crate) alt: isize,
+    pub(crate) pred: SemanticContext,
 }
 
 //todo rewrite as wrapper with helper methods
@@ -16,13 +18,16 @@ pub type DFAStateRef = usize;
 pub struct DFAState {
     pub state_number: usize,
     pub configs: Box<ATNConfigSet>,
+    /// - 0 => no edge
+    /// - usize::MAX => error edge
+    /// - _ => actual edge
     pub edges: Vec<DFAStateRef>,
     pub is_accept_state: bool,
 
     pub prediction: isize,
     pub lexer_action_executor: Option<Box<LexerActionExecutor>>,
     pub requires_full_context: bool,
-    //    predicates: Vec < PredPrediction > ,
+    pub predicates: Vec<PredPrediction>,
 }
 
 //impl Hash for *DFAState{
@@ -48,12 +53,13 @@ impl DFAState {
         DFAState {
             state_number: stateNumber,
             configs,
-            edges: Vec::with_capacity((MAX_DFA_EDGE - MIN_DFA_EDGE + 1) as usize),
+//            edges: Vec::with_capacity((MAX_DFA_EDGE - MIN_DFA_EDGE + 1) as usize),
+            edges: Vec::new(),
             is_accept_state: false,
             prediction: 0,
             lexer_action_executor: None,
             requires_full_context: false,
-            //        predicates: Vec::new(),
+            predicates: Vec::new(),
         }
     }
 

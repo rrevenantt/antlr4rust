@@ -6,6 +6,8 @@ use crate::atn_type::ATNType;
 use crate::atn_state::ATNStateRef;
 use crate::lexer_action::LexerAction;
 
+pub const INVALID_ALT: isize = 0;
+
 pub struct ATN {
     pub decision_to_state: Vec<ATNStateRef>,
 

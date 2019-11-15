@@ -1,5 +1,7 @@
 use crate::recognizer::Recognizer;
 use crate::rule_context::RuleContext;
+use crate::parser::{BaseParser, Parser};
+use crate::parser_rule_context::ParserRuleContext;
 
 //pub trait SemanticContext:Sync + Send {
 ////    fn evaluate(&self, parser: &Recognizer, outerContext: &RuleContext) -> bool;
@@ -14,7 +16,7 @@ fn empty() -> SemanticContext {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq)]
 pub enum SemanticContext {
     Predicate {
         rule_index: isize,
@@ -27,10 +29,15 @@ pub enum SemanticContext {
 }
 
 impl SemanticContext {
-    fn evaluate(&self, parser: &Recognizer, outerContext: &RuleContext) -> bool {
+    pub const NONE: SemanticContext = SemanticContext::Predicate {
+        rule_index: -1,
+        pred_index: -1,
+        is_ctx_dependent: false,
+    };
+    pub(crate) fn evaluate(&self, parser: &dyn Parser/*, outer_context: &dyn ParserRuleContext*/) -> bool {
         unimplemented!()
     }
-    fn eval_precedence(&self, parser: &Recognizer, outerContext: &RuleContext) -> SemanticContext {
+    pub(crate) fn eval_precedence(&self, parser: &dyn Parser/*, outer_context: &dyn ParserRuleContext*/) -> Option<SemanticContext> {
         unimplemented!()
     }
 }

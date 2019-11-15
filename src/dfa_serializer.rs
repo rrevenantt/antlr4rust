@@ -1,6 +1,7 @@
 use crate::dfa::DFA;
 use std::fmt::{Display, Formatter};
 use crate::dfa_state::DFAState;
+use crate::lexer_atn_simulator::ERROR_DFA_STATE_REF;
 
 pub struct DFASerializer<'a, 'b> {
     dfa: &'a DFA,
@@ -12,7 +13,7 @@ impl Display for DFASerializer<'_, '_> {
         let dfa = self.dfa.states.read().unwrap();
         for source in dfa.iter() {
             for (i, edge) in source.edges.iter().copied().enumerate() {
-                if edge != 0 && edge != usize::max_value() {
+                if edge != 0 && edge != ERROR_DFA_STATE_REF {
                     let target = &dfa[edge];
                     f.write_fmt(format_args!("{}-{}->{}\n",
                                              self.get_state_string(source),

@@ -2,8 +2,14 @@ use std::collections::{HashMap, LinkedList};
 use std::hash::{BuildHasher, Hash, Hasher};
 use murmur3::murmur3_32::MurmurHasher;
 use crate::prediction_context::PredictionContext::{Singleton, Array};
+use crate::atn::ATN;
+use crate::parser_rule_context::{ParserRuleContext, EMPTY_CTX};
+use std::ops::Deref;
+use crate::transition::{TransitionType, RuleTransition};
+use crate::atn_deserializer::cast;
+use std::ptr;
 
-pub const base_prediction_context_empty_return_state: isize = 0x7FFFFFFF;
+pub const PREDICTION_CONTEXT_EMPTY_RETURN_STATE: isize = 0x7FFFFFFF;
 
 //pub trait PredictionContext: Sync + Send {
 //    fn get_parent(&self, index: isize) -> Option<&BasePredictionContext>;
@@ -14,7 +20,7 @@ pub const base_prediction_context_empty_return_state: isize = 0x7FFFFFFF;
 //    fn hash_code(&self)->i32;
 //}
 
-
+//todo make return states ATNStateRef
 #[derive(Eq, Clone)]
 pub enum PredictionContext {
     Singleton(SingletonPredictionContext),
@@ -40,7 +46,7 @@ pub struct SingletonPredictionContext {
 
 impl SingletonPredictionContext {
     fn is_empty(&self) -> bool {
-        self.return_state == base_prediction_context_empty_return_state
+        self.return_state == PREDICTION_CONTEXT_EMPTY_RETURN_STATE
     }
 }
 
@@ -58,7 +64,7 @@ impl Hash for PredictionContext {
 
 lazy_static! {
     pub static ref EMPTY_PREDICTION_CONTEXT: PredictionContext =
-        PredictionContext::new_empty_prediction_context();
+        PredictionContext::new_empty();
 }
 
 impl PredictionContext {
@@ -66,7 +72,7 @@ impl PredictionContext {
         unimplemented!()
     }
 
-    pub fn new_array_prediction_context(
+    pub fn new_array(
         parents: Vec<Option<Box<PredictionContext>>>,
         return_states: Vec<isize>,
     ) -> PredictionContext {
@@ -79,7 +85,7 @@ impl PredictionContext {
         ctx
     }
 
-    pub fn new_singleton_prediction_context(
+    pub fn new_singleton(
         parent_ctx: Option<Box<PredictionContext>>,
         return_state: isize,
     ) -> PredictionContext {
@@ -92,11 +98,11 @@ impl PredictionContext {
         ctx
     }
 
-    pub fn new_empty_prediction_context() -> PredictionContext {
+    pub fn new_empty() -> PredictionContext {
         let mut ctx = PredictionContext::Singleton(SingletonPredictionContext {
             cached_hash: 0,
             parent_ctx: None,
-            return_state: base_prediction_context_empty_return_state,
+            return_state: PREDICTION_CONTEXT_EMPTY_RETURN_STATE,
         });
         ctx.calc_hash();
         ctx
@@ -188,7 +194,7 @@ impl PredictionContext {
     }
 
     pub fn has_empty_path(&self) -> bool {
-        self.get_return_state(self.length() - 1) == base_prediction_context_empty_return_state
+        self.get_return_state(self.length() - 1) == PREDICTION_CONTEXT_EMPTY_RETURN_STATE
     }
 
     pub fn hash_code(&self) -> i32 {
@@ -222,8 +228,8 @@ impl PredictionContext {
             }
             (a, b) => {
                 if root_is_wildcard {
-                    if a.is_empty() { return Self::new_empty_prediction_context(); }
-                    if b.is_empty() { return Self::new_empty_prediction_context(); }
+                    if a.is_empty() { return Self::new_empty(); }
+                    if b.is_empty() { return Self::new_empty(); }
                 }
 
                 Self::merge_arrays(a.into_array(), b.into_array(), root_is_wildcard)
@@ -237,7 +243,7 @@ impl PredictionContext {
                 let parent = Self::merge(*a.parent_ctx.clone().unwrap(), *b.parent_ctx.clone().unwrap(), root_is_wildcard);
                 if Some(&parent) == a.parent_ctx.as_deref() { return Singleton(a); }
                 if Some(&parent) == b.parent_ctx.as_deref() { return Singleton(b); }
-                Self::new_singleton_prediction_context(Some(Box::new(parent)), a.return_state)
+                Self::new_singleton(Some(Box::new(parent)), a.return_state)
             } else {
                 let mut result = ArrayPredictionContext {
                     cached_hash: -1,
@@ -255,19 +261,19 @@ impl PredictionContext {
 
     fn merge_root(a: &mut SingletonPredictionContext, b: &mut SingletonPredictionContext, root_is_wildcard: bool) -> Option<PredictionContext> {
         if root_is_wildcard {
-            if a.is_empty() || b.is_empty() { return Some(Self::new_empty_prediction_context()); }
+            if a.is_empty() || b.is_empty() { return Some(Self::new_empty()); }
         } else {
-            if a.is_empty() && b.is_empty() { return Some(Self::new_empty_prediction_context()); }
+            if a.is_empty() && b.is_empty() { return Some(Self::new_empty()); }
             if a.is_empty() {
-                return Some(Self::new_array_prediction_context(
+                return Some(Self::new_array(
                     vec![b.parent_ctx.take(), None],
-                    vec![b.return_state, base_prediction_context_empty_return_state],
+                    vec![b.return_state, PREDICTION_CONTEXT_EMPTY_RETURN_STATE],
                 ));
             }
             if b.is_empty() {
-                return Some(Self::new_array_prediction_context(
+                return Some(Self::new_array(
                     vec![a.parent_ctx.take(), None],
-                    vec![a.return_state, base_prediction_context_empty_return_state],
+                    vec![a.return_state, PREDICTION_CONTEXT_EMPTY_RETURN_STATE],
                 ));
             }
         }
@@ -289,7 +295,7 @@ impl PredictionContext {
             let b_parent = b.parents[i].take();
             if a.return_states[i] == b.return_states[j] {
                 let payload = a.return_states[i];
-                let both = payload == base_prediction_context_empty_return_state
+                let both = payload == PREDICTION_CONTEXT_EMPTY_RETURN_STATE
                     && a_parent.is_none() && b_parent.is_none();
                 let ax_ax = a_parent.is_some() && b_parent.is_some()
                     && a_parent == b_parent;
@@ -329,7 +335,7 @@ impl PredictionContext {
         }
 
         if merged.parents.len() == 1 {
-            return Self::new_singleton_prediction_context(merged.parents[0].take(), merged.return_states[0]);
+            return Self::new_singleton(merged.parents[0].take(), merged.return_states[0]);
         }
 
         merged.return_states.shrink_to_fit();
@@ -340,16 +346,32 @@ impl PredictionContext {
         return Array(merged);
     }
 
-//    fn combine_common_parents(array: &mut ArrayPredictionContext) {
+    pub fn from_rule_context(atn: &ATN, outer_context: &dyn ParserRuleContext) -> PredictionContext {
+        if outer_context.peek_parent().is_none() || ptr::eq(outer_context, EMPTY_CTX.as_ref()) {
+            return PredictionContext::new_empty()
+        }
+
+        let parent = PredictionContext::from_rule_context(atn, outer_context.peek_parent().unwrap());
+
+        let transition = atn.states[outer_context.get_invoking_state() as usize]
+            .get_transitions()
+            .first().unwrap()
+            .deref();
+
+        let transition = if transition.get_serialization_type() == TransitionType::TRANSITION_RULE {
+            unsafe { cast::<RuleTransition>(transition) }
+        } else {
+            panic!("invalid state, cast error");
+        };
+
+        PredictionContext::new_singleton(Some(Box::new(parent)), transition.follow_state as isize)
+    }
+    //    fn combine_common_parents(array: &mut ArrayPredictionContext) {
 //
 //    }
 }
 
-//    fn prediction_context_from_rule_context(a *ATN, outerContext: RuleContext) -> PredictionContext { unimplemented!() }
-//
 
-//
-//
 //
 //    fn get_cached_base_prediction_context(context PredictionContext, contextCache: * PredictionContextCache, visited: map[PredictionContext]PredictionContext) -> PredictionContext { unimplemented!() }
 
