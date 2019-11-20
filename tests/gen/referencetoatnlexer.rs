@@ -2,7 +2,6 @@
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
-
 use antlr_rust::atn::ATN;
 use antlr_rust::char_stream::CharStream;
 use antlr_rust::lexer::{BaseLexer, Lexer};
@@ -16,6 +15,8 @@ use antlr_rust::token_source::TokenSource;
 use antlr_rust::common_token_factory::TokenFactory;
 use antlr_rust::token::*;
 use antlr_rust::rule_context::BaseRuleContext;
+use antlr_rust::parser_rule_context::ParserRuleContext;
+use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
 
 use std::sync::Arc;
 use std::cell::RefCell;
@@ -43,30 +44,30 @@ pub const _SYMBOLIC_NAMES: [Option<&'static str>; 4] = [
 ];
 lazy_static! {
 	    static ref _shared_context_cache: Arc<PredictionContextCache> = Arc::new(PredictionContextCache::new());
-	//	static ref VOCABULARY :Vocabulary = VocabularyImpl::new(_LITERAL_NAMES, _SYMBOLIC_NAMES);
+		static ref VOCABULARY: Box<dyn Vocabulary> = Box::new(VocabularyImpl::new(_LITERAL_NAMES.iter(), _SYMBOLIC_NAMES.iter(), None));
 	}
 
-impl<'a> Deref for ReferenceToATNLexer<'a> {
-    type Target = BaseLexer<'a>;
+impl<'a> Deref for ReferenceToATNLexer {
+    type Target = BaseLexer<'static>;
 
     fn deref(&self) -> &Self::Target {
         &self.base
     }
 }
 
-impl DerefMut for ReferenceToATNLexer<'_> {
+impl DerefMut for ReferenceToATNLexer {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.base
     }
 }
 
 
-pub struct ReferenceToATNLexer<'a> {
-    base: BaseLexer<'a>,
+pub struct ReferenceToATNLexer {
+    base: BaseLexer<'static>,
 //	static { RuntimeMetaData.checkVersion("4.7.1", RuntimeMetaData.VERSION); }
 }
 
-impl ReferenceToATNLexer<'_> {
+impl ReferenceToATNLexer {
     fn get_rule_names(&self) -> &'static [&'static str] {
         &ruleNames
     }
@@ -113,8 +114,7 @@ impl Recognizer for ReferenceToATNLexerActions {}
 
 impl ReferenceToATNLexerActions {}
 
-
-impl TokenSource for ReferenceToATNLexer<'_> {
+impl TokenSource for ReferenceToATNLexer {
     fn next_token(&mut self) -> Box<dyn Token> {
         self.base.next_token()
     }

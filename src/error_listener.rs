@@ -1,28 +1,23 @@
 use crate::recognizer::Recognizer;
 use crate::errors::ANTLRError;
 use crate::lexer::{Lexer, BaseLexer};
-use crate::token::OwningToken;
+use crate::token::{OwningToken, Token};
+use std::any::Any;
 
 pub trait ErrorListener {
-    fn syntax_error(
-        &mut self,
-        recognizer: &BaseLexer,
-        offending_symbol: Option<&OwningToken>,
-        line: isize,
-        column: isize,
-        msg: &str,
-        e: &ANTLRError,
-    );
+    fn syntax_error(&mut self, recognizer: &dyn Any, offending_symbol: Option<&dyn Token>,
+                    line: isize, column: isize, msg: &str, e: Option<&ANTLRError>, ) {}
     //    fn report_ambiguity(recognizer: Parser, dfa: * DFA, startIndex: isize, stopIndex: isize, exact: bool, ambigAlts: * BitSet, configs: ATNConfigSet)
     //    fn report_attempting_full_context(&self, recognizer: Parser, dfa: * DFA, startIndex: isize, stopIndex: isize, conflictingAlts: * BitSet, configs: ATNConfigSet);
     //    fn report_context_sensitivity(&self, recognizer: Parser, dfa: * DFA, startIndex: isize, stopIndex: isize, prediction: isize, configs: ATNConfigSet);
 }
 
 #[derive(Debug)]
-pub struct DefaultErrorListener {}
+pub struct ConsoleErrorListener {}
 
-impl ErrorListener for DefaultErrorListener {
-    fn syntax_error(&mut self, recognizer: &BaseLexer, offending_symbol: Option<&OwningToken>, line: isize, column: isize, msg: &str, e: &ANTLRError) {
+impl ErrorListener for ConsoleErrorListener {
+    fn syntax_error(&mut self, recognizer: &dyn Any, offending_symbol: Option<&dyn Token>,
+                    line: isize, column: isize, msg: &str, e: Option<&ANTLRError>) {
         eprintln!("line {}:{} {}", line, column, msg);
     }
 }

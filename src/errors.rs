@@ -1,5 +1,5 @@
 use std::error::Error;
-use crate::token::Token;
+use crate::token::{Token, OwningToken};
 use crate::int_stream::IntStream;
 
 use crate::interval_set::IntervalSet;
@@ -11,8 +11,11 @@ use std::fmt::{Debug, Display};
 use std::fmt::Formatter;
 use std::fmt;
 use std::mem::discriminant;
+use crate::parser::{Parser, BaseParser};
+use crate::atn::ATN;
+use crate::atn_simulator::IATNSimulator;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ANTLRError {
     LexerNoAltError { start_index: isize },
     NoAltError(NoViableAltError),
@@ -29,25 +32,44 @@ impl Display for ANTLRError {
 
 impl Error for ANTLRError {}
 
-pub trait RecognitionError {
-    fn get_offending_token(&self) -> &Token;
-    fn get_message(&self) -> String;
-    fn get_input_stream(&self) -> &IntStream;
+impl RecognitionError for ANTLRError {
+    fn get_offending_token(&self) -> Option<&dyn Token> {
+        Some(match self {
+            ANTLRError::NoAltError(e) => &e.base.offending_token,
+            ANTLRError::InputMismatchError(e) => &e.base.offending_token,
+            ANTLRError::PredicateError(e) => &e.base.offending_token,
+            _ => return None
+        })
+    }
 }
 
-#[derive(Debug)]
+impl ANTLRError {
+    fn get_expected_tokens(&self, atn: &ATN) -> IntervalSet {
+//        atn.get_expected_tokens(se)
+        unimplemented!()
+    }
+}
+
+pub trait RecognitionError: Error {
+    fn get_offending_token(&self) -> Option<&dyn Token>;
+    fn get_message(&self) -> String { self.to_string() }
+//    fn get_input_stream(&self) -> &IntStream;
+}
+
+#[derive(Debug, Clone)]
 pub struct BaseRecognitionError {
-    message: String,
+    pub message: String,
     //    recognizer: Box<Recognizer>,
-    offending_token: Option<isize>,
-    offending_state: isize,
+    pub offending_token: OwningToken,
+    pub offending_state: isize,
     //    ctx: Box<RuleContext>,
     //    input: Box<IntStream>,
 }
 
 impl BaseRecognitionError {
-    fn get_expected_tokens(&self) -> IntervalSet {
-        unimplemented!()
+    pub fn get_expected_tokens(&self, recognizer: &dyn Parser) -> IntervalSet {
+        recognizer.get_interpreter().atn()
+            .get_expected_tokens(self.offending_state, recognizer.get_parser_rule_context())
     }
 
     fn new() -> BaseRecognitionError {
@@ -55,22 +77,22 @@ impl BaseRecognitionError {
     }
 }
 
-impl RecognitionError for BaseRecognitionError {
-    fn get_offending_token(&self) -> &Token {
-        unimplemented!()
-    }
+//impl RecognitionError for BaseRecognitionError {
+//    fn get_offending_token(&self) -> &Token {
+//        unimplemented!()
+//    }
+//
+//    fn get_message(&self) -> String {
+//        unimplemented!()
+//    }
+//
+//    fn get_input_stream(&self) -> &IntStream {
+//        unimplemented!()
+//    }
+//}
 
-    fn get_message(&self) -> String {
-        unimplemented!()
-    }
 
-    fn get_input_stream(&self) -> &IntStream {
-        unimplemented!()
-    }
-}
-
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LexerNoViableAltError {
     base: BaseRecognitionError,
     start_index: isize,
@@ -86,11 +108,11 @@ pub struct LexerNoViableAltError {
 //
 //}
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NoViableAltError {
-    base: BaseRecognitionError,
-//    start_token: Box<Token>,
-//    offending_token: Box<Token>,
+    pub base: BaseRecognitionError,
+    pub start_token: OwningToken,
+    pub offending_token: OwningToken,
     //    ctx: ParserRuleContext,
     //    dead_end_configs: BaseATNConfigSet,
 }
@@ -103,18 +125,18 @@ impl NoViableAltError {
 
 //fn new_no_viable_alt_exception(recognizer: Parser, input: TokenStream, startToken: &Token, offendingToken: &Token, deadEndConfigs: ATNConfigSet, ctx: ParserRuleContext) -> NoViableAltError { unimplemented!() }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InputMisMatchError {
-    base: BaseRecognitionError,
+    pub(crate) base: BaseRecognitionError,
 }
 
 impl InputMisMatchError {
-    pub fn new() -> InputMisMatchError {
+    pub fn new(recognizer: &mut dyn Parser) -> InputMisMatchError {
         InputMisMatchError {
             base: BaseRecognitionError {
                 message: "".to_string(),
-                offending_token: None,
-                offending_state: 0,
+                offending_token: recognizer.get_current_token().to_owned(),
+                offending_state: recognizer.get_state(),
             }
         }
     }
@@ -122,9 +144,9 @@ impl InputMisMatchError {
 
 //fn new_input_mis_match_exception(recognizer: Parser) -> InputMisMatchError { unimplemented!() }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FailedPredicateError {
-    base: BaseRecognitionError,
+    pub(crate) base: BaseRecognitionError,
     rule_index: isize,
     predicate_index: isize,
     predicate: String,

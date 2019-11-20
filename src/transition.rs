@@ -5,6 +5,8 @@ use std::mem;
 use crate::lexer::{LEXER_MAX_CHAR_VALUE, LEXER_MIN_CHAR_VALUE};
 use std::fmt::Debug;
 use crate::semantic_context::SemanticContext;
+use std::borrow::Cow;
+use crate::dfa::ScopeExt;
 
 const TransitionNames: [&'static str; 11] = [
     "INVALID",
@@ -51,7 +53,7 @@ pub trait Transition: Sync + Send + Debug {
     fn is_epsilon(&self) -> bool {
         false
     }
-    fn get_label(&self) -> Option<IntervalSet> {
+    fn get_label(&self) -> Option<Cow<IntervalSet>> {
         None
     }
     fn get_serialization_type(&self) -> TransitionType;
@@ -124,6 +126,12 @@ impl Transition for AtomTransition {
 
     fn set_target(&mut self, s: ATNStateRef) {
         self.target = s
+    }
+
+    fn get_label(&self) -> Option<Cow<IntervalSet>> {
+        let mut r = IntervalSet::new();
+        r.add_one(self.label);
+        Some(Cow::Owned(r))
     }
 
     fn get_serialization_type(&self) -> TransitionType {
@@ -206,6 +214,12 @@ impl Transition for RangeTransition {
         self.target = s
     }
 
+    fn get_label(&self) -> Option<Cow<IntervalSet>> {
+        let mut r = IntervalSet::new();
+        r.add_range(self.start, self.stop);
+        Some(Cow::Owned(r))
+    }
+
     fn get_serialization_type(&self) -> TransitionType {
         TransitionType::TRANSITION_RANGE
     }
@@ -213,6 +227,7 @@ impl Transition for RangeTransition {
     fn matches(&self, _symbol: isize, _minVocabSymbol: isize, _maxVocabSymbol: isize) -> bool {
         _symbol >= self.start && _symbol <= self.stop
     }
+
 }
 
 #[derive(Debug)]
@@ -259,6 +274,10 @@ impl Transition for SetTransition {
         self.target = s
     }
 
+    fn get_label(&self) -> Option<Cow<IntervalSet>> {
+        Some(Cow::Borrowed(&self.set))
+    }
+
     fn get_serialization_type(&self) -> TransitionType {
         TransitionType::TRANSITION_SET
     }
@@ -266,6 +285,7 @@ impl Transition for SetTransition {
     fn matches(&self, _symbol: isize, _minVocabSymbol: isize, _maxVocabSymbol: isize) -> bool {
         self.set.contains(_symbol)
     }
+
 }
 
 #[derive(Debug)]
@@ -280,6 +300,10 @@ impl Transition for NotSetTransition {
     }
     fn set_target(&mut self, s: ATNStateRef) {
         self.target = s
+    }
+
+    fn get_label(&self) -> Option<Cow<IntervalSet>> {
+        Some(Cow::Borrowed(&self.set))
     }
 
     fn get_serialization_type(&self) -> TransitionType {
@@ -357,6 +381,9 @@ impl Transition for PrecedencePredicateTransition {
     fn set_target(&mut self, s: ATNStateRef) {
         self.target = s
     }
+
+    fn is_epsilon(&self) -> bool { true }
+
 
     fn get_serialization_type(&self) -> TransitionType {
         TransitionType::TRANSITION_PRECEDENCE

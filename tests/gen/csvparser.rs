@@ -3,7 +3,6 @@
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 #![feature(try_blocks)]
-
 use antlr_rust::prediction_context::PredictionContextCache;
 use antlr_rust::parser::{Parser, BaseParser};
 use antlr_rust::token_stream::TokenStream;
@@ -19,6 +18,7 @@ use antlr_rust::error_strategy::{ErrorStrategy, DefaultErrorStrategy};
 use antlr_rust::parser_rule_context::{BaseParserRuleContext, ParserRuleContext};
 use antlr_rust::tree::TerminalNode;
 use antlr_rust::token::TOKEN_EOF;
+use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
 use super::csvlistener::*;
 
 use std::sync::Arc;
@@ -40,7 +40,6 @@ pub const ruleNames: [&'static str; 4] = [
     "csvFile", "hdr", "row", "field"
 ];
 
-//lazy_static!{
 pub const _LITERAL_NAMES: [Option<&'static str>; 4] = [
     None, Some("','"), Some("'\r'"), Some("'\n'")
 ];
@@ -49,12 +48,11 @@ pub const _SYMBOLIC_NAMES: [Option<&'static str>; 7] = [
 ];
 lazy_static! {
 	    static ref _shared_context_cache: Arc<PredictionContextCache> = Arc::new(PredictionContextCache::new());
-	//	static ref VOCABULARY :Vocabulary = VocabularyImpl::new(_LITERAL_NAMES, _SYMBOLIC_NAMES);
+		static ref VOCABULARY: Box<dyn Vocabulary> = Box::new(VocabularyImpl::new(_LITERAL_NAMES.iter(), _SYMBOLIC_NAMES.iter(), None));
 	}
-//}
 
 pub struct CSVParser {
-    base: BaseParser<dyn CSVListener, CSVListenerCaller>,
+    base: BaseParser<CSVParserExt, dyn CSVListener, CSVListenerCaller>,
     interpreter: Arc<ParserATNSimulator>,
     _shared_context_cache: Box<PredictionContextCache>,
     err_handler: Box<dyn ErrorStrategy>,
@@ -62,17 +60,11 @@ pub struct CSVParser {
 }
 
 impl CSVParser {
-    pub fn get_grammar_file_name() -> &'static str { "CSV.g4" }
-
-    pub fn get_rule_names() -> &'static [&'static str] { &ruleNames }
-
     pub fn get_serialized_atn() -> &'static str { unimplemented!() }
 
     pub fn set_error_strategy(&mut self, strategy: Box<dyn ErrorStrategy>) {
         self.err_handler = strategy
     }
-
-    //pub fn get_vocabulary() -> &Vocabulary {&VOCABULARY }
 
 
     pub fn new(input: Box<dyn TokenStream>) -> Self {
@@ -83,8 +75,9 @@ impl CSVParser {
         ));
         Self {
             base: BaseParser::new_base_parser(
-				input,
-				Arc::clone(&interpreter),
+                input,
+                Arc::clone(&interpreter),
+                CSVParserExt
 			),
             interpreter,
             _shared_context_cache: Box::new(PredictionContextCache::new()),
@@ -94,7 +87,7 @@ impl CSVParser {
 }
 
 impl Deref for CSVParser {
-    type Target = BaseParser<dyn CSVListener, CSVListenerCaller>;
+    type Target = BaseParser<CSVParserExt, dyn CSVListener, CSVListenerCaller>;
 
     fn deref(&self) -> &Self::Target {
         &self.base
@@ -105,6 +98,16 @@ impl DerefMut for CSVParser {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.base
     }
+}
+
+pub struct CSVParserExt;
+
+impl Recognizer for CSVParserExt {
+    fn get_grammar_file_name(&self) -> &str { "CSV.g4" }
+
+    fn get_rule_names(&self) -> &[&str] { &ruleNames }
+
+    fn get_vocabulary(&self) -> &dyn Vocabulary { &**VOCABULARY }
 }
 
 pub struct CsvFileContext {
@@ -182,12 +185,12 @@ impl CSVParser {
                     self.base.set_state(12);
                     self.err_handler.sync(&mut self.base)?;
                     _la = self.base.input.la(1);
-                    if !((((_la) & !0x3f) == 0 && ((1usize << _la) & ((1usize << T__0) | (1usize << T__1) | (1usize << T__2) | (1usize << TEXT) | (1usize << STRING))) != 0)) { break; }
+                    if !((((_la) & !0x3f) == 0 && ((1usize << _la) & ((1usize << T__0) | (1usize << T__1) | (1usize << T__2) | (1usize << TEXT) | (1usize << STRING))) != 0)) { break }
                 }
             }
         };
         match result {
-            Ok(_) => {}
+            Ok(_) => {},
             Err(ref re) => {
                 //_localctx.exception = re;
                 self.err_handler.report_error(&mut self.base, re);
@@ -256,7 +259,7 @@ impl CSVParser {
             }
         };
         match result {
-            Ok(_) => {}
+            Ok(_) => {},
             Err(ref re) => {
                 //_localctx.exception = re;
                 self.err_handler.report_error(&mut self.base, re);
@@ -359,7 +362,7 @@ impl CSVParser {
             }
         };
         match result {
-            Ok(_) => {}
+            Ok(_) => {},
             Err(ref re) => {
                 //_localctx.exception = re;
                 self.err_handler.report_error(&mut self.base, re);
@@ -456,7 +459,7 @@ impl CSVParser {
             }
         };
         match result {
-            Ok(_) => {}
+            Ok(_) => {},
             Err(ref re) => {
                 //_localctx.exception = re;
                 self.err_handler.report_error(&mut self.base, re);

@@ -13,6 +13,7 @@ use std::ops::Deref;
 use std::pin::Pin;
 use std::task::RawWaker;
 
+///Helper trait for scope management and temporary values not living long enough
 pub(crate) trait ScopeExt: Sized {
     fn convert_with<T, F: FnOnce(Self) -> T>(self, f: F) -> T {
         f(self)
@@ -21,12 +22,18 @@ pub(crate) trait ScopeExt: Sized {
         f(self)
     }
 
-    fn modify_with<F: FnOnce(&mut Self)>(&mut self, f: F) {
-        f(self)
+    //apply
+    fn modify_with<F: FnOnce(&mut Self)>(mut self, f: F) -> Self {
+        f(&mut self);
+        self
     }
-    fn apply<F: FnOnce(&mut Self) -> &mut Self>(&mut self, f: F) -> &mut Self {
-        f(self)
+    //apply_inplace
+    fn apply<F: FnOnce(&mut Self)>(&mut self, f: F) -> &mut Self {
+        f(self);
+        self
     }
+
+    fn drop(self) {}
 }
 
 impl<Any: Sized> ScopeExt for Any {}
@@ -113,12 +120,12 @@ impl DFA {
             self.states
                 .write().unwrap()[*x]
                 .edges
-                .modify_with(|edges| {
+                .apply(|edges| {
                     if edges.len() <= precedence {
                         edges.resize(precedence + 1, 0);
                     }
                     edges[precedence] = _start_state;
-                })
+                });
         }
     }
 

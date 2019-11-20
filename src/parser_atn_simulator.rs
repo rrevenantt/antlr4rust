@@ -530,7 +530,7 @@ impl ParserATNSimulator {
     }
 
     fn get_alt_that_finished_decision_entry_rule(&self, configs: &ATNConfigSet) -> isize {
-        let mut alts = IntervalSet::new_interval_set();
+        let mut alts = IntervalSet::new();
         for c in configs.get_items() {
             let has_empty_path = c.get_context().map(|x| x.has_empty_path()) == Some(true);
             let is_stop = self.atn().states[c.get_state()].get_state_type() == &RuleStopState;

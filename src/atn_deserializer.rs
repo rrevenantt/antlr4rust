@@ -278,7 +278,7 @@ impl ATNDeserializer {
         for i in 0..nsets {
             let intervals = data.next().unwrap();
 
-            let mut set = IntervalSet::new_interval_set();
+            let mut set = IntervalSet::new();
 
             if data.next().unwrap() != 0 {
                 set.add_one(-1)
@@ -544,15 +544,15 @@ impl ATNDeserializer {
 
     fn state_factory(
         &self,
-        typeIndex: isize,
-        ruleIndex: isize,
+        type_index: isize,
+        rule_index: isize,
         state_number: usize,
     ) -> Box<ATNState> {
         let mut state = BaseATNState::new_base_atnstate();
         state.state_number = state_number;
-        state.rule_index = ruleIndex as usize;
-        state.state_type_id = typeIndex;
-        state.state_type = match typeIndex {
+        state.rule_index = rule_index as usize;
+        state.state_type_id = type_index;
+        state.state_type = match type_index {
             ATNSTATE_INVALID_TYPE => ATNStateType::InvalidState,
             ATNSTATE_BASIC => ATNStateType::BasicState,
             ATNSTATE_RULE_START => ATNStateType::RuleStartState {

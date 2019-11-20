@@ -11,10 +11,10 @@ WIP, not quite useful yet
   - [X] Full testing with ANTLR4 test suit (couple of corner cases remaining though)
 - [ ] Parser
   - [X] general implementation
-  - [ ] LL*
+  - [X] LL*,adapdive predict
   - [ ] recovery
   - [ ] syntax tree
-  - [ ] Full testing with ANTLR4 test suit
+  - [ ] Full testing with ANTLR4 test suit(currently about 50% parser logic tests are passing )
 - [ ] Documentation
 - [ ] API stabilization 
 

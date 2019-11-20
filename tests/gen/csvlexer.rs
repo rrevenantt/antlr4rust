@@ -2,7 +2,6 @@
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
-
 use antlr_rust::atn::ATN;
 use antlr_rust::char_stream::CharStream;
 use antlr_rust::lexer::{BaseLexer, Lexer};
@@ -16,6 +15,8 @@ use antlr_rust::token_source::TokenSource;
 use antlr_rust::common_token_factory::TokenFactory;
 use antlr_rust::token::*;
 use antlr_rust::rule_context::BaseRuleContext;
+use antlr_rust::parser_rule_context::ParserRuleContext;
+use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
 
 use std::sync::Arc;
 use std::cell::RefCell;
@@ -29,49 +30,49 @@ pub const WS: isize = 4;
 pub const TEXT: isize = 5;
 pub const STRING: isize = 6;
 pub const channelNames: [&'static str; 0 + 2] = [
-    "DEFAULT_TOKEN_CHANNEL", "HIDDEN"
+	"DEFAULT_TOKEN_CHANNEL", "HIDDEN"
 ];
 
 pub const modeNames: [&'static str; 1] = [
-    "DEFAULT_MODE"
+	"DEFAULT_MODE"
 ];
 
 pub const ruleNames: [&'static str; 6] = [
-    "T__0", "T__1", "T__2", "WS", "TEXT", "STRING"
+	"T__0", "T__1", "T__2", "WS", "TEXT", "STRING"
 ];
 
 pub const _LITERAL_NAMES: [Option<&'static str>; 4] = [
-    None, Some("','"), Some("'\r'"), Some("'\n'")
+	None, Some("','"), Some("'\r'"), Some("'\n'")
 ];
 pub const _SYMBOLIC_NAMES: [Option<&'static str>; 7] = [
-    None, None, None, None, Some("WS"), Some("TEXT"), Some("STRING")
+	None, None, None, None, Some("WS"), Some("TEXT"), Some("STRING")
 ];
 lazy_static! {
 	    static ref _shared_context_cache: Arc<PredictionContextCache> = Arc::new(PredictionContextCache::new());
-	//	static ref VOCABULARY :Vocabulary = VocabularyImpl::new(_LITERAL_NAMES, _SYMBOLIC_NAMES);
+		static ref VOCABULARY: Box<dyn Vocabulary> = Box::new(VocabularyImpl::new(_LITERAL_NAMES.iter(), _SYMBOLIC_NAMES.iter(), None));
 	}
 
-impl<'a> Deref for CSVLexer<'a> {
-    type Target = BaseLexer<'a>;
+impl<'a> Deref for CSVLexer {
+	type Target = BaseLexer<'static>;
 
-    fn deref(&self) -> &Self::Target {
-        &self.base
-    }
+	fn deref(&self) -> &Self::Target {
+		&self.base
+	}
 }
 
-impl DerefMut for CSVLexer<'_> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.base
-    }
+impl DerefMut for CSVLexer {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.base
+	}
 }
 
 
-pub struct CSVLexer<'a> {
-    base: BaseLexer<'a>,
+pub struct CSVLexer {
+	base: BaseLexer<'static>,
 //	static { RuntimeMetaData.checkVersion("4.7.1", RuntimeMetaData.VERSION); }
 }
 
-impl CSVLexer<'_> {
+impl CSVLexer {
     fn get_rule_names(&self) -> &'static [&'static str] {
         &ruleNames
     }
@@ -95,19 +96,19 @@ impl CSVLexer<'_> {
         "CSVLexer.g4"
     }
 
-    pub fn new(input: Box<dyn CharStream>) -> Self {
-        Self {
-            base: BaseLexer::new_base_lexer(
+	pub fn new(input: Box<dyn CharStream>) -> Self {
+		Self {
+			base: BaseLexer::new_base_lexer(
 				input,
 				LexerATNSimulator::new_lexer_atnsimulator(
 					_ATN.clone(),
 					_decision_to_DFA.clone(),
 					_shared_context_cache.clone(),
-					Box::new(CSVLexerActions {}),
-				),
+					Box::new(CSVLexerActions {})
+				)
 			)
-        }
-    }
+		}
+	}
 }
 
 struct CSVLexerActions {}
@@ -118,8 +119,7 @@ impl Recognizer for CSVLexerActions {}
 
 impl CSVLexerActions {}
 
-
-impl TokenSource for CSVLexer<'_> {
+impl TokenSource for CSVLexer {
     fn next_token(&mut self) -> Box<dyn Token> {
         self.base.next_token()
     }
@@ -162,7 +162,7 @@ lazy_static! {
 
 
 const _serializedATN: &'static str =
-    "\x03\u{608b}\u{a72a}\u{8133}\u{b9ed}\u{417c}\u{3be7}\u{7786}\u{5964}\x02\
+	"\x03\u{608b}\u{a72a}\u{8133}\u{b9ed}\u{417c}\u{3be7}\u{7786}\u{5964}\x02\
 		\x08\x2c\x08\x01\x04\x02\x09\x02\x04\x03\x09\x03\x04\x04\x09\x04\x04\x05\
 		\x09\x05\x04\x06\x09\x06\x04\x07\x09\x07\x03\x02\x03\x02\x03\x03\x03\x03\
 		\x03\x04\x03\x04\x03\x05\x06\x05\x17\x0a\x05\x0d\x05\x0e\x05\x18\x03\x05\

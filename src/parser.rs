@@ -7,7 +7,7 @@ use crate::interval_set::IntervalSet;
 use crate::errors::{RecognitionError, ANTLRError};
 use crate::token_source::TokenSource;
 use crate::parser_atn_simulator::ParserATNSimulator;
-use crate::error_listener::ErrorListener;
+use crate::error_listener::{ErrorListener, ConsoleErrorListener};
 use crate::error_strategy::ErrorStrategy;
 use crate::rule_context::RuleContext;
 use std::mem;
@@ -15,14 +15,18 @@ use crate::parser_rule_context::ParserRuleContext;
 use std::any::Any;
 use crate::tree::{ParseTreeListener, ListenerDispatch};
 use std::rc::Weak;
-use std::ops::DerefMut;
+use std::ops::{DerefMut, Deref};
 use std::marker::PhantomData;
 use std::sync::Arc;
+use crate::atn_simulator::IATNSimulator;
+use crate::vocabulary::{Vocabulary, VocabularyImpl};
+use crate::atn::ATN;
+use std::cell::RefCell;
 
-pub trait Parser {
+pub trait Parser: Recognizer {
     fn get_interpreter(&self) -> &ParserATNSimulator;
+//    fn get_vocabulary(&self) -> &dyn Vocabulary;
 
-    //    fn get_token_stream<T>(&self) -> &dyn TokenStream<T>;
     fn get_token_factory(&self) -> &dyn TokenFactory;
     fn get_parser_rule_context(&self) -> &ParserRuleContext;
 //    fn set_parser_rule_context(&self, v: ParserRuleContext);
@@ -32,9 +36,9 @@ pub trait Parser {
     //    fn get_error_handler(&self) -> ErrorStrategy;
 //    fn set_error_handler(&self, e: ErrorStrategy);
     fn get_input_stream(&mut self) -> &mut dyn TokenStream;
-    fn get_current_token(&self) -> &dyn Token;
+    fn get_current_token(&mut self) -> &dyn Token;
     fn get_expected_tokens(&self) -> IntervalSet;
-    fn notify_error_listeners(&self, msg: String, offendingToken: &dyn Token, err: ANTLRError);
+    fn notify_error_listeners(&mut self, msg: String, offending_token: Option<isize>, err: Option<&ANTLRError>);
     fn is_expected_token(&self, symbol: isize) -> bool;
     fn get_precedence(&self) -> isize;
 
@@ -43,6 +47,7 @@ pub trait Parser {
 //    fn get_rule_invocation_stack(&self, c: ParserRuleContext) -> Vec<String>;
 }
 
+/// helper trait to be able to extend listener behavior
 pub trait ListenerCaller<T: ParseTreeListener + ?Sized = dyn ParseTreeListener> {
     fn enter_rule(ctx: &dyn ParserRuleContext, listener: &mut T) {}
     fn exit_rule(ctx: &dyn ParserRuleContext, listener: &mut T) {}
@@ -52,8 +57,14 @@ pub struct ListenerCallerDefault;
 
 impl ListenerCaller for ListenerCallerDefault {}
 
-pub struct BaseParser<T: ParseTreeListener + ?Sized = dyn ParseTreeListener, Ext: ListenerCaller<T> = ListenerCallerDefault> {
-//    base: BaseRecognizer,
+pub struct RecogDefault;
+
+impl Recognizer for RecogDefault {}
+
+pub struct BaseParser<
+    Ext: Recognizer + 'static,
+    T: ParseTreeListener + ?Sized = dyn ParseTreeListener,
+    L: ListenerCaller<T> + 'static = ListenerCallerDefault> {
 
     interp: Arc<ParserATNSimulator>,
     pub ctx: Option<Box<dyn ParserRuleContext>>,
@@ -67,10 +78,32 @@ pub struct BaseParser<T: ParseTreeListener + ?Sized = dyn ParseTreeListener, Ext
     //    tracer: * TraceListener,
     parse_listeners: Vec<Box<T>>,
     _syntax_errors: isize,
-    ext: PhantomData<Ext>
+    error_listeners: RefCell<Vec<Box<dyn ErrorListener>>>,
+//    vocabulary:Box<dyn Vocabulary>,
+
+    ext: Ext,
+    phantom: PhantomData<L>
 }
 
-impl<T: ParseTreeListener + ?Sized, Ext: ListenerCaller<T>> Parser for BaseParser<T, Ext> {
+impl<T: ParseTreeListener + ?Sized, L: ListenerCaller<T> + 'static, Ext: Recognizer + 'static> Recognizer for BaseParser<Ext, T, L> {
+    fn get_rule_names(&self) -> &[&str] {
+        self.ext.get_rule_names()
+    }
+
+    fn get_vocabulary(&self) -> &Vocabulary {
+        self.ext.get_vocabulary()
+    }
+
+    fn get_grammar_file_name(&self) -> &str {
+        self.ext.get_grammar_file_name()
+    }
+
+    fn get_atn(&self) -> &ATN {
+        self.interp.atn()
+    }
+}
+
+impl<T: ParseTreeListener + ?Sized, L: ListenerCaller<T> + 'static, Ext: Recognizer + 'static> Parser for BaseParser<Ext, T, L> {
     fn get_interpreter(&self) -> &ParserATNSimulator {
         self.interp.as_ref()
     }
@@ -98,8 +131,8 @@ impl<T: ParseTreeListener + ?Sized, Ext: ListenerCaller<T>> Parser for BaseParse
         self.input.as_mut()
     }
 
-    fn get_current_token(&self) -> &Token {
-        unimplemented!()
+    fn get_current_token(&mut self) -> &Token {
+        self.input.lt(1)
     }
 
 //    fn get_error_handler(&self) -> _ {
@@ -111,11 +144,21 @@ impl<T: ParseTreeListener + ?Sized, Ext: ListenerCaller<T>> Parser for BaseParse
 //    }
 
     fn get_expected_tokens(&self) -> IntervalSet {
-        unimplemented!()
+        self.interp.atn().get_expected_tokens(self.state, self.ctx.as_deref().unwrap())
     }
 
-    fn notify_error_listeners(&self, msg: String, offendingToken: &Token, err: ANTLRError) {
-        unimplemented!()
+    fn notify_error_listeners(&mut self, msg: String, offending_token: Option<isize>, err: Option<&ANTLRError>) {
+        self._syntax_errors += 1;
+        let offending_token = match offending_token {
+            None => None,
+            Some(x) => Some(self.input.get(x)),
+        };
+        let line = offending_token.map(|x| x.get_line()).unwrap_or(-1);
+        let column = offending_token.map(|x| x.get_column()).unwrap_or(-1);
+
+        for listener in self.error_listeners.borrow_mut().iter_mut() {
+            listener.syntax_error(self, offending_token, line, column, &msg, err)
+        }
     }
 
     fn is_expected_token(&self, symbol: isize) -> bool {
@@ -139,8 +182,12 @@ impl<T: ParseTreeListener + ?Sized, Ext: ListenerCaller<T>> Parser for BaseParse
 //    }
 }
 
-impl<T: ParseTreeListener + ?Sized, Ext: ListenerCaller<T>> BaseParser<T, Ext> {
-    pub fn new_base_parser(input: Box<dyn TokenStream>, interpreter: Arc<ParserATNSimulator>) -> BaseParser<T, Ext> {
+impl<T: ParseTreeListener + ?Sized, L: ListenerCaller<T> + 'static, Ext: Recognizer + 'static> BaseParser<Ext, T, L> {
+    pub fn new_base_parser(
+        input: Box<dyn TokenStream>,
+        interpreter: Arc<ParserATNSimulator>,
+        ext: Ext,
+    ) -> BaseParser<Ext, T, L> {
         BaseParser {
 //            base: BaseRecognizer::new_base_recognizer(),
             interp: interpreter,
@@ -152,7 +199,11 @@ impl<T: ParseTreeListener + ?Sized, Ext: ListenerCaller<T>> BaseParser<T, Ext> {
             precedence_stack: vec![0],
             parse_listeners: vec![],
             _syntax_errors: 0,
-            ext: Default::default()
+            error_listeners: RefCell::new(vec![Box::new(ConsoleErrorListener {})]),
+//            vocabulary: VocabularyImpl::from_token_names(&[]),
+//            vocabulary:Box::new(vocabulary),
+            ext,
+            phantom: Default::default()
         }
     }
 
@@ -176,10 +227,9 @@ pub fn match_token(&mut self, ttype: isize, err_handler: &mut dyn ErrorStrategy)
         }
         return Ok(self.input.lt(1));
     }
-    //
-//
-//    fn match_wildcard(&self) -> Token { unimplemented!() }
-//
+
+    fn match_wildcard(&self) -> &dyn Token { unimplemented!() }
+
     pub fn add_parse_listener(&mut self, listener: Box<T>) -> usize {
         self.parse_listeners.push(listener);
         self.parse_listeners.len() - 1
@@ -192,13 +242,13 @@ pub fn match_token(&mut self, ttype: isize, err_handler: &mut dyn ErrorStrategy)
 
     fn trigger_enter_rule_event(&mut self) {
         for listener in &mut self.parse_listeners {
-            Ext::enter_rule(self.ctx.as_deref().unwrap(), listener);
+            L::enter_rule(self.ctx.as_deref().unwrap(), listener);
         }
     }
 
     fn trigger_exit_rule_event(&mut self) {
         for listener in self.parse_listeners.iter_mut().rev() {
-            Ext::exit_rule(self.ctx.as_deref().unwrap(), listener);
+            L::exit_rule(self.ctx.as_deref().unwrap(), listener);
         }
     }
 //
@@ -237,7 +287,9 @@ fn add_context_to_parse_tree(&self) { unimplemented!() }
     }
     //
 //
-    pub fn enter_outer_alt(&mut self, new_ctx: Option<Box<dyn ParserRuleContext>>, altNum: isize) {}
+    pub fn enter_outer_alt(&mut self, new_ctx: Option<Box<dyn ParserRuleContext>>, altNum: isize) {
+        new_ctx.map(|it| self.ctx = Some(it));
+    }
 //
 //
 //    fn enter_recursion_rule(&self, localctx: ParserRuleContext, state: isize, ruleIndex: isize, precedence: isize) { unimplemented!() }

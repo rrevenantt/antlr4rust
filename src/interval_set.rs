@@ -1,4 +1,9 @@
 use std::cmp::{max, min, Ordering};
+use crate::prediction_mode::resolves_to_just_one_viable_alt;
+use crate::vocabulary::Vocabulary;
+use crate::token::{TOKEN_EOF, TOKEN_EPSILON};
+use std::borrow::Cow;
+use std::borrow::Cow::Borrowed;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Interval {
@@ -84,11 +89,19 @@ impl Interval {
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct IntervalSet {
     intervals: Vec<Interval>,
-    read_only: bool,
+    pub read_only: bool,
 }
 
+//impl ToOwned for &IntervalSet{
+//    type Owned = IntervalSet;
+//
+//    fn to_owned(&self) -> Self::Owned {
+//        unimplemented!()
+//    }
+//}
+
 impl IntervalSet {
-    pub fn new_interval_set() -> IntervalSet {
+    pub fn new() -> IntervalSet {
         IntervalSet {
             intervals: Vec::new(),
             read_only: false,
@@ -142,7 +155,7 @@ impl IntervalSet {
             }
             if added.startsBeforeDisjoint(r) {
                 // insert before r
-                self.intervals.insert(i - 1, added);
+                self.intervals.insert(i, added);
                 return;
             }
             i += 1;
@@ -151,12 +164,65 @@ impl IntervalSet {
         self.intervals.push(added);
     }
 
-    fn add_set(&self, _other: &IntervalSet) -> IntervalSet {
-        unimplemented!()
+    pub(crate) fn add_set(&mut self, _other: &IntervalSet) {
+        for i in &_other.intervals {
+            self.add_interval(*i)
+        }
     }
 
-    fn complement(&self, _start: isize, _stop: isize) -> IntervalSet {
-        unimplemented!()
+    fn substract(&mut self, right: &IntervalSet) {
+        let mut result = self;
+        let mut result_i = 0usize;
+        let mut right_i = 0usize;
+
+        while result_i < result.intervals.len() && right_i < right.intervals.len() {
+            let result_interval = result.intervals[result_i];
+            let right_interval = right.intervals[right_i];
+
+            if right_interval.b < result_interval.a {
+                right_i += 1;
+                continue
+            }
+
+            if right_interval.a > result_interval.b {
+                result_i += 1;
+                continue
+            }
+
+            let before_curr = if right_interval.a > result_interval.a {
+                Some(Interval::new_interval(result_interval.a, right_interval.a - 1))
+            } else { None };
+            let after_curr = if right_interval.b < result_interval.b {
+                Some(Interval::new_interval(right_interval.b + 1, result_interval.b))
+            } else { None };
+
+            match (before_curr, after_curr) {
+                (Some(before_curr), Some(after_curr)) => {
+                    result.intervals[result_i] = before_curr;
+                    result.intervals.insert(result_i + 1, after_curr);
+                    result_i += 1;
+                    right_i += 1;
+                }
+                (Some(before_curr), None) => {
+                    result.intervals[result_i] = before_curr;
+                    result_i += 1;
+                }
+                (None, Some(after_curr)) => {
+                    result.intervals[result_i] = after_curr;
+                    right_i += 1;
+                }
+                (None, None) => { result.intervals.remove(result_i); }
+            }
+        }
+
+//        return result;
+    }
+
+    pub fn complement(&self, start: isize, stop: isize) -> IntervalSet {
+        let mut vocablulary_is = IntervalSet::new();
+        vocablulary_is.add_range(start, stop);
+        vocablulary_is.substract(self);
+        return vocablulary_is;
     }
 
     pub fn contains(&self, _item: isize) -> bool {
@@ -175,8 +241,35 @@ impl IntervalSet {
         unimplemented!()
     }
 
-    fn remove_one(&self, _v: isize) {
-        unimplemented!()
+    pub fn remove_one(&mut self, el: isize) {
+        if self.read_only { panic!("can't alter readonly IntervalSet") }
+
+        for i in 0..self.intervals.len() {
+            let int = &mut self.intervals[i];
+            if el < int.a { break }
+
+            if el == int.a && el == int.b {
+                self.intervals.remove(i);
+                break;
+            }
+
+            if el == int.a {
+                int.a += 1;
+                break
+            }
+
+            if el == int.b {
+                int.b -= 1;
+                break
+            }
+
+            if el > int.a && el < int.b {
+                let old_b = int.b;
+                int.b = el - 1;
+                self.add_range(el + 1, old_b);
+            }
+        }
+
     }
 
     fn String(&self) -> String {
@@ -200,17 +293,48 @@ impl IntervalSet {
         unimplemented!()
     }
 
-    fn to_token_String(&self, _literalNames: Vec<String>, _symbolicNames: Vec<String>) -> String {
-        unimplemented!()
+    pub fn to_token_string(&self, vocabulary: &dyn Vocabulary) -> String {
+        if self.intervals.is_empty() {
+            return "{}".to_owned();
+        }
+        let mut buf = String::new();
+        if self.length() > 1 {
+            buf += "{";
+        }
+
+        let mut iter = self.intervals.iter();
+        while let Some(int) = iter.next() {
+            if int.a == int.b {
+                buf += self.element_name(vocabulary, int.a).as_ref();
+            } else {
+                for i in int.a..=int.b {
+                    if i > int.a { buf += ", "; }
+                    buf += self.element_name(vocabulary, i).as_ref();
+                }
+            }
+            if !iter.len() == 0 {
+                buf += ", ";
+            }
+        }
+
+        if self.length() > 1 {
+            buf += "}";
+        }
+
+        return buf;
     }
 
-    fn element_name(
-        &self,
-        _literalNames: Vec<String>,
-        _symbolicNames: Vec<String>,
-        _a: isize,
-    ) -> String {
-        unimplemented!()
+    fn element_name<'a>(&self,
+                        vocabulary: &'a dyn Vocabulary,
+                        a: isize,
+    ) -> Cow<'a, str> {
+        if a == TOKEN_EOF {
+            Borrowed("<EOF>")
+        } else if a == TOKEN_EPSILON {
+            Borrowed("<EPSILON>")
+        } else {
+            vocabulary.get_display_name(a)
+        }
     }
 }
 

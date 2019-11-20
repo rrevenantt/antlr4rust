@@ -66,6 +66,7 @@ pub trait ILexerATNSimulator: IATNSimulator {
 
 pub struct LexerATNSimulator {
     base: BaseATNSimulator,
+    //todo maybe move to Lexer
     recog: Rc<RefCell<Box<dyn Recognizer>>>,
 
     prediction_mode: isize,

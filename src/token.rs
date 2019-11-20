@@ -4,9 +4,9 @@ use std::fmt::{Debug, Display};
 use std::fmt::Formatter;
 use std::fmt::Result;
 
-pub const token_invalid_type: isize = 0;
+pub const TOKEN_INVALID_TYPE: isize = 0;
 pub const TOKEN_EPSILON: isize = -2;
-pub const token_min_user_token_type: isize = 1;
+pub const TOKEN_MIN_USER_TOKEN_TYPE: isize = 1;
 pub const TOKEN_EOF: isize = -1;
 pub const TOKEN_DEFAULT_CHANNEL: isize = 0;
 pub const TOKEN_HIDDEN_CHANNEL: isize = 1;

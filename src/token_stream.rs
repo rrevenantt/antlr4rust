@@ -154,7 +154,7 @@ impl<T: TokenSource> TokenStream for UnbufferedTokenStream<T> {
     }
 
     fn get_text_from_tokens(&self, a: &Token, b: &Token) -> String {
-        unimplemented!()
+        self.get_text_from_interval(a.get_token_index(), b.get_token_index())
     }
 }
 

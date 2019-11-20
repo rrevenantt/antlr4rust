@@ -1,14 +1,14 @@
 use crate::char_stream::CharStream;
 //use lexer_atn_simulator::ILexerATNSimulator;
 use crate::common_token_factory::TokenFactory;
-use crate::error_listener::{ErrorListener, DefaultErrorListener};
+use crate::error_listener::{ErrorListener, ConsoleErrorListener};
 use crate::errors::ANTLRError;
 use crate::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
 use crate::recognizer::Recognizer;
 
 use std::borrow::{Borrow, BorrowMut};
 
-use crate::token::{Token, token_invalid_type};
+use crate::token::{Token, TOKEN_INVALID_TYPE};
 use crate::token_source::TokenSource;
 use std::cell::{RefCell, RefMut};
 
@@ -36,7 +36,7 @@ pub trait Lexer: TokenSource {
     fn reset(&mut self);
 }
 
-pub struct BaseLexer<'b> {
+pub struct BaseLexer<'b: 'static> {
     interpreter: Option<LexerATNSimulator>,
     input: Option<Box<dyn CharStream>>,
 //    recog: Rc<RefCell<Box<dyn Recognizer>>>,
@@ -164,17 +164,17 @@ impl<'b> BaseLexer<'b> {
         input: Box<dyn CharStream>,
         interpreter: LexerATNSimulator,
 //        recog:Rc<RefCell<Box<dyn Recognizer>>>
-    ) -> BaseLexer<'b> {
+    ) -> BaseLexer<'static> {
         BaseLexer {
             interpreter: Some(interpreter),
             input: Some(input),
 //            recog,
             factory: super::common_token_factory::CommonTokenFactoryDEFAULT.as_ref(),
-            error_listeners: RefCell::new(vec![Box::new(DefaultErrorListener {})]),
+            error_listeners: RefCell::new(vec![Box::new(ConsoleErrorListener {})]),
             token_start_char_index: 0,
             token_start_line: 0,
             token_start_column: 0,
-            token_type: super::token::token_invalid_type,
+            token_type: super::token::TOKEN_INVALID_TYPE,
             text: "".into(),
             token: None,
             hit_eof: false,
@@ -206,7 +206,7 @@ impl<'b> TokenSource for BaseLexer<'b> {
 
             'inner: loop {
                 let ttype;
-                self.token_type = token_invalid_type;
+                self.token_type = TOKEN_INVALID_TYPE;
                 {
                     // detach from self, to allow self to be passed deeper
                     let mut interpreter = self.interpreter.take().unwrap();
@@ -233,7 +233,7 @@ impl<'b> TokenSource for BaseLexer<'b> {
                     self.hit_eof = true;
                 }
 
-                if self.token_type == token_invalid_type {
+                if self.token_type == TOKEN_INVALID_TYPE {
                     self.token_type = ttype;
                 }
 
@@ -276,10 +276,10 @@ impl<'b> TokenSource for BaseLexer<'b> {
     }
 }
 
-fn notify_listeners(_liseners: &mut Vec<Box<ErrorListener>>, e: &ANTLRError, lexer: &BaseLexer) {
+fn notify_listeners(_liseners: &mut Vec<Box<ErrorListener>>, e: &ANTLRError, lexer: &BaseLexer<'static>) {
     let text = format!("token recognition error at: '{}'", lexer.input.as_ref().unwrap().get_text(lexer.token_start_char_index, lexer.get_char_index()));
     for listener in _liseners.iter_mut() {
-        listener.syntax_error(lexer, None, lexer.token_start_line, lexer.token_start_column, &text, e)
+        listener.syntax_error(lexer, None, lexer.token_start_line, lexer.token_start_column, &text, Some(e))
     }
 }
 

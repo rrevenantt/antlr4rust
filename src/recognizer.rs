@@ -9,18 +9,21 @@ use std::sync::Arc;
 use crate::lexer::{Lexer, BaseLexer};
 use crate::char_stream::CharStream;
 use crate::parser_rule_context::ParserRuleContext;
+use crate::vocabulary::Vocabulary;
 
 pub trait Recognizer {
-    fn get_literal_names(&self) -> &[Option<&str>] {
-        &[]
-    }
-    fn get_symbolic_names(&self) -> &[Option<&str>] {
-        &[]
-    }
+    //    fn get_literal_names(&self) -> &[Option<&str>] {
+//        &[]
+//    }
+//    fn get_symbolic_names(&self) -> &[Option<&str>] {
+//        &[]
+//    }
     fn get_rule_names(&self) -> &[&str] {
         &[]
     }
+    fn get_vocabulary(&self) -> &dyn Vocabulary { unimplemented!() }
 
+    fn get_grammar_file_name(&self) -> &str { "" }
     fn sempred(&mut self, _localctx: Option<&dyn ParserRuleContext>, _ruleIndex: isize, _actionIndex: isize,
                lexer: &mut BaseLexer,
     ) -> bool {
@@ -31,18 +34,12 @@ pub trait Recognizer {
     ) -> bool {
         true
     }
+
     fn action(&mut self, _localctx: Option<&dyn ParserRuleContext>, rule_index: isize, action_index: isize
               , lexer: &mut BaseLexer,
     ) {}
+    fn get_atn(&self) -> &ATN { unimplemented!() }
 
-    fn get_atn(&self) -> Arc<ATN> {
-        unreachable!()
-    }
-    fn get_grammar_file_name(&self) -> &str {
-        ""
-    }
-
-    fn get_error_listener_dispatch(&self) -> Box<ErrorListener> { unimplemented!() }
 }
 
 //impl Recognizer for BaseRecognizer {

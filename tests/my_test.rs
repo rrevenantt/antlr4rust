@@ -110,7 +110,7 @@ if (x < x && a > 0) then duh
 
     impl ParseTreeListener for Listener {
         fn enter_every_rule(&self, ctx: &dyn ParserRuleContext) {
-            println!("rule entered {}", CSVParser::get_rule_names().get(ctx.get_rule_index()).unwrap_or(&"error"))
+            println!("rule entered {}", csvparser::ruleNames.get(ctx.get_rule_index()).unwrap_or(&"error"))
         }
     }
 
@@ -134,7 +134,7 @@ if (x < x && a > 0) then duh
 
     impl ParseTreeListener for Listener2 {
         fn enter_every_rule(&self, ctx: &dyn ParserRuleContext) {
-            println!("rule entered {}", ReferenceToATNParser::get_rule_names().get(ctx.get_rule_index()).unwrap_or(&"error"))
+            println!("rule entered {}", referencetoatnparser::ruleNames.get(ctx.get_rule_index()).unwrap_or(&"error"))
         }
     }
 
@@ -142,7 +142,7 @@ if (x < x && a > 0) then duh
 
     #[test]
     fn adaptive_predict_test() {
-        let mut _lexer = ReferenceToATNLexer::new(Box::new(InputStream::new("".into())));
+        let mut _lexer = ReferenceToATNLexer::new(Box::new(InputStream::new("a 34 b".into())));
         //        _lexer.base.add_error_listener();
 //        let mut token_source = UnbufferedTokenStream::new_unbuffered(_lexer);
         let mut token_source = CommonTokenStream::new(_lexer);

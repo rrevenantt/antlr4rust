@@ -1,0 +1,99 @@
+use std::cmp::max;
+use crate::token::TOKEN_EOF;
+//use std::borrow::Cow;
+use std::borrow::Cow::{self, Borrowed, Owned};
+use crate::dfa::ScopeExt;
+use std::borrow::Borrow;
+
+pub trait Vocabulary: Sync {
+    fn get_max_token_type(&self) -> isize;
+    fn get_literal_name(&self, token_type: isize) -> Option<&str>;
+    fn get_symbolic_name(&self, token_type: isize) -> Option<&str>;
+    fn get_display_name(&self, token_type: isize) -> Cow<str>;
+}
+
+#[derive(Debug)]
+pub struct VocabularyImpl {
+    literal_names: Vec<Option<String>>,
+    symbolic_names: Vec<Option<String>>,
+    display_names: Vec<Option<String>>,
+    max_token_type: isize,
+}
+
+fn collect_to_string<'b, T: Borrow<str> + 'b>(iter: impl IntoIterator<Item=&'b Option<T>>) -> Vec<Option<String>> {
+    iter.into_iter().map(|x| x.as_ref().map(|it| it.borrow().to_owned())).collect()
+}
+
+impl VocabularyImpl {
+    pub fn new<'b, T: Borrow<str> + 'b, Iter: IntoIterator<Item=&'b Option<T>>>(
+        literal_names: Iter,
+        symbolic_names: Iter,
+        display_names: Option<Iter>,
+    ) -> VocabularyImpl {
+//        let display_names = display_names.unwrap_or(&[]);
+        VocabularyImpl {
+            literal_names: collect_to_string(literal_names),
+            symbolic_names: collect_to_string(symbolic_names),
+            display_names: collect_to_string(display_names.into_iter().flatten()),
+            max_token_type: 0,
+        }.modify_with(|it|
+            it.max_token_type = max(it.literal_names.len(), max(it.symbolic_names.len(), it.display_names.len())) as isize - 1
+        )
+    }
+
+
+    pub fn from_token_names(token_names: &[Option<&str>]) -> VocabularyImpl {
+        let token_names = collect_to_string(token_names.iter());
+        let mut literal_names = token_names.clone();
+        let mut symbolic_names = token_names.clone();
+
+        for (i, tn) in token_names.iter().enumerate() {
+            match tn {
+                Some(tn) if !tn.is_empty() && tn.chars().next().unwrap() == '\'' => {
+                    symbolic_names[i] = None;
+                    continue;
+                }
+                Some(tn) if !tn.is_empty() && tn.chars().next().unwrap().is_uppercase() => {
+                    literal_names[i] = None;
+                    continue;
+                }
+                None => { continue; }
+                _ => {}
+            }
+            literal_names[i] = None;
+            symbolic_names[i] = None;
+        }
+
+        Self::new(
+            literal_names.iter(),
+            symbolic_names.iter(),
+            Some(token_names.iter()),
+        )
+    }
+}
+
+impl Vocabulary for VocabularyImpl {
+    fn get_max_token_type(&self) -> isize {
+        self.max_token_type
+    }
+
+    fn get_literal_name(&self, token_type: isize) -> Option<&str> {
+        self.literal_names.get(token_type as usize).and_then(|x| x.as_deref())
+    }
+
+    fn get_symbolic_name(&self, token_type: isize) -> Option<&str> {
+        if token_type == TOKEN_EOF {
+            return Some("EOF");
+        }
+        self.symbolic_names.get(token_type as usize).and_then(|x| x.as_deref())
+    }
+
+    fn get_display_name(&self, token_type: isize) -> Cow<str> {
+        self.display_names.get(token_type as usize)
+            .and_then(|x| x.as_deref())
+            .or_else(|| self.get_literal_name(token_type))
+            .or_else(|| self.get_symbolic_name(token_type))
+            .map(|x| Borrowed(x))
+            .unwrap_or(Owned(token_type.to_string()))
+    }
+}

@@ -21,7 +21,7 @@ pub const PREDICTION_CONTEXT_EMPTY_RETURN_STATE: isize = 0x7FFFFFFF;
 //}
 
 //todo make return states ATNStateRef
-#[derive(Eq, Clone)]
+#[derive(Eq, Clone, Debug)]
 pub enum PredictionContext {
     Singleton(SingletonPredictionContext),
     Array(ArrayPredictionContext),
@@ -30,14 +30,14 @@ pub enum PredictionContext {
 //    },
 }
 
-#[derive(Eq, PartialEq, Clone)]
+#[derive(Eq, PartialEq, Clone, Debug)]
 pub struct ArrayPredictionContext {
     cached_hash: i32,
     parents: Vec<Option<Box<PredictionContext>>>,
     return_states: Vec<isize>,
 }
 
-#[derive(Eq, PartialEq, Clone)]
+#[derive(Eq, PartialEq, Clone, Debug)]
 pub struct SingletonPredictionContext {
     cached_hash: i32,
     parent_ctx: Option<Box<PredictionContext>>,

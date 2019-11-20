@@ -13,7 +13,7 @@ extern crate lazy_static;
 extern crate byteorder;
 //extern crate uuid;
 
-//pub mod ll1_analyzer;
+pub mod ll1_analyzer;
 pub mod common_token_factory;
 pub mod recognizer;
 pub mod int_stream;
@@ -58,6 +58,7 @@ pub mod parser_atn_simulator;
 //pub mod tokenstream_rewriter_test;
 pub mod atn_type;
 pub mod rule_context;
+pub mod vocabulary;
 
 //
 //#[cfg(test)]
