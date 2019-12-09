@@ -1,14 +1,16 @@
-use crate::semantic_context::SemanticContext;
-use crate::atn_config::ATNConfig;
-use std::collections::{HashMap, HashSet};
-use crate::prediction_context::{MurmurHasherBuilder, PredictionContext};
-use std::hash::{Hash, Hasher};
-use std::cmp::max;
 use std::cell::Cell;
-use murmur3::murmur3_32::MurmurHasher;
+use std::cmp::max;
+use std::collections::{HashMap, HashSet};
+use std::hash::{Hash, Hasher};
+
 use bit_set::BitSet;
+use murmur3::murmur3_32::MurmurHasher;
+
+use crate::atn_config::ATNConfig;
 use crate::atn_simulator::{BaseATNSimulator, IATNSimulator};
 use crate::parser_atn_simulator::MergeCache;
+use crate::prediction_context::{MurmurHasherBuilder, PredictionContext};
+use crate::semantic_context::SemanticContext;
 
 //pub trait ATNConfigSet:Sync+Send{
 //    fn hash(&self) ->isize;
@@ -162,7 +164,7 @@ impl ATNConfigSet {
                 existing.set_precedence_filter_suppressed(true)
             }
 
-            existing.set_context(Box::new(merged));
+            existing.set_context(merged);
         } else {
             self.config_lookup.insert(hash, self.configs.len());
             self.cached_hash = 0;

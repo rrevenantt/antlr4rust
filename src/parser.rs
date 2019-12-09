@@ -122,7 +122,8 @@ impl<T: ParseTreeListener + ?Sized, L: ListenerCaller<T> + 'static, Ext: Recogni
             self.input.consume();
         }
         if self.build_parse_trees {
-            unreachable!()
+            unreachable!();
+//            let a:RangeInclusiveEquality;
         }
 //        self.input.lt(-1)
     }
@@ -225,10 +226,22 @@ pub fn match_token(&mut self, ttype: isize, err_handler: &mut dyn ErrorStrategy)
                 unimplemented!()
             }
         }
-        return Ok(self.input.lt(1));
-    }
+    return Ok(self.input.lt(1));
+}
 
-    fn match_wildcard(&self) -> &dyn Token { unimplemented!() }
+    pub fn match_wildcard(&mut self, err_handler: &mut dyn ErrorStrategy) -> Result<(), ANTLRError> {
+        let t = self.get_current_token();
+        if t.get_token_type() > 0 {
+            err_handler.report_match(self);
+            self.consume();
+        } else {
+            let t = err_handler.recover_inline(self)?;
+            if self.build_parse_trees && t.get_token_type() == -1 {
+                unimplemented!()
+            }
+        }
+        return Ok(())
+    }
 
     pub fn add_parse_listener(&mut self, listener: Box<T>) -> usize {
         self.parse_listeners.push(listener);
@@ -318,4 +331,3 @@ fn add_context_to_parse_tree(&self) { unimplemented!() }
 //
 //    fn set_trace(&self, trace: * TraceListener) { unimplemented!() }
 }
-

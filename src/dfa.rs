@@ -1,17 +1,16 @@
-use crate::dfa_state::{DFAState, DFAStateRef};
 use std::collections::{HashMap, HashSet};
-
+use std::convert::TryFrom;
+use std::ops::Deref;
+use std::pin::Pin;
 use std::sync::{Arc, RwLock};
+use std::task::RawWaker;
 
 use crate::atn::ATN;
 use crate::atn_config_set::ATNConfigSet;
 use crate::atn_state::{ATNDecisionState, ATNState, ATNStateRef, ATNStateType};
 use crate::dfa_serializer::DFASerializer;
+use crate::dfa_state::{DFAState, DFAStateRef};
 use crate::prediction_context::MurmurHasherBuilder;
-use std::convert::TryFrom;
-use std::ops::Deref;
-use std::pin::Pin;
-use std::task::RawWaker;
 
 ///Helper trait for scope management and temporary values not living long enough
 pub(crate) trait ScopeExt: Sized {
@@ -37,6 +36,7 @@ pub(crate) trait ScopeExt: Sized {
 }
 
 impl<Any: Sized> ScopeExt for Any {}
+
 
 pub struct DFA {
     pub atn_start_state: ATNStateRef,

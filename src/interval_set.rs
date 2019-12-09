@@ -13,8 +13,8 @@ pub struct Interval {
 
 impl Interval {
     /* stop is not included! */
-    fn new_interval(_start: isize, _stop: isize) -> Interval {
-        unimplemented!()
+    fn new(a: isize, b: isize) -> Interval {
+        Interval { a, b }
     }
 
     fn contains(&self, _item: isize) -> bool {
@@ -190,10 +190,10 @@ impl IntervalSet {
             }
 
             let before_curr = if right_interval.a > result_interval.a {
-                Some(Interval::new_interval(result_interval.a, right_interval.a - 1))
+                Some(Interval::new(result_interval.a, right_interval.a - 1))
             } else { None };
             let after_curr = if right_interval.b < result_interval.b {
-                Some(Interval::new_interval(right_interval.b + 1, result_interval.b))
+                Some(Interval::new(right_interval.b + 1, result_interval.b))
             } else { None };
 
             match (before_curr, after_curr) {
@@ -339,14 +339,45 @@ impl IntervalSet {
 }
 
 mod test {
-    use crate::interval_set::IntervalSet;
+    use crate::interval_set::{IntervalSet, Interval};
 
     #[test]
-    fn test() {
-        let mut set = IntervalSet {
-            intervals: Vec::new(),
-            read_only: false,
-        };
+    fn test_add_1() {
+        let mut set = IntervalSet::new();
         set.add_range(1, 2);
+        assert_eq!(&set.intervals, &[Interval { a: 1, b: 2 }]);
+        set.add_range(2, 3);
+        assert_eq!(&set.intervals, &[Interval { a: 1, b: 3 }]);
+        set.add_range(1, 5);
+        assert_eq!(&set.intervals, &[Interval { a: 1, b: 5 }]);
+    }
+
+    #[test]
+    fn test_add_2() {
+        let mut set = IntervalSet::new();
+        set.add_range(1, 3);
+        set.add_range(5, 6);
+        assert_eq!(&set.intervals, &[Interval { a: 1, b: 3 }, Interval { a: 5, b: 6 }]);
+        set.add_range(3, 4);
+        assert_eq!(&set.intervals, &[Interval { a: 1, b: 6 }]);
+    }
+
+    #[test]
+    fn test_remove() {
+        let mut set = IntervalSet::new();
+        set.add_range(1, 5);
+        set.remove_one(3);
+        assert_eq!(&set.intervals, &[Interval { a: 1, b: 2 }, Interval { a: 4, b: 5 }]);
+    }
+
+    #[test]
+    fn test_substract() {
+        let mut set1 = IntervalSet::new();
+        set1.add_range(1, 2);
+        set1.add_range(4, 5);
+        let mut set2 = IntervalSet::new();
+        set2.add_range(2, 4);
+        set1.substract(&set2);
+        assert_eq!(&set1.intervals, &[Interval { a: 1, b: 1 }, Interval { a: 5, b: 5 }]);
     }
 }

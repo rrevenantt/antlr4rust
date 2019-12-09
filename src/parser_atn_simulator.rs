@@ -7,38 +7,40 @@
 //)
 
 
-use crate::atn_simulator::{BaseATNSimulator, IATNSimulator};
-use std::sync::Arc;
-use crate::prediction_context::{PredictionContextCache, PredictionContext, MurmurHasherBuilder, PREDICTION_CONTEXT_EMPTY_RETURN_STATE};
-use crate::atn::{ATN, INVALID_ALT};
-use crate::dfa::{DFA, ScopeExt};
-use crate::rule_context::RuleContext;
-use crate::recognizer::Recognizer;
-use crate::token_stream::TokenStream;
-use crate::parser_rule_context::{ParserRuleContext, BaseParserRuleContext, EMPTY_CTX};
-use crate::errors::ANTLRError;
-use std::ops::Deref;
-use crate::dfa_state::{DFAStateRef, DFAState, PredPrediction};
-use crate::lexer_atn_simulator::ERROR_DFA_STATE_REF;
-use crate::prediction_mode::{PredictionMode, get_conflicting_alt_subsets, resolves_to_just_one_viable_alt};
-use crate::atn_state::ATNStateType::{DecisionState, RuleStopState};
-use bit_set::BitSet;
-use crate::atn_config_set::ATNConfigSet;
-use crate::token::{TOKEN_EOF, TOKEN_EPSILON};
-use crate::int_stream::EOF;
-use crate::atn_state::{ATNState, ATNStateRef};
-use std::usize;
-use crate::semantic_context::SemanticContext;
-use crate::parser::{BaseParser, Parser};
-use crate::interval_set::IntervalSet;
-use crate::atn_config::ATNConfig;
-use std::collections::{HashSet, HashMap};
-use murmur3::murmur3_32::MurmurHasher;
-use crate::transition::{TRANSITION_ACTION, Transition, TransitionType, EpsilonTransition, ActionTransition, PrecedencePredicateTransition, PredicateTransition, RuleTransition};
-use crate::atn_deserializer::cast;
-use std::hash::{Hash, Hasher};
 use std::borrow::BorrowMut;
 use std::cell::Cell;
+use std::collections::{HashMap, HashSet};
+use std::hash::{Hash, Hasher};
+use std::ops::Deref;
+use std::sync::Arc;
+use std::usize;
+
+use bit_set::BitSet;
+use murmur3::murmur3_32::MurmurHasher;
+
+use crate::atn::{ATN, INVALID_ALT};
+use crate::atn_config::ATNConfig;
+use crate::atn_config_set::ATNConfigSet;
+use crate::atn_deserializer::cast;
+use crate::atn_simulator::{BaseATNSimulator, IATNSimulator};
+use crate::atn_state::{ATNState, ATNStateRef};
+use crate::atn_state::ATNStateType::{DecisionState, RuleStopState};
+use crate::dfa::{DFA, ScopeExt};
+use crate::dfa_state::{DFAState, DFAStateRef, PredPrediction};
+use crate::errors::ANTLRError;
+use crate::int_stream::EOF;
+use crate::interval_set::IntervalSet;
+use crate::lexer_atn_simulator::ERROR_DFA_STATE_REF;
+use crate::parser::{BaseParser, Parser};
+use crate::parser_rule_context::{BaseParserRuleContext, EMPTY_CTX, ParserRuleContext};
+use crate::prediction_context::{MurmurHasherBuilder, PREDICTION_CONTEXT_EMPTY_RETURN_STATE, PredictionContext, PredictionContextCache};
+use crate::prediction_mode::{get_conflicting_alt_subsets, PredictionMode, resolves_to_just_one_viable_alt};
+use crate::recognizer::Recognizer;
+use crate::rule_context::RuleContext;
+use crate::semantic_context::SemanticContext;
+use crate::token::{TOKEN_EOF, TOKEN_EPSILON};
+use crate::token_stream::TokenStream;
+use crate::transition::{ActionTransition, EpsilonTransition, PrecedencePredicateTransition, PredicateTransition, RuleTransition, Transition, TRANSITION_ACTION, TransitionType};
 
 pub struct ParserATNSimulator {
     base: BaseATNSimulator,
@@ -573,7 +575,7 @@ impl ParserATNSimulator {
                local: &mut Local,
     ) {
         let initial_depth = 0;
-        //todo hash collisions
+        //fixme hash collisions
         // maybe add list of possible duplicates
         let mut closure_busy: HashSet<u64> = HashSet::new();
         self.closure_checking_stop_state(
@@ -715,7 +717,7 @@ impl ParserATNSimulator {
                     if !closure_busy.insert(hash) {
                         continue
                     }
-                    configs.set_dips_into_outer_context(true);
+//                    configs.set_dips_into_outer_context(true);
                     assert!(new_depth > isize::min_value());
                     new_depth -= 1;
                 } else {
@@ -831,7 +833,7 @@ impl ParserATNSimulator {
 //
 //    fn dump_dead_end_configs(&self, nvae: * NoViableAltError) { unimplemented!() }
 //
-    fn no_viable_alt(&self, local: &mut Local, configs: &ATNConfigSet, startIndex: isize)
+    fn no_viable_alt(&self, local: &mut Local, configs: &ATNConfigSet, start_index: isize)
                      -> ANTLRError {
         unimplemented!()
     }
@@ -891,7 +893,7 @@ impl ParserATNSimulator {
 
     fn report_attempting_full_context(&self,
                                       dfa: &DFA,
-                                      conflictingAlts: &BitSet,
+                                      conflicting_alts: &BitSet,
                                       configs: &ATNConfigSet,
                                       start_index: isize,
                                       stop_index: isize,

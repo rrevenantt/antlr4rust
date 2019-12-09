@@ -1,14 +1,15 @@
-use crate::semantic_context::SemanticContext;
-use crate::atn_state::{ATNState, ATNStateRef, ATNStateType};
-
-use crate::prediction_context::PredictionContext;
-use crate::atn_state::ATNBlockStart::BasicBlockStart;
 use std::hash::{Hash, Hasher};
+
 use murmur3::murmur3_32::MurmurHasher;
+
 use crate::atn_config::ATNConfigType::LexerATNConfig;
+use crate::atn_state::{ATNState, ATNStateRef, ATNStateType};
+use crate::atn_state::ATNBlockStart::BasicBlockStart;
 use crate::atn_state::ATNStateType::DecisionState;
-use crate::lexer_action_executor::LexerActionExecutor;
 use crate::dfa::ScopeExt;
+use crate::lexer_action_executor::LexerActionExecutor;
+use crate::prediction_context::PredictionContext;
+use crate::semantic_context::SemanticContext;
 
 //pub trait ATNConfig: Sync + Send {
 //    fn get_state(&self) -> ATNStateRef;
@@ -62,8 +63,10 @@ pub struct ATNConfig {
     precedence_filter_suppressed: bool,
     state: ATNStateRef,
     alt: isize,
-    //todo maybe option is unnecesary and PredictionContext::EMPTY would be enough
-    //another todo, maybe make separate shared PredictionContext owning structure since cloning them might be slow
+    //todo maybe option is unnecessary and PredictionContext::EMPTY would be enough
+    //another todo check if Arc is actually faster,
+    // but looks like cloning is enough, PredictionContext size is most of the time very small
+    // or maybe transform it into local variant with Rc because prediction for particular symbol is done in one thread
     context: Option<Box<PredictionContext>>,
     pub semantic_context: Option<Box<SemanticContext>>,
     pub reaches_into_outer_context: isize,
@@ -193,6 +196,7 @@ impl ATNConfig {
     }
 
     pub fn cloned(&self, target: &ATNState) -> ATNConfig {
+//        println!("depth {}",PredictionContext::size(self.context.as_deref()));
         let mut new = self.clone();
         new.state = target.get_state_number();
         if let ATNConfigType::LexerATNConfig { passed_through_non_greedy_decision, .. } = &mut new.config_type {
@@ -202,7 +206,6 @@ impl ATNConfig {
     }
 
     pub fn cloned_with_new_ctx(&self, target: &ATNState, ctx: Option<PredictionContext>) -> ATNConfig {
-        // todo don't full clone here since prediction context is biggest part
         let mut new = self.cloned(target);
         new.context = ctx.map(Box::new);
 //        if let ATNConfigType::LexerATNConfig { passed_through_non_greedy_decision,.. } = &mut new.config_type{
@@ -265,10 +268,12 @@ impl ATNConfig {
 
     pub fn take_context(&mut self) -> PredictionContext {
         *self.context.take().unwrap()
+//        Box::try_unwrap(self.context.take().unwrap())
+//            .unwrap_or_else(|it| it.deref().clone() )
     }
 
-    pub fn set_context(&mut self, _v: Box<PredictionContext>) {
-        self.context = Some(_v);
+    pub fn set_context(&mut self, _v: PredictionContext) {
+        self.context = Some(Box::new(_v));
     }
 
     pub fn get_reaches_into_outer_context(&self) -> isize {
@@ -287,6 +292,7 @@ impl ATNConfig {
         self.precedence_filter_suppressed = _v;
     }
 }
+
 
 fn check_non_greedy_decision(source: &ATNConfig, target: &ATNState) -> bool {
     if let LexerATNConfig {

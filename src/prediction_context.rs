@@ -1,13 +1,15 @@
 use std::collections::{HashMap, LinkedList};
 use std::hash::{BuildHasher, Hash, Hasher};
-use murmur3::murmur3_32::MurmurHasher;
-use crate::prediction_context::PredictionContext::{Singleton, Array};
-use crate::atn::ATN;
-use crate::parser_rule_context::{ParserRuleContext, EMPTY_CTX};
 use std::ops::Deref;
-use crate::transition::{TransitionType, RuleTransition};
-use crate::atn_deserializer::cast;
 use std::ptr;
+
+use murmur3::murmur3_32::MurmurHasher;
+
+use crate::atn::ATN;
+use crate::atn_deserializer::cast;
+use crate::parser_rule_context::{EMPTY_CTX, ParserRuleContext};
+use crate::prediction_context::PredictionContext::{Array, Singleton};
+use crate::transition::{RuleTransition, TransitionType};
 
 pub const PREDICTION_CONTEXT_EMPTY_RETURN_STATE: isize = 0x7FFFFFFF;
 
@@ -33,6 +35,7 @@ pub enum PredictionContext {
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct ArrayPredictionContext {
     cached_hash: i32,
+    //todo maybe Rc here too?
     parents: Vec<Option<Box<PredictionContext>>>,
     return_states: Vec<isize>,
 }
@@ -68,6 +71,17 @@ lazy_static! {
 }
 
 impl PredictionContext {
+//    pub fn size(ctx:Option<&PredictionContext>) -> usize{
+//        if ctx.is_none() {return 0;}
+//
+//        match ctx.unwrap() {
+//            PredictionContext::Singleton(x) => return 1+Self::size(x.parent_ctx.as_deref()),
+//            PredictionContext::Array(x) =>
+//                return x.parents.len() + x.parents.iter()
+//                    .map(|x|Self::size(x.as_deref())).sum::<usize>(),
+//        }
+//    }
+
     pub fn new(cached_hash: isize) -> PredictionContext {
         unimplemented!()
     }
