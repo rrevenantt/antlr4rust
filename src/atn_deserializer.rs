@@ -1,28 +1,28 @@
-use crate::atn_deserialization_options::ATNDeserializationOptions;
-use crate::atn::ATN;
-use crate::interval_set::IntervalSet;
-use crate::atn_state::ATNState;
-use crate::transition::Transition;
-use uuid::Uuid;
-use crate::atn_type::ATNType;
-
+use std::any::Any;
+use std::io::{stdout, Write};
+use std::mem;
+use std::str::Chars;
 use std::str::FromStr;
 
-use std::str::Chars;
-use byteorder::WriteBytesExt;
 use byteorder::LittleEndian;
-use crate::atn_state::BaseATNState;
-use crate::atn_state::ATNStateType;
-use crate::atn_state::ATNDecisionState;
-use crate::atn_state::ATNBlockStart;
+use byteorder::WriteBytesExt;
+use uuid::Uuid;
+
+use crate::atn::ATN;
+use crate::atn_deserialization_options::ATNDeserializationOptions;
 use crate::atn_state::*;
-use crate::transition::*;
-use std::any::Any;
-use std::mem;
-use std::io::{stdout, Write};
-use crate::lexer_action::*;
+use crate::atn_state::ATNBlockStart;
+use crate::atn_state::ATNDecisionState;
+use crate::atn_state::ATNState;
+use crate::atn_state::ATNStateType;
+use crate::atn_state::BaseATNState;
+use crate::atn_type::ATNType;
 use crate::int_stream::EOF;
+use crate::interval_set::IntervalSet;
+use crate::lexer_action::*;
 use crate::lexer_action::LexerAction::*;
+use crate::transition::*;
+use crate::transition::Transition;
 
 lazy_static! {
     static ref BASE_SERIALIZED_UUID: Uuid =
@@ -51,6 +51,7 @@ pub struct ATNDeserializer {
     //    pd:PhantomData<*const T>
 }
 
+//todo make transition a enum and remove this
 pub unsafe fn cast<T: Transition>(tr: &dyn Transition) -> &T {
     let to = mem::transmute::<&dyn Transition, std::raw::TraitObject>(tr).data;
     mem::transmute::<*mut (), &T>(to)

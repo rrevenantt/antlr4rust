@@ -1,27 +1,28 @@
-use crate::recognizer::Recognizer;
-use crate::token_stream::TokenStream;
+use std::any::Any;
+use std::cell::RefCell;
+use std::marker::PhantomData;
+use std::mem;
+use std::ops::{Deref, DerefMut};
+use std::rc::Weak;
+use std::sync::Arc;
+
+use crate::atn::ATN;
+use crate::atn_simulator::IATNSimulator;
 use crate::common_token_factory::TokenFactory;
-use crate::token::{Token, TOKEN_EOF};
+use crate::error_listener::{ConsoleErrorListener, ErrorListener};
+use crate::error_strategy::ErrorStrategy;
+use crate::errors::{ANTLRError, RecognitionError};
 use crate::int_stream::IntStream;
 use crate::interval_set::IntervalSet;
-use crate::errors::{RecognitionError, ANTLRError};
-use crate::token_source::TokenSource;
 use crate::parser_atn_simulator::ParserATNSimulator;
-use crate::error_listener::{ErrorListener, ConsoleErrorListener};
-use crate::error_strategy::ErrorStrategy;
-use crate::rule_context::RuleContext;
-use std::mem;
 use crate::parser_rule_context::ParserRuleContext;
-use std::any::Any;
-use crate::tree::{ParseTreeListener, ListenerDispatch};
-use std::rc::Weak;
-use std::ops::{DerefMut, Deref};
-use std::marker::PhantomData;
-use std::sync::Arc;
-use crate::atn_simulator::IATNSimulator;
+use crate::recognizer::Recognizer;
+use crate::rule_context::RuleContext;
+use crate::token::{Token, TOKEN_EOF};
+use crate::token_source::TokenSource;
+use crate::token_stream::TokenStream;
+use crate::tree::{ListenerDispatch, ParseTreeListener};
 use crate::vocabulary::{Vocabulary, VocabularyImpl};
-use crate::atn::ATN;
-use std::cell::RefCell;
 
 pub trait Parser: Recognizer {
     fn get_interpreter(&self) -> &ParserATNSimulator;
@@ -29,7 +30,7 @@ pub trait Parser: Recognizer {
 
     fn get_token_factory(&self) -> &dyn TokenFactory;
     fn get_parser_rule_context(&self) -> &ParserRuleContext;
-//    fn set_parser_rule_context(&self, v: ParserRuleContext);
+    //    fn set_parser_rule_context(&self, v: ParserRuleContext);
     fn consume(&mut self);
 //    fn get_parse_listeners(&self) -> Vec<ParseTreeListener>;
 
@@ -275,8 +276,8 @@ pub fn match_token(&mut self, ttype: isize, err_handler: &mut dyn ErrorStrategy)
 //    fn set_input_stream(&self, input: TokenStream) { unimplemented!() }
 //
 //    fn set_token_stream(&self, input: TokenStream) { unimplemented!() }
-//
-fn add_context_to_parse_tree(&self) { unimplemented!() }
+
+    fn add_context_to_parse_tree(&self) { unimplemented!() }
 
 
     pub fn enter_rule(&mut self, localctx: Box<dyn ParserRuleContext>, state: isize, rule_index: usize) {
@@ -289,7 +290,7 @@ fn add_context_to_parse_tree(&self) { unimplemented!() }
         }
         self.trigger_enter_rule_event();
     }
-    //
+
     pub fn exit_rule(&mut self) {
         self.trigger_exit_rule_event();
         self.set_state(self.get_parser_rule_context().get_invoking_state());
@@ -298,19 +299,25 @@ fn add_context_to_parse_tree(&self) { unimplemented!() }
         let mut parent = ctx.get_parent_ctx().take();
         mem::replace(localctx, parent);
     }
-    //
-//
+
     pub fn enter_outer_alt(&mut self, new_ctx: Option<Box<dyn ParserRuleContext>>, altNum: isize) {
         new_ctx.map(|it| self.ctx = Some(it));
     }
-//
-//
-//    fn enter_recursion_rule(&self, localctx: ParserRuleContext, state: isize, ruleIndex: isize, precedence: isize) { unimplemented!() }
-//
+
+
+    fn enter_recursion_rule(&mut self, localctx: Box<dyn ParserRuleContext>, state: isize, ruleIndex: isize, precedence: isize) {
+        self.set_state(state);
+        self.precedence_stack.push(precedence);
+        self.ctx = Some(localctx);
+        self.trigger_enter_rule_event()
+    }
+
 //    fn push_new_recursion_context(&self, localctx: ParserRuleContext, state: isize, ruleIndex: isize) { unimplemented!() }
-//
-//    fn unroll_recursion_contexts(&self, parentCtx: ParserRuleContext) { unimplemented!() }
-//
+
+    fn unroll_recursion_contexts(&mut self/*, parentCtx: ParserRuleContext*/) {
+        self.precedence_stack.pop();
+    }
+
 //    fn get_invoking_context(&self, ruleIndex: isize) -> ParserRuleContext { unimplemented!() }
 //
 //    fn precpred(&self, localctx: RuleContext, precedence: isize) -> bool { unimplemented!() }

@@ -1,12 +1,12 @@
-use crate::token::{Token, OwningToken};
-use crate::rule_context::{RuleContext, BaseRuleContext, CustomRuleContext, CustomRuleContextInternal};
-use crate::errors::ANTLRError;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
+
+use crate::errors::ANTLRError;
+use crate::rule_context::{BaseRuleContext, CustomRuleContext, CustomRuleContextInternal, RuleContext};
+use crate::token::{OwningToken, Token};
 use crate::tree::ParseTreeListener;
 
-
-pub trait ParserRuleContext: CustomRuleContext + RuleContext + Send + Sync {
+pub trait ParserRuleContext: CustomRuleContext + RuleContext /*+ Send + Sync*/ {
     fn set_exception(&mut self, e: ANTLRError);
 
     fn set_start(&mut self, t: isize);
@@ -23,11 +23,12 @@ pub trait ParserRuleContext: CustomRuleContext + RuleContext + Send + Sync {
 //    fn remove_last_child(&self);
 }
 
-lazy_static! {
-    pub static ref EMPTY_CTX: Box<dyn ParserRuleContext> =
-        Box::new(BaseParserRuleContext::new_parser_ctx(None,-1,CustomRuleContextInternal));
-}
-
+//requires ParserRuleContext to be Sync
+//lazy_static! {
+//    pub static ref EMPTY_CTX: Box<dyn ParserRuleContext> =
+//        Box::new(BaseParserRuleContext::new_parser_ctx(None,-1,CustomRuleContextInternal));
+//}
+//todo do not calc this every time, maybe threadlocal?
 pub(crate) fn empty_ctx() -> Box<dyn ParserRuleContext> {
     Box::new(BaseParserRuleContext::new_parser_ctx(None, -1, CustomRuleContextInternal))
 }

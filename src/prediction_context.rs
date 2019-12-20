@@ -7,7 +7,7 @@ use murmur3::murmur3_32::MurmurHasher;
 
 use crate::atn::ATN;
 use crate::atn_deserializer::cast;
-use crate::parser_rule_context::{EMPTY_CTX, ParserRuleContext};
+use crate::parser_rule_context::{empty_ctx, ParserRuleContext};
 use crate::prediction_context::PredictionContext::{Array, Singleton};
 use crate::transition::{RuleTransition, TransitionType};
 
@@ -361,7 +361,7 @@ impl PredictionContext {
     }
 
     pub fn from_rule_context(atn: &ATN, outer_context: &dyn ParserRuleContext) -> PredictionContext {
-        if outer_context.peek_parent().is_none() || ptr::eq(outer_context, EMPTY_CTX.as_ref()) {
+        if outer_context.peek_parent().is_none() || ptr::eq(outer_context, empty_ctx().as_ref()) {
             return PredictionContext::new_empty()
         }
 

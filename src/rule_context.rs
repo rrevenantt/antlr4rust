@@ -25,7 +25,7 @@ impl CustomRuleContext for CustomRuleContextInternal {
     }
 }
 
-pub trait CustomRuleContext: Sync + Send {
+pub trait CustomRuleContext {
     fn get_rule_index(&self) -> usize;
     fn get_alt_number(&self) -> isize { INVALID_ALT }
     fn set_alt_number(&self, alt_number: isize) {}

@@ -32,7 +32,7 @@ use crate::int_stream::EOF;
 use crate::interval_set::IntervalSet;
 use crate::lexer_atn_simulator::ERROR_DFA_STATE_REF;
 use crate::parser::{BaseParser, Parser};
-use crate::parser_rule_context::{BaseParserRuleContext, EMPTY_CTX, ParserRuleContext};
+use crate::parser_rule_context::{BaseParserRuleContext, empty_ctx, ParserRuleContext};
 use crate::prediction_context::{MurmurHasherBuilder, PREDICTION_CONTEXT_EMPTY_RETURN_STATE, PredictionContext, PredictionContextCache};
 use crate::prediction_mode::{get_conflicting_alt_subsets, PredictionMode, resolves_to_just_one_viable_alt};
 use crate::recognizer::Recognizer;
@@ -82,9 +82,9 @@ impl ParserATNSimulator {
         }
     }
 
-    fn get_prediction_mode(&self) -> PredictionMode { unimplemented!() }
+    fn get_prediction_mode(&self) -> PredictionMode { self.prediction_mode }
 
-    fn set_prediction_mode(&self, v: PredictionMode) { unimplemented!() }
+    fn set_prediction_mode(&mut self, v: PredictionMode) { self.prediction_mode = v }
 
     fn reset(&self) { unimplemented!() }
 
@@ -118,7 +118,7 @@ impl ParserATNSimulator {
             let s0 = s0.unwrap_or_else(|| {
                 let mut s0_closure = self.compute_start_state(
                     local.dfa.atn_start_state,
-                    PredictionContext::from_rule_context(self.atn(), EMPTY_CTX.as_ref()),
+                    PredictionContext::from_rule_context(self.atn(), empty_ctx().as_ref()),
                     false,
                     &mut local,
                 );
@@ -575,6 +575,7 @@ impl ParserATNSimulator {
                local: &mut Local,
     ) {
         let initial_depth = 0;
+
         //fixme hash collisions
         // maybe add list of possible duplicates
         let mut closure_busy: HashSet<u64> = HashSet::new();
