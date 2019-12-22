@@ -3,28 +3,32 @@
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 #![feature(try_blocks)]
-use antlr_rust::prediction_context::PredictionContextCache;
-use antlr_rust::parser::{Parser, BaseParser};
-use antlr_rust::token_stream::TokenStream;
-use antlr_rust::token_source::TokenSource;
-use antlr_rust::parser_atn_simulator::ParserATNSimulator;
-use antlr_rust::errors::{ANTLRError, NoViableAltError};
-use antlr_rust::rule_context::{BaseRuleContext, CustomRuleContext, RuleContext};
-use antlr_rust::recognizer::Recognizer;
+
+use std::cell::RefCell;
+use std::convert::TryFrom;
+use std::ops::{Deref, DerefMut};
+use std::rc::Rc;
+use std::sync::Arc;
+
+use antlr_rust::atn::{ATN, INVALID_ALT};
 use antlr_rust::atn_deserializer::ATNDeserializer;
 use antlr_rust::dfa::DFA;
-use antlr_rust::atn::{ATN, INVALID_ALT};
-use antlr_rust::error_strategy::{ErrorStrategy, DefaultErrorStrategy};
+use antlr_rust::error_strategy::{DefaultErrorStrategy, ErrorStrategy};
+use antlr_rust::errors::{ANTLRError, NoViableAltError};
+use antlr_rust::int_stream::EOF;
+use antlr_rust::parser::{BaseParser, Parser};
+use antlr_rust::parser_atn_simulator::ParserATNSimulator;
 use antlr_rust::parser_rule_context::{BaseParserRuleContext, ParserRuleContext};
-use antlr_rust::tree::TerminalNode;
+use antlr_rust::prediction_context::PredictionContextCache;
+use antlr_rust::recognizer::Recognizer;
+use antlr_rust::rule_context::{BaseRuleContext, CustomRuleContext, RuleContext};
 use antlr_rust::token::TOKEN_EOF;
+use antlr_rust::token_source::TokenSource;
+use antlr_rust::token_stream::TokenStream;
+use antlr_rust::tree::TerminalNode;
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
-use super::referencetoatnlistener::*;
 
-use std::sync::Arc;
-use std::convert::TryFrom;
-use std::cell::RefCell;
-use std::ops::{DerefMut, Deref};
+use super::referencetoatnlistener::*;
 
 pub const ID: isize = 1;
 pub const ATN: isize = 2;
@@ -69,8 +73,8 @@ impl ReferenceToATNParser {
             base: BaseParser::new_base_parser(
                 input,
                 Arc::clone(&interpreter),
-                ReferenceToATNParserExt
-			),
+                ReferenceToATNParserExt,
+            ),
             interpreter,
             _shared_context_cache: Box::new(PredictionContextCache::new()),
             err_handler: Box::new(DefaultErrorStrategy::new()),
@@ -147,8 +151,8 @@ impl AContext {
         unimplemented!()
         //getToken(ReferenceToATNParser.ID, i)
     }
-    pub fn new(parent: Option<Box<dyn ParserRuleContext>>, invoking_state: isize) -> Box<dyn ParserRuleContext> {
-        Box::new(
+    pub fn new(parent: Option<Rc<dyn ParserRuleContext>>, invoking_state: isize) -> Rc<dyn ParserRuleContext> {
+        Rc::new(
             BaseParserRuleContext::new_parser_ctx(parent, invoking_state, AContextExt {}),
         )
     }
@@ -157,7 +161,8 @@ impl AContext {
 
 impl ReferenceToATNParser {
     pub fn a(&mut self) -> Result<()/*AContext*/, ANTLRError> {
-        let mut _localctx = AContext::new(self.ctx.take(), self.base.get_state());
+        let _parentctx = self.ctx.take();
+        let mut _localctx = AContext::new(_parentctx.clone(), self.base.get_state());
         //let mut _localctx = BaseRuleContext::new(self.ctx.take(), self.base.get_state());
         //self.ctx = Some(_localctx);
         //let mut _localctx = self.ctx.as_deref_mut().unwrap();

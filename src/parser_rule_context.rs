@@ -1,4 +1,5 @@
 use std::ops::{Deref, DerefMut};
+use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
 use crate::errors::ANTLRError;
@@ -28,6 +29,7 @@ pub trait ParserRuleContext: CustomRuleContext + RuleContext /*+ Send + Sync*/ {
 //    pub static ref EMPTY_CTX: Box<dyn ParserRuleContext> =
 //        Box::new(BaseParserRuleContext::new_parser_ctx(None,-1,CustomRuleContextInternal));
 //}
+
 //todo do not calc this every time, maybe threadlocal?
 pub(crate) fn empty_ctx() -> Box<dyn ParserRuleContext> {
     Box::new(BaseParserRuleContext::new_parser_ctx(None, -1, CustomRuleContextInternal))
@@ -40,7 +42,10 @@ pub struct BaseParserRuleContext<Ctx: CustomRuleContext> {
     start: isize,
     stop: isize,
     exception: Option<Box<ANTLRError>>,
-//    children: Vec<Tree>,
+    /// List of children of current node
+    /// Editing is done via Rc::try_unwrap or Rc::get_mut
+    /// because in wellformed tree strong ref count should be one
+    children: Vec<Rc<dyn ParserRuleContext>>,
 }
 
 impl<Ctx: CustomRuleContext> RuleContext for BaseParserRuleContext<Ctx> {
@@ -56,11 +61,11 @@ impl<Ctx: CustomRuleContext> RuleContext for BaseParserRuleContext<Ctx> {
         self.base.is_empty()
     }
 
-    fn get_parent_ctx(&mut self) -> &mut Option<Box<dyn ParserRuleContext>> {
+    fn get_parent_ctx(&self) -> &Option<Weak<dyn ParserRuleContext>> {
         self.base.get_parent_ctx()
     }
 
-    fn peek_parent(&self) -> Option<&dyn ParserRuleContext> {
+    fn peek_parent(&self) -> Option<Rc<dyn ParserRuleContext>> {
         self.base.peek_parent()
     }
 }
@@ -94,12 +99,13 @@ impl<Ctx: CustomRuleContext> ParserRuleContext for BaseParserRuleContext<Ctx> {
 }
 
 impl<Ctx: CustomRuleContext> BaseParserRuleContext<Ctx> {
-    pub fn new_parser_ctx(parent_ctx: Option<Box<dyn ParserRuleContext>>, invoking_state: isize, ext: Ctx) -> Self {
+    pub fn new_parser_ctx(parent_ctx: Option<Rc<dyn ParserRuleContext>>, invoking_state: isize, ext: Ctx) -> Self {
         BaseParserRuleContext {
             base: BaseRuleContext::new_ctx(parent_ctx, invoking_state, ext),
             start: -1,
             stop: -1,
             exception: None,
+            children: vec![],
         }
     }
 

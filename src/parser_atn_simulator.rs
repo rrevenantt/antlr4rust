@@ -67,7 +67,7 @@ struct Local<'a, 'b> {
 impl Local<'_, '_> {
     fn input(&mut self) -> &mut dyn TokenStream { self.parser.get_input_stream() }
     fn seek(&mut self, i: isize) { self.input().seek(i) }
-    fn outer_context(&self) -> &dyn ParserRuleContext { self.parser.get_parser_rule_context() }
+    fn outer_context(&self) -> &dyn ParserRuleContext { self.parser.get_parser_rule_context().deref() }
 }
 
 pub type MergeCache = HashMap<(u64, u64), PredictionContext, MurmurHasherBuilder>;

@@ -2,26 +2,27 @@
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
+
+use std::cell::RefCell;
+use std::ops::{Deref, DerefMut};
+use std::rc::Rc;
+use std::sync::Arc;
+
 use antlr_rust::atn::ATN;
-use antlr_rust::char_stream::CharStream;
-use antlr_rust::lexer::{BaseLexer, Lexer};
 use antlr_rust::atn_deserializer::ATNDeserializer;
+use antlr_rust::char_stream::CharStream;
+use antlr_rust::common_token_factory::TokenFactory;
 use antlr_rust::dfa::DFA;
-use antlr_rust::lexer_atn_simulator::{LexerATNSimulator, ILexerATNSimulator};
+use antlr_rust::error_listener::ErrorListener;
+use antlr_rust::lexer::{BaseLexer, Lexer};
+use antlr_rust::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
+use antlr_rust::parser_rule_context::ParserRuleContext;
 use antlr_rust::prediction_context::PredictionContextCache;
 use antlr_rust::recognizer::Recognizer;
-use antlr_rust::error_listener::ErrorListener;
-use antlr_rust::token_source::TokenSource;
-use antlr_rust::common_token_factory::TokenFactory;
-use antlr_rust::token::*;
 use antlr_rust::rule_context::BaseRuleContext;
-use antlr_rust::parser_rule_context::ParserRuleContext;
+use antlr_rust::token::*;
+use antlr_rust::token_source::TokenSource;
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
-
-use std::sync::Arc;
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::ops::{Deref, DerefMut};
 
 pub const T__0: isize = 1;
 pub const T__1: isize = 2;
@@ -67,9 +68,11 @@ impl DerefMut for CSVLexer {
 }
 
 
+
 pub struct CSVLexer {
 	base: BaseLexer<'static>,
 //	static { RuntimeMetaData.checkVersion("4.7.1", RuntimeMetaData.VERSION); }
+
 }
 
 impl CSVLexer {
@@ -86,15 +89,15 @@ impl CSVLexer {
 
     fn add_error_listener(&mut self, _listener: Box<ErrorListener>) {
         self.base.add_error_listener(_listener);
-    }
+	}
 
-    fn remove_error_listeners(&mut self) {
-        self.base.remove_error_listeners()
-    }
+	fn remove_error_listeners(&mut self) {
+		self.base.remove_error_listeners()
+	}
 
-    fn get_grammar_file_name(&self) -> &'static str {
-        "CSVLexer.g4"
-    }
+	fn get_grammar_file_name(&self) -> &'static str {
+		"CSVLexer.g4"
+	}
 
 	pub fn new(input: Box<dyn CharStream>) -> Self {
 		Self {
@@ -104,8 +107,8 @@ impl CSVLexer {
 					_ATN.clone(),
 					_decision_to_DFA.clone(),
 					_shared_context_cache.clone(),
-					Box::new(CSVLexerActions {})
-				)
+					Box::new(CSVLexerActions {}),
+				),
 			)
 		}
 	}
@@ -120,25 +123,25 @@ impl Recognizer for CSVLexerActions {}
 impl CSVLexerActions {}
 
 impl TokenSource for CSVLexer {
-    fn next_token(&mut self) -> Box<dyn Token> {
-        self.base.next_token()
-    }
+	fn next_token(&mut self) -> Box<dyn Token> {
+		self.base.next_token()
+	}
 
-    fn get_line(&self) -> isize {
-        self.base.get_line()
-    }
+	fn get_line(&self) -> isize {
+		self.base.get_line()
+	}
 
     fn get_char_position_in_line(&self) -> isize {
         self.base.get_char_position_in_line()
     }
 
-    fn get_input_stream(&mut self) -> &mut dyn CharStream {
-        self.base.get_input_stream()
-    }
+	fn get_input_stream(&mut self) -> &mut dyn CharStream {
+		self.base.get_input_stream()
+	}
 
-    fn get_token_factory(&self) -> &dyn TokenFactory {
-        self.base.get_token_factory()
-    }
+	fn get_token_factory(&self) -> &dyn TokenFactory {
+		self.base.get_token_factory()
+	}
 }
 
 

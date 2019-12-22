@@ -1,18 +1,21 @@
-use std::collections::HashMap;
-use crate::rule_context::RuleContext;
-use crate::interval_set::IntervalSet;
-use crate::atn_state::ATNState;
-use crate::atn_type::ATNType;
-use crate::atn_state::ATNStateRef;
-use crate::lexer_action::LexerAction;
 use std::borrow::Cow;
+use std::borrow::Cow::{Borrowed, Owned};
+use std::collections::HashMap;
+use std::rc::Rc;
 use std::sync::Once;
+
+use crate::atn_deserializer::cast;
+use crate::atn_state::ATNState;
+use crate::atn_state::ATNStateRef;
+use crate::atn_type::ATNType;
 use crate::dfa::ScopeExt;
+use crate::interval_set::IntervalSet;
+use crate::lexer_action::LexerAction;
 use crate::ll1_analyzer::LL1Analyzer;
 use crate::parser_rule_context::ParserRuleContext;
-use crate::token::{TOKEN_EPSILON, TOKEN_EOF};
+use crate::rule_context::RuleContext;
+use crate::token::{TOKEN_EOF, TOKEN_EPSILON};
 use crate::transition::{RuleTransition, TransitionType};
-use crate::atn_deserializer::cast;
 
 pub const INVALID_ALT: isize = 0;
 
@@ -94,7 +97,7 @@ impl ATN {
         self.decision_to_state[decision]
     }
 
-    pub fn get_expected_tokens(&self, state_number: isize, _ctx: &dyn ParserRuleContext) -> IntervalSet {
+    pub fn get_expected_tokens(&self, state_number: isize, _ctx: &Rc<dyn ParserRuleContext>) -> IntervalSet {
         let s = self.states[state_number as usize].as_ref();
         let mut following = self.next_tokens(s);
         if !following.contains(TOKEN_EPSILON) {
@@ -103,7 +106,7 @@ impl ATN {
         let mut expected = IntervalSet::new();
         expected.add_set(&following);
         expected.remove_one(TOKEN_EPSILON);
-        let mut ctx = Some(_ctx);
+        let mut ctx = Some(Rc::clone(_ctx));
 
         while let Some(c) = ctx {
             if c.get_invoking_state() < 0 || !following.contains(TOKEN_EPSILON) { break }

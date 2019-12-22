@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::mem;
 use std::ops::{Deref, DerefMut};
-use std::rc::Weak;
+use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
 use crate::atn::ATN;
@@ -29,7 +29,7 @@ pub trait Parser: Recognizer {
 //    fn get_vocabulary(&self) -> &dyn Vocabulary;
 
     fn get_token_factory(&self) -> &dyn TokenFactory;
-    fn get_parser_rule_context(&self) -> &ParserRuleContext;
+    fn get_parser_rule_context(&self) -> &Rc<ParserRuleContext>;
     //    fn set_parser_rule_context(&self, v: ParserRuleContext);
     fn consume(&mut self);
 //    fn get_parse_listeners(&self) -> Vec<ParseTreeListener>;
@@ -66,9 +66,10 @@ pub struct BaseParser<
     Ext: Recognizer + 'static,
     T: ParseTreeListener + ?Sized = dyn ParseTreeListener,
     L: ListenerCaller<T> + 'static = ListenerCallerDefault> {
-
     interp: Arc<ParserATNSimulator>,
-    pub ctx: Option<Box<dyn ParserRuleContext>>,
+    pub ctx: Option<Rc<dyn ParserRuleContext>>,
+    // if `build_parse_trees` is false
+//    ctx_owner:Vec<Rc<dyn ParserRuleContext>>,
     build_parse_trees: bool,
     pub matched_eof: bool,
 
@@ -113,8 +114,8 @@ impl<T: ParseTreeListener + ?Sized, L: ListenerCaller<T> + 'static, Ext: Recogni
         unimplemented!()
     }
 
-    fn get_parser_rule_context(&self) -> &dyn ParserRuleContext {
-        self.ctx.as_deref().unwrap()
+    fn get_parser_rule_context(&self) -> &Rc<dyn ParserRuleContext> {
+        self.ctx.as_ref().unwrap()
     }
 
 
@@ -146,7 +147,7 @@ impl<T: ParseTreeListener + ?Sized, L: ListenerCaller<T> + 'static, Ext: Recogni
 //    }
 
     fn get_expected_tokens(&self) -> IntervalSet {
-        self.interp.atn().get_expected_tokens(self.state, self.ctx.as_deref().unwrap())
+        self.interp.atn().get_expected_tokens(self.state, self.ctx.as_ref().unwrap())
     }
 
     fn notify_error_listeners(&mut self, msg: String, offending_token: Option<isize>, err: Option<&ANTLRError>) {
@@ -280,10 +281,10 @@ pub fn match_token(&mut self, ttype: isize, err_handler: &mut dyn ErrorStrategy)
     fn add_context_to_parse_tree(&self) { unimplemented!() }
 
 
-    pub fn enter_rule(&mut self, localctx: Box<dyn ParserRuleContext>, state: isize, rule_index: usize) {
+    pub fn enter_rule(&mut self, localctx: Rc<dyn ParserRuleContext>, state: isize, rule_index: usize) {
         self.set_state(state);
         self.ctx = Some(localctx);
-        let mut localctx = self.ctx.as_deref_mut().unwrap();
+        let mut localctx = Rc::get_mut(self.ctx.as_mut().unwrap()).unwrap();
         localctx.set_start(self.input.lt(1).get_token_index());
         if self.build_parse_trees {
             unimplemented!()
@@ -296,16 +297,21 @@ pub fn match_token(&mut self, ttype: isize, err_handler: &mut dyn ErrorStrategy)
         self.set_state(self.get_parser_rule_context().get_invoking_state());
         let mut localctx = &mut self.ctx;
         let mut ctx = localctx.as_mut().unwrap();
-        let mut parent = ctx.get_parent_ctx().take();
+        let mut parent = ctx.get_parent_ctx()
+            .as_ref()
+            .map(|it| it
+                .upgrade()
+                .unwrap()
+            );
         mem::replace(localctx, parent);
     }
 
-    pub fn enter_outer_alt(&mut self, new_ctx: Option<Box<dyn ParserRuleContext>>, altNum: isize) {
+    pub fn enter_outer_alt(&mut self, new_ctx: Option<Rc<dyn ParserRuleContext>>, altNum: isize) {
         new_ctx.map(|it| self.ctx = Some(it));
     }
 
 
-    fn enter_recursion_rule(&mut self, localctx: Box<dyn ParserRuleContext>, state: isize, ruleIndex: isize, precedence: isize) {
+    fn enter_recursion_rule(&mut self, localctx: Rc<dyn ParserRuleContext>, state: isize, ruleIndex: isize, precedence: isize) {
         self.set_state(state);
         self.precedence_stack.push(precedence);
         self.ctx = Some(localctx);

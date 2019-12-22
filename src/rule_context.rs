@@ -1,5 +1,8 @@
 //use tree::RuleNode;
 
+use std::borrow::Cow;
+use std::rc::{Rc, Weak};
+
 use crate::atn::INVALID_ALT;
 use crate::parser_rule_context::ParserRuleContext;
 use crate::tree::ParseTreeListener;
@@ -13,8 +16,8 @@ pub trait RuleContext {
 
 
     //todo rewrite into take and get
-    fn get_parent_ctx(&mut self) -> &mut Option<Box<dyn ParserRuleContext>>;
-    fn peek_parent(&self) -> Option<&dyn ParserRuleContext>;
+    fn get_parent_ctx(&self) -> &Option<Weak<dyn ParserRuleContext>>;
+    fn peek_parent(&self) -> Option<Rc<dyn ParserRuleContext>>;
 }
 
 pub(crate) struct CustomRuleContextInternal;
@@ -36,17 +39,17 @@ pub trait CustomRuleContext {
 
 
 pub struct BaseRuleContext<Ctx: CustomRuleContext> {
-    parent_ctx: Option<Box<dyn ParserRuleContext>>,
+    parent_ctx: Option<Weak<dyn ParserRuleContext>>,
     invoking_state: isize,
-    pub(crate)ext: Ctx
+    pub(crate)ext: Ctx,
 }
 
 impl<Ctx: CustomRuleContext> BaseRuleContext<Ctx> {
-    pub(crate) fn new_ctx(parent_ctx: Option<Box<dyn ParserRuleContext>>, invoking_state: isize, ext: Ctx) -> Self {
+    pub(crate) fn new_ctx(parent_ctx: Option<Rc<dyn ParserRuleContext>>, invoking_state: isize, ext: Ctx) -> Self {
         BaseRuleContext {
-            parent_ctx,
+            parent_ctx: parent_ctx.as_ref().map(Rc::downgrade),
             invoking_state,
-            ext
+            ext,
         }
     }
 }
@@ -64,12 +67,12 @@ impl<Ctx: CustomRuleContext> RuleContext for BaseRuleContext<Ctx> {
         unimplemented!()
     }
 
-    fn get_parent_ctx(&mut self) -> &mut Option<Box<dyn ParserRuleContext>> {
-        &mut self.parent_ctx
+    fn get_parent_ctx(&self) -> &Option<Weak<dyn ParserRuleContext>> {
+        &self.parent_ctx
     }
 
-    fn peek_parent(&self) -> Option<&ParserRuleContext> {
-        self.parent_ctx.as_deref()
+    fn peek_parent(&self) -> Option<Rc<dyn ParserRuleContext>> {
+        self.parent_ctx.as_ref().map(Weak::upgrade).map(Option::unwrap)
     }
 }
 

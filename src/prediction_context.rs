@@ -365,7 +365,7 @@ impl PredictionContext {
             return PredictionContext::new_empty()
         }
 
-        let parent = PredictionContext::from_rule_context(atn, outer_context.peek_parent().unwrap());
+        let parent = PredictionContext::from_rule_context(atn, outer_context.peek_parent().unwrap().deref());
 
         let transition = atn.states[outer_context.get_invoking_state() as usize]
             .get_transitions()

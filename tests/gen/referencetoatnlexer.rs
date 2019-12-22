@@ -2,26 +2,27 @@
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
+
+use std::cell::RefCell;
+use std::ops::{Deref, DerefMut};
+use std::rc::Rc;
+use std::sync::Arc;
+
 use antlr_rust::atn::ATN;
-use antlr_rust::char_stream::CharStream;
-use antlr_rust::lexer::{BaseLexer, Lexer};
 use antlr_rust::atn_deserializer::ATNDeserializer;
+use antlr_rust::char_stream::CharStream;
+use antlr_rust::common_token_factory::TokenFactory;
 use antlr_rust::dfa::DFA;
-use antlr_rust::lexer_atn_simulator::{LexerATNSimulator, ILexerATNSimulator};
+use antlr_rust::error_listener::ErrorListener;
+use antlr_rust::lexer::{BaseLexer, Lexer};
+use antlr_rust::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
+use antlr_rust::parser_rule_context::ParserRuleContext;
 use antlr_rust::prediction_context::PredictionContextCache;
 use antlr_rust::recognizer::Recognizer;
-use antlr_rust::error_listener::ErrorListener;
-use antlr_rust::token_source::TokenSource;
-use antlr_rust::common_token_factory::TokenFactory;
-use antlr_rust::token::*;
 use antlr_rust::rule_context::BaseRuleContext;
-use antlr_rust::parser_rule_context::ParserRuleContext;
+use antlr_rust::token::*;
+use antlr_rust::token_source::TokenSource;
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
-
-use std::sync::Arc;
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::ops::{Deref, DerefMut};
 
 pub const ID: isize = 1;
 pub const ATN: isize = 2;
@@ -60,6 +61,7 @@ impl DerefMut for ReferenceToATNLexer {
         &mut self.base
     }
 }
+
 
 
 pub struct ReferenceToATNLexer {

@@ -1,14 +1,16 @@
-use crate::errors::{RecognitionError, ANTLRError, InputMisMatchError, NoViableAltError, FailedPredicateError};
-use crate::token::{Token, TOKEN_EPSILON, TOKEN_EOF, OwningToken};
-use crate::parser::Parser;
-use crate::atn_simulator::IATNSimulator;
-use crate::atn_state::ATNStateType;
-use crate::atn_state::*;
-use crate::interval_set::IntervalSet;
-use crate::transition::TransitionType::TRANSITION_RULE;
+use std::ops::Deref;
+
 use crate::atn_deserializer::cast;
-use crate::transition::RuleTransition;
+use crate::atn_simulator::IATNSimulator;
+use crate::atn_state::*;
+use crate::atn_state::ATNStateType;
 use crate::dfa::ScopeExt;
+use crate::errors::{ANTLRError, FailedPredicateError, InputMisMatchError, NoViableAltError, RecognitionError};
+use crate::interval_set::IntervalSet;
+use crate::parser::Parser;
+use crate::token::{OwningToken, Token, TOKEN_EOF, TOKEN_EPSILON};
+use crate::transition::RuleTransition;
+use crate::transition::TransitionType::TRANSITION_RULE;
 
 pub trait ErrorStrategy {
     fn reset(&mut self, recognizer: &mut dyn Parser);
@@ -103,7 +105,7 @@ impl DefaultErrorStrategy {
         let atn = recognizer.get_interpreter().atn();
         let current_state = atn.states[recognizer.get_state() as usize].as_ref();
         let next = current_state.get_transitions().first().unwrap().get_target();
-        let expect_at_ll2 = atn.next_tokens_in_ctx(atn.states[next].as_ref(), Some(recognizer.get_parser_rule_context()));
+        let expect_at_ll2 = atn.next_tokens_in_ctx(atn.states[next].as_ref(), Some(recognizer.get_parser_rule_context().deref()));
         if expect_at_ll2.contains(current_token) {
             self.report_missing_token(recognizer);
             return true;
@@ -137,7 +139,7 @@ impl DefaultErrorStrategy {
 
     fn get_error_recovery_set(&self, recognizer: &dyn Parser) -> IntervalSet {
         let atn = recognizer.get_interpreter().atn();
-        let mut ctx = Some(recognizer.get_parser_rule_context());
+        let mut ctx = Some(recognizer.get_parser_rule_context().clone());
         let mut recover_set = IntervalSet::new();
         while let Some(c) = ctx {
             if c.get_invoking_state() < 0 { break }
