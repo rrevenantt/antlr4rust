@@ -1,13 +1,17 @@
+use std::any::Any;
 use std::ops::{Deref, DerefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
 use crate::errors::ANTLRError;
-use crate::rule_context::{BaseRuleContext, CustomRuleContext, CustomRuleContextInternal, RuleContext};
+use crate::interval_set::Interval;
+use crate::recognizer::Recognizer;
+use crate::rule_context::{BaseRuleContext, CustomRuleContext, EmptyCustomRuleContext, RuleContext};
 use crate::token::{OwningToken, Token};
-use crate::tree::ParseTreeListener;
+use crate::tree::{ErrorNode, ParseTree, ParseTreeListener, SyntaxTree, TerminalNode, Tree};
+use crate::trees;
 
-pub trait ParserRuleContext: CustomRuleContext + RuleContext /*+ Send + Sync*/ {
+pub trait ParserRuleContext: RuleContext + CustomRuleContext + ParseTree {
     fn set_exception(&mut self, e: ANTLRError);
 
     fn set_start(&mut self, t: isize);
@@ -17,11 +21,11 @@ pub trait ParserRuleContext: CustomRuleContext + RuleContext /*+ Send + Sync*/ {
     fn get_stop(&self) -> isize;
 
 
-//    fn add_token_node(&self, token: Box<dyn Token>) -> * TerminalNodeImpl;
-//    fn add_error_node(&self, badToken: Box<dyn Token>) -> * ErrorNodeImpl;
+    fn add_token_node(&mut self, token: TerminalNode) -> Rc<dyn ParserRuleContext>;
+    fn add_error_node(&mut self, bad_token: ErrorNode) -> Rc<dyn ParserRuleContext>;
 
-//    fn add_child(&self, child: Self) -> RuleContext;
-//    fn remove_last_child(&self);
+    fn add_child(&mut self, child: Rc<dyn ParserRuleContext>);
+    fn remove_last_child(&mut self);
 }
 
 //requires ParserRuleContext to be Sync
@@ -32,7 +36,7 @@ pub trait ParserRuleContext: CustomRuleContext + RuleContext /*+ Send + Sync*/ {
 
 //todo do not calc this every time, maybe threadlocal?
 pub(crate) fn empty_ctx() -> Box<dyn ParserRuleContext> {
-    Box::new(BaseParserRuleContext::new_parser_ctx(None, -1, CustomRuleContextInternal))
+    Box::new(BaseParserRuleContext::new_parser_ctx(None, -1, EmptyCustomRuleContext))
 }
 
 
@@ -44,7 +48,8 @@ pub struct BaseParserRuleContext<Ctx: CustomRuleContext> {
     exception: Option<Box<ANTLRError>>,
     /// List of children of current node
     /// Editing is done via Rc::try_unwrap or Rc::get_mut
-    /// because in wellformed tree strong ref count should be one
+    /// because in well-formed tree strong ref count should be one
+    /// But Rc is still needed for Weak references to parent
     children: Vec<Rc<dyn ParserRuleContext>>,
 }
 
@@ -76,6 +81,14 @@ impl<Ctx: CustomRuleContext> CustomRuleContext for BaseParserRuleContext<Ctx> {
     }
 }
 
+impl<Ctx: CustomRuleContext> Deref for BaseParserRuleContext<Ctx> {
+    type Target = Ctx;
+
+    fn deref(&self) -> &Self::Target {
+        &self.base.ext
+    }
+}
+
 impl<Ctx: CustomRuleContext> ParserRuleContext for BaseParserRuleContext<Ctx> {
     fn set_exception(&mut self, e: ANTLRError) {
         self.exception = Some(Box::new(e));
@@ -96,6 +109,22 @@ impl<Ctx: CustomRuleContext> ParserRuleContext for BaseParserRuleContext<Ctx> {
     fn get_stop(&self) -> isize {
         self.stop
     }
+
+    fn add_token_node(&mut self, token: TerminalNode) -> Rc<dyn ParserRuleContext> {
+        unimplemented!()
+    }
+
+    fn add_error_node(&mut self, bad_token: ErrorNode) -> Rc<dyn ParserRuleContext> {
+        unimplemented!()
+    }
+
+    fn add_child(&mut self, child: Rc<dyn ParserRuleContext>) {
+        unimplemented!()
+    }
+
+    fn remove_last_child(&mut self) {
+        self.children.pop();
+    }
 }
 
 impl<Ctx: CustomRuleContext> BaseParserRuleContext<Ctx> {
@@ -108,36 +137,54 @@ impl<Ctx: CustomRuleContext> BaseParserRuleContext<Ctx> {
             children: vec![],
         }
     }
+}
 
+impl<Ctx: CustomRuleContext> Tree for BaseParserRuleContext<Ctx> {
+    fn get_parent(&self) -> Option<&Rc<dyn ParserRuleContext>> {
+        unimplemented!()
+    }
 
-//
-//    fn set_exception(&self, e: RecognitionError) { unimplemented!() }
-//
-//    fn get_children(&self) -> Vec<Tree> { unimplemented!() }
-//
+    fn get_payload(&self) -> Box<Any> {
+        unimplemented!()
+    }
+
+    fn get_child(&self, i: usize) -> Option<&Rc<dyn ParserRuleContext>> {
+        self.children.get(i)
+    }
+
+    fn get_child_count(&self) -> usize {
+        self.children.len()
+    }
+
+    fn get_children(&self) -> &Vec<Rc<dyn ParserRuleContext>> {
+        &self.children
+    }
+}
+
+impl<Ctx: CustomRuleContext> SyntaxTree for BaseParserRuleContext<Ctx> {
+    fn get_source_interval(&self) -> Interval {
+        unimplemented!()
+    }
+}
+
+impl<Ctx: CustomRuleContext> ParseTree for BaseParserRuleContext<Ctx> {
+    fn get_text(&self) -> String {
+        unimplemented!()
+    }
+
+    fn to_string_tree(&self, r: &dyn Recognizer) -> String {
+        trees::string_tree(self, r.get_rule_names())
+    }
+}
 //    fn copy_from(&self, ctx: * BaseParserRuleContext) { unimplemented!() }
 //
 //    fn get_text(&self) -> String { unimplemented!() }
 //
-//    fn enter_rule(&self, listener: ParseTreeListener) {  }
-//
-//    fn exit_rule(&self, listener: ParseTreeListener) { unimplemented!() }
-//
 //    fn add_terminal_node_child(&self, child: TerminalNode) -> TerminalNode { unimplemented!() }
-//
-//    fn add_child(&self, child: RuleContext) -> RuleContext { unimplemented!() }
-//
-//    fn remove_last_child(&self) { unimplemented!() }
-//
-//    fn add_token_node(&self, token: Token) -> * TerminalNodeImpl { unimplemented!() }
-//
-//    fn add_error_node(&self, badToken: Token) -> * ErrorNodeImpl { unimplemented!() }
-//
-//    fn get_child(&self, i: isize) -> Tree { unimplemented!() }
 //
 //    fn get_child_of_type(&self, i: isize, childType: reflect.Type) -> RuleContext { unimplemented!() }
 //
-//    fn to_String_tree(&self, ruleNames Vec<String>, recog: Recognizer) -> String { unimplemented!() }
+//    fn to_string_tree(&self, ruleNames Vec<String>, recog: Recognizer) -> String { unimplemented!() }
 //
 //    fn get_rule_context(&self) -> RuleContext { unimplemented!() }
 //
@@ -178,5 +225,4 @@ impl<Ctx: CustomRuleContext> BaseParserRuleContext<Ctx> {
 //    }
 //
 //    fn new_base_interpreter_rule_context(parent BaseInterpreterRuleContext, invokingStateNumber: isize, ruleIndex: isize) -> * BaseInterpreterRuleContext { unimplemented!() }
-}
  

@@ -21,7 +21,7 @@ use crate::rule_context::RuleContext;
 use crate::token::{Token, TOKEN_EOF};
 use crate::token_source::TokenSource;
 use crate::token_stream::TokenStream;
-use crate::tree::{ListenerDispatch, ParseTreeListener};
+use crate::tree::ParseTreeListener;
 use crate::vocabulary::{Vocabulary, VocabularyImpl};
 
 pub trait Parser: Recognizer {
@@ -29,7 +29,7 @@ pub trait Parser: Recognizer {
 //    fn get_vocabulary(&self) -> &dyn Vocabulary;
 
     fn get_token_factory(&self) -> &dyn TokenFactory;
-    fn get_parser_rule_context(&self) -> &Rc<ParserRuleContext>;
+    fn get_parser_rule_context(&self) -> &Rc<dyn ParserRuleContext>;
     //    fn set_parser_rule_context(&self, v: ParserRuleContext);
     fn consume(&mut self);
 //    fn get_parse_listeners(&self) -> Vec<ParseTreeListener>;
@@ -58,10 +58,6 @@ pub struct ListenerCallerDefault;
 
 impl ListenerCaller for ListenerCallerDefault {}
 
-pub struct RecogDefault;
-
-impl Recognizer for RecogDefault {}
-
 pub struct BaseParser<
     Ext: Recognizer + 'static,
     T: ParseTreeListener + ?Sized = dyn ParseTreeListener,
@@ -70,7 +66,7 @@ pub struct BaseParser<
     pub ctx: Option<Rc<dyn ParserRuleContext>>,
     // if `build_parse_trees` is false
 //    ctx_owner:Vec<Rc<dyn ParserRuleContext>>,
-    build_parse_trees: bool,
+    pub build_parse_trees: bool,
     pub matched_eof: bool,
 
     state: isize,
@@ -212,8 +208,8 @@ impl<T: ParseTreeListener + ?Sized, L: ListenerCaller<T> + 'static, Ext: Recogni
 
 //
 //    fn reset(&self) { unimplemented!() }
-//
-pub fn match_token(&mut self, ttype: isize, err_handler: &mut dyn ErrorStrategy) -> Result<&dyn Token, ANTLRError> {
+
+    pub fn match_token(&mut self, ttype: isize, err_handler: &mut dyn ErrorStrategy) -> Result<&dyn Token, ANTLRError> {
         let token = self.input.la(1);
         if token == ttype {
             if ttype == TOKEN_EOF { self.matched_eof = true; }
@@ -250,7 +246,7 @@ pub fn match_token(&mut self, ttype: isize, err_handler: &mut dyn ErrorStrategy)
         self.parse_listeners.len() - 1
     }
 
-    //todo, looks like we need hashset to be able to remove one listener
+    //todo, looks like we need to return some kind of handler to be able to remove one listener
     pub fn remove_parse_listener(&self, listener_id: usize) { unimplemented!() }
 
     pub fn remove_parse_listeners(&mut self) { self.parse_listeners.clear() }
@@ -278,8 +274,12 @@ pub fn match_token(&mut self, ttype: isize, err_handler: &mut dyn ErrorStrategy)
 //
 //    fn set_token_stream(&self, input: TokenStream) { unimplemented!() }
 
-    fn add_context_to_parse_tree(&self) { unimplemented!() }
-
+    fn add_context_to_parse_tree(&mut self) {
+//        self.ctx.as_mut().map(|it|{
+//            let r = Rc::get_mut_unchecked(it.getp);
+//        });
+        unimplemented!()
+    }
 
     pub fn enter_rule(&mut self, localctx: Rc<dyn ParserRuleContext>, state: isize, rule_index: usize) {
         self.set_state(state);
@@ -287,7 +287,7 @@ pub fn match_token(&mut self, ttype: isize, err_handler: &mut dyn ErrorStrategy)
         let mut localctx = Rc::get_mut(self.ctx.as_mut().unwrap()).unwrap();
         localctx.set_start(self.input.lt(1).get_token_index());
         if self.build_parse_trees {
-            unimplemented!()
+            self.add_context_to_parse_tree()
         }
         self.trigger_enter_rule_event();
     }
@@ -295,15 +295,12 @@ pub fn match_token(&mut self, ttype: isize, err_handler: &mut dyn ErrorStrategy)
     pub fn exit_rule(&mut self) {
         self.trigger_exit_rule_event();
         self.set_state(self.get_parser_rule_context().get_invoking_state());
-        let mut localctx = &mut self.ctx;
-        let mut ctx = localctx.as_mut().unwrap();
+        let mut currctx = &mut self.ctx;
+        let mut ctx = currctx.as_mut().unwrap();
         let mut parent = ctx.get_parent_ctx()
             .as_ref()
-            .map(|it| it
-                .upgrade()
-                .unwrap()
-            );
-        mem::replace(localctx, parent);
+            .map(|it| it.upgrade().unwrap());
+        mem::replace(currctx, parent);
     }
 
     pub fn enter_outer_alt(&mut self, new_ctx: Option<Rc<dyn ParserRuleContext>>, altNum: isize) {

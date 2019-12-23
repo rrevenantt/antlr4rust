@@ -20,9 +20,9 @@ pub trait RuleContext {
     fn peek_parent(&self) -> Option<Rc<dyn ParserRuleContext>>;
 }
 
-pub(crate) struct CustomRuleContextInternal;
+pub(crate) struct EmptyCustomRuleContext;
 
-impl CustomRuleContext for CustomRuleContextInternal {
+impl CustomRuleContext for EmptyCustomRuleContext {
     fn get_rule_index(&self) -> usize {
         usize::max_value()
     }

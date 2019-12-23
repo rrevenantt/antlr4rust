@@ -10,6 +10,7 @@ Missing features:
   - [ ] Some corner cases from ANTLR4 test suit are still failing
 - [ ] Parser
   - [ ] recovery is partially working
+  - [ ] some internal optimizations
   - [ ] labeled alternatives
   - [ ] left recursion
   - [ ] syntax tree

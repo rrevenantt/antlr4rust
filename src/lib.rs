@@ -8,9 +8,10 @@
 #![feature(bind_by_move_pattern_guards)]
 #![feature(never_type)]
 #![feature(cell_update)]
+#![feature(specialization)]
+extern crate byteorder;
 #[macro_use]
 extern crate lazy_static;
-extern crate byteorder;
 //extern crate uuid;
 
 pub mod ll1_analyzer;
@@ -38,8 +39,8 @@ pub mod dfa;
 //pub mod file_stream;
 pub mod atn_deserializer;
 pub mod token;
-//pub mod utils;
-//pub mod trees;
+pub mod utils;
+pub mod trees;
 pub mod atn_config_set;
 //pub mod diagnostic_error_listener;
 pub mod error_listener;

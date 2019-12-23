@@ -1,15 +1,22 @@
-use crate::interval_set::Interval;
 use std::any::Any;
-use crate::parser_rule_context::ParserRuleContext;
-use crate::token::Token;
+use std::ops::Deref;
+use std::rc::Rc;
 
-pub trait Tree {
-    fn get_parent(&self) -> &dyn Tree;
+use crate::atn::INVALID_ALT;
+use crate::interval_set::Interval;
+use crate::parser_rule_context::{BaseParserRuleContext, ParserRuleContext};
+use crate::recognizer::Recognizer;
+use crate::rule_context::CustomRuleContext;
+use crate::token::{OwningToken, Token};
+
+//todo try to make in more generic
+pub trait Tree: NodeText {
+    fn get_parent(&self) -> Option<&Rc<dyn ParserRuleContext>>;
     //    fn set_parent(&self, tree: Self);
     fn get_payload(&self) -> Box<dyn Any>;
-    fn get_child(&self, i: isize) -> &dyn Tree;
-    fn get_child_count(&self) -> isize;
-    fn get_children(&self) -> Vec<&dyn Tree>;
+    fn get_child(&self, i: usize) -> Option<&Rc<dyn ParserRuleContext>>;
+    fn get_child_count(&self) -> usize;
+    fn get_children(&self) -> &Vec<Rc<dyn ParserRuleContext>>;
 }
 
 pub trait SyntaxTree: Tree {
@@ -20,17 +27,79 @@ pub trait ParseTree: SyntaxTree {
     //    fn accept(&self, v: ParseTreeVisitor) -> interface;
     fn get_text(&self) -> String;
 
-//    fn to_String_tree(&self, s: Vec<String>, r: Recognizer) -> String;
+    fn to_string_tree(&self, r: &dyn Recognizer) -> String;
+}
+
+pub trait NodeText {
+    fn get_node_text(&self, rule_names: &[&str]) -> String;
+}
+
+impl<T: Tree> NodeText for T {
+    default fn get_node_text(&self, rule_names: &[&str]) -> String {
+        "<unknown>".to_owned()
+    }
+}
+
+impl<T: ParserRuleContext> NodeText for T {
+    default fn get_node_text(&self, rule_names: &[&str]) -> String {
+        let rule_index = self.get_rule_index();
+        let rule_name = rule_names[rule_index];
+        let alt_number = self.get_alt_number();
+        if alt_number != INVALID_ALT {
+            return format!("{}:{}", rule_name, alt_number);
+        }
+        return rule_name.to_owned();
+    }
 }
 
 //pub trait RuleNode: ParseTree {
 //    fn get_rule_context(&self) -> RuleContext;
 //    fn get_base_rule_context(&self) -> * BaseRuleContext;
 //}
+/// AST leaf
+pub type TerminalNode = BaseParserRuleContext<TerminalNodeCtx>;
 
-pub trait TerminalNode: ParseTree {
-    fn get_symbol(&self) -> &dyn Token;
+pub struct TerminalNodeCtx {
+    pub symbol: OwningToken
 }
+
+impl CustomRuleContext for TerminalNodeCtx {
+    fn get_rule_index(&self) -> usize {
+        unimplemented!()
+    }
+}
+
+impl NodeText for TerminalNode {
+    fn get_node_text(&self, rule_names: &[&str]) -> String {
+        self.symbol.get_text().to_owned()
+    }
+}
+
+
+/// # Error Leaf
+/// Created for each token created or consumed during recovery
+pub type ErrorNode = BaseParserRuleContext<ErrorNodeCtx>;
+
+//not type alias because we would like to use it in downcasting
+pub struct ErrorNodeCtx(TerminalNodeCtx);
+
+impl CustomRuleContext for ErrorNodeCtx {
+    fn get_rule_index(&self) -> usize {
+        unimplemented!()
+    }
+}
+
+impl Deref for ErrorNodeCtx {
+    type Target = TerminalNodeCtx;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+//pub trait TerminalNode: ParseTree {
+//    fn get_symbol(&self) -> &dyn Token;
+//}
 
 //pub trait ErrorNode: TerminalNode {
 //    fn error_node(&self);
@@ -57,15 +126,6 @@ pub trait ParseTreeListener: 'static {
 //    fn visit_error_node(&self, node: ErrorNode) {}
     fn enter_every_rule(&self, ctx: &ParserRuleContext) {}
     fn exit_every_rule(&self, ctx: &ParserRuleContext) {}
-}
-
-pub trait Guard {
-    type T: ParseTreeListener + ?Sized;
-}
-
-pub trait ListenerDispatch {
-    fn enter(&mut self, ctx: &ParserRuleContext);
-    fn exit(&mut self, ctx: &ParserRuleContext);
 }
 
 //pub struct BaseParseTreeListener {  }
@@ -115,7 +175,7 @@ pub trait ListenerDispatch {
 //
 //    fn String(&self) -> String { unimplemented!() }
 //
-//    fn to_String_tree(&self, s Vec<String>, r: Recognizer) -> String { unimplemented!() }
+//    fn to_string_tree(&self, s Vec<String>, r: Recognizer) -> String { unimplemented!() }
 //}
 //
 //pub struct ErrorNodeImpl {
