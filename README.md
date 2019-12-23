@@ -1,19 +1,20 @@
 # antlr4rust
 ANTLR4 runtime for Rust programming language 
 
-Generator part is currently located in [rrevenantt/antlr4](https://github.com/rrevenantt/antlr4)
+Generator part is currently located in rust-target branch of my antlr4 fork [rrevenantt/antlr4/tree/rust-target](https://github.com/rrevenantt/antlr4/tree/rust-target)
 
 For examples you can see [grammars](grammars) and [tests/gen](tests/gen) for corresponding generated code 
+and [tests/my_tests.rs](tests/my_test.rs) for usage 
 
 # Implementation status
 
-WIP, not quite useful yet
+WIP, some basic things are working but still not quite useful yet
 
-Missing features:
+Missing features(everything else is pretty much implemented, but you should still expect bugs/panics):
 - [ ] Lexer
   - [ ] Some corner cases from ANTLR4 test suit are still failing
 - [ ] Parser
-  - [ ] recovery is partially working
+  - [ ] recovery/error reporting is partially working
   - [ ] some internal optimizations
   - [ ] labeled alternatives
   - [ ] left recursion
