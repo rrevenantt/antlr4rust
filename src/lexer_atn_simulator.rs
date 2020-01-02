@@ -5,37 +5,38 @@
 //lexer_atnsimulator_max_dfaedge = 127
 //lexer_atnsimulator_match_calls = 0
 
+use std::borrow::BorrowMut;
+use std::cell::{Cell, RefCell, RefMut};
+use std::convert::TryFrom;
+use std::io::{stdout, Write};
+use std::ops::{Add, Deref, DerefMut, Index};
+use std::ptr;
+use std::rc::Rc;
+use std::sync::{Arc, RwLockReadGuard};
+use std::usize;
+
 use crate::atn::ATN;
-use crate::atn_simulator::{IATNSimulator, BaseATNSimulator};
+use crate::atn_config::{ATNConfig, ATNConfigType};
+use crate::atn_config_set::ATNConfigSet;
+use crate::atn_deserializer::cast;
+use crate::atn_simulator::{BaseATNSimulator, IATNSimulator};
+use crate::atn_state::{ATNState, ATNStateType};
+use crate::atn_state::ATNStateType::RuleStopState;
 use crate::char_stream::CharStream;
 use crate::dfa::DFA;
-use crate::lexer::{Lexer, LEXER_MIN_CHAR_VALUE, LEXER_MAX_CHAR_VALUE, BaseLexer};
+use crate::dfa_state::{DFAState, DFAStateRef};
+use crate::errors::ANTLRError;
+use crate::errors::ANTLRError::LexerNoAltError;
+use crate::int_stream::{EOF, IntStream};
+use crate::lexer::{BaseLexer, Lexer, LEXER_MAX_CHAR_VALUE, LEXER_MIN_CHAR_VALUE, LexerRecog};
+use crate::lexer_action_executor::LexerActionExecutor;
 use crate::prediction_context::{PREDICTION_CONTEXT_EMPTY_RETURN_STATE, PredictionContext,
                                 PredictionContextCache};
 use crate::prediction_context::EMPTY_PREDICTION_CONTEXT;
-use crate::dfa_state::{DFAState, DFAStateRef};
-use crate::atn_config_set::ATNConfigSet;
-use crate::transition::{Transition, TransitionType, RuleTransition, ActionTransition, PredicateTransition};
-use crate::atn_state::{ATNState, ATNStateType};
-use crate::atn_config::{ATNConfig, ATNConfigType};
-use crate::errors::ANTLRError;
-use crate::int_stream::{EOF, IntStream};
-use crate::atn_state::ATNStateType::RuleStopState;
-use crate::errors::ANTLRError::LexerNoAltError;
-use crate::token::TOKEN_EOF;
-use crate::atn_deserializer::cast;
-use crate::lexer_action_executor::LexerActionExecutor;
 use crate::recognizer::Recognizer;
+use crate::token::TOKEN_EOF;
 use crate::token_source::TokenSource;
-use std::ptr;
-use std::usize;
-use std::sync::{Arc, RwLockReadGuard};
-use std::convert::TryFrom;
-use std::ops::{Deref, DerefMut, Index, Add};
-use std::io::{stdout, Write};
-use std::cell::{RefCell, RefMut, Cell};
-use std::rc::Rc;
-use std::borrow::BorrowMut;
+use crate::transition::{ActionTransition, PredicateTransition, RuleTransition, Transition, TransitionType};
 
 //lazy_static! {
 //    pub static ref ERROR: DFAState = DFAState::new_dfastate(
@@ -47,17 +48,17 @@ pub const ERROR_DFA_STATE_REF: DFAStateRef = usize::MAX;
 
 pub trait ILexerATNSimulator: IATNSimulator {
     fn reset(&self);
-    fn match_token<'a>(
-        &'a mut self,
+    fn match_token(
+        &mut self,
         mode: isize,
 //        input:&mut dyn CharStream,
         lexer: &mut BaseLexer,
     ) -> Result<isize, ANTLRError>;
     fn get_char_position_in_line(&self) -> isize;
     fn get_line(&self) -> isize;
-    fn get_text(&self, input: &CharStream) -> String;
-    fn consume(&self, input: &mut CharStream);
-    fn recover(&mut self, _re: ANTLRError, input: &mut CharStream) {
+    fn get_text(&self, input: &dyn CharStream) -> String;
+    fn consume(&self, input: &mut dyn CharStream);
+    fn recover(&mut self, _re: ANTLRError, input: &mut dyn CharStream) {
         if input.la(1) != EOF {
             self.consume(input)
         }
@@ -67,7 +68,7 @@ pub trait ILexerATNSimulator: IATNSimulator {
 pub struct LexerATNSimulator {
     base: BaseATNSimulator,
     //todo maybe move to Lexer
-    recog: Rc<RefCell<Box<dyn Recognizer>>>,
+    recog: Rc<RefCell<Box<dyn LexerRecog>>>,
 
     prediction_mode: isize,
     //    merge_cache: DoubleDict,
@@ -84,8 +85,8 @@ impl ILexerATNSimulator for LexerATNSimulator {
         unimplemented!()
     }
 
-    fn match_token<'a>(
-        &'a mut self,
+    fn match_token(
+        &mut self,
         mode: isize,
 //        input:&mut dyn CharStream,
         lexer: &mut BaseLexer,
@@ -161,7 +162,7 @@ impl LexerATNSimulator {
         atn: Arc<ATN>,
         decision_to_dfa: Arc<Vec<DFA>>,
         shared_context_cache: Arc<PredictionContextCache>,
-        recog: Box<dyn Recognizer>,
+        recog: Box<dyn LexerRecog>,
     ) -> LexerATNSimulator {
         LexerATNSimulator {
             base: BaseATNSimulator::new_base_atnsimulator(atn, decision_to_dfa, shared_context_cache),
@@ -208,8 +209,8 @@ impl LexerATNSimulator {
     //        dfa.states.read().unwrap()
     //    }
 
-    fn exec_atn<'a>(
-        &'a mut self,
+    fn exec_atn(
+        &mut self,
 //        input: &'a mut dyn CharStream,
         ds0: DFAStateRef,
         lexer: &mut BaseLexer,
@@ -385,13 +386,13 @@ impl LexerATNSimulator {
         }
     }
 
-    fn accept(&mut self, input: &mut CharStream) {
+    fn accept(&mut self, input: &mut dyn CharStream) {
         input.seek(self.prev_accept.index);
         self.line.set(self.prev_accept.line);
         self.char_position_in_line.set(self.prev_accept.column);
     }
 
-    fn compute_start_state(&self, _p: &ATNState, lexer: &mut BaseLexer) -> Box<ATNConfigSet> {
+    fn compute_start_state(&self, _p: &dyn ATNState, lexer: &mut BaseLexer) -> Box<ATNConfigSet> {
         //        let initial_context = &EMPTY_PREDICTION_CONTEXT;
         let mut config_set = ATNConfigSet::new_base_atnconfig_set(true);
 
@@ -423,7 +424,7 @@ impl LexerATNSimulator {
         _configs: &mut ATNConfigSet,
         mut _current_alt_reached_accept_state: bool,
         _speculative: bool,
-        _treatEOFAsEpsilon: bool,
+        _treat_eofas_epsilon: bool,
         lexer: &mut BaseLexer,
     ) -> bool {
         //        let config = &config;
@@ -458,7 +459,7 @@ impl LexerATNSimulator {
                             _configs,
                             _current_alt_reached_accept_state,
                             _speculative,
-                            _treatEOFAsEpsilon,
+                            _treat_eofas_epsilon,
                             lexer,
                         )
                     }
@@ -484,7 +485,7 @@ impl LexerATNSimulator {
                 tr.as_ref(),
                 _configs,
                 _speculative,
-                _treatEOFAsEpsilon,
+                _treat_eofas_epsilon,
                 lexer,
             );
 
@@ -494,7 +495,7 @@ impl LexerATNSimulator {
                     _configs,
                     _current_alt_reached_accept_state,
                     _speculative,
-                    _treatEOFAsEpsilon,
+                    _treat_eofas_epsilon,
                     lexer,
                 );
             }
@@ -603,7 +604,7 @@ impl LexerATNSimulator {
         return result;
     }
 
-    fn capture_sim_state(&mut self, input: &CharStream, dfa_state: DFAStateRef) -> bool {
+    fn capture_sim_state(&mut self, input: &dyn CharStream, dfa_state: DFAStateRef) -> bool {
         if self.get_dfa()
             .states
             .read().unwrap()

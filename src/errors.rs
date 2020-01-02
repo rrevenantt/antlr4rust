@@ -1,19 +1,23 @@
+use std::borrow::Borrow;
 use std::error::Error;
-use crate::token::{Token, OwningToken};
-use crate::int_stream::IntStream;
+use std::fmt::{Debug, Display};
+use std::fmt;
+use std::fmt::Formatter;
+use std::mem::discriminant;
+use std::ops::Deref;
 
+use crate::atn::ATN;
+use crate::atn_config_set::ATNConfigSet;
+use crate::atn_deserializer::cast;
+use crate::atn_simulator::IATNSimulator;
+use crate::char_stream::CharStream;
+use crate::int_stream::IntStream;
 use crate::interval_set::IntervalSet;
 use crate::lexer::Lexer;
-use crate::char_stream::CharStream;
-use crate::atn_config_set::ATNConfigSet;
-
-use std::fmt::{Debug, Display};
-use std::fmt::Formatter;
-use std::fmt;
-use std::mem::discriminant;
-use crate::parser::{Parser, BaseParser};
-use crate::atn::ATN;
-use crate::atn_simulator::IATNSimulator;
+use crate::parser::{BaseParser, Parser};
+use crate::token::{OwningToken, Token};
+use crate::transition::PredicateTransition;
+use crate::transition::TransitionType::TRANSITION_PREDICATE;
 
 #[derive(Debug, Clone)]
 pub enum ANTLRError {
@@ -72,8 +76,12 @@ impl BaseRecognitionError {
             .get_expected_tokens(self.offending_state, recognizer.get_parser_rule_context())
     }
 
-    fn new() -> BaseRecognitionError {
-        unimplemented!()
+    fn new(recog: &mut dyn Parser) -> BaseRecognitionError {
+        BaseRecognitionError {
+            message: "".to_string(),
+            offending_token: recog.get_current_token().to_owned(),
+            offending_state: recog.get_state(),
+        }
     }
 }
 
@@ -133,11 +141,7 @@ pub struct InputMisMatchError {
 impl InputMisMatchError {
     pub fn new(recognizer: &mut dyn Parser) -> InputMisMatchError {
         InputMisMatchError {
-            base: BaseRecognitionError {
-                message: "".to_string(),
-                offending_token: recognizer.get_current_token().to_owned(),
-                offending_state: recognizer.get_state(),
-            }
+            base: BaseRecognitionError::new(recognizer)
         }
     }
 }
@@ -152,4 +156,31 @@ pub struct FailedPredicateError {
     predicate: String,
 }
 
+impl FailedPredicateError {
+    pub fn new(recog: &mut dyn Parser, predicate: Option<String>, msg: Option<String>) -> ANTLRError {
+//        let predicate = predicate.map(|x|x.into());
+//        let msg = msg.map(|x|x.into());
+
+        let tr = recog.get_interpreter().atn()
+            .states[recog.get_state() as usize]
+            .get_transitions().first().unwrap();
+        let (rule_index, predicate_index) = if tr.get_serialization_type() == TRANSITION_PREDICATE {
+            let pr = unsafe { cast::<PredicateTransition>(tr.deref()) };
+            (pr.rule_index, pr.pred_index)
+        } else {
+            (0, 0)
+        };
+
+        ANTLRError::PredicateError(FailedPredicateError {
+            base: BaseRecognitionError {
+                message: msg.unwrap_or_else(|| format!("failed predicate: {}", predicate.as_deref().unwrap_or("None"))),
+                offending_token: recog.get_current_token().to_owned(),
+                offending_state: recog.get_state(),
+            },
+            rule_index,
+            predicate_index,
+            predicate: predicate.unwrap_or_default(),
+        })
+    }
+}
 //fn new_failed_predicate_exception(recognizer: Parser, predicate: String, message: String) -> FailedPredicateError { unimplemented!() }

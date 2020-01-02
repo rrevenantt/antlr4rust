@@ -1,4 +1,4 @@
-// Generated from ReferenceToATN.g4 by ANTLR 4.7.1
+// Generated from SimpleLR.g4 by ANTLR 4.7.1
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
@@ -25,8 +25,7 @@ use antlr_rust::token_source::TokenSource;
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
 
 pub const ID: isize = 1;
-pub const ATN: isize = 2;
-pub const WS: isize = 3;
+pub const WS: isize = 2;
 pub const channelNames: [&'static str; 0 + 2] = [
     "DEFAULT_TOKEN_CHANNEL", "HIDDEN"
 ];
@@ -35,20 +34,20 @@ pub const modeNames: [&'static str; 1] = [
     "DEFAULT_MODE"
 ];
 
-pub const ruleNames: [&'static str; 3] = [
-    "ID", "ATN", "WS"
+pub const ruleNames: [&'static str; 2] = [
+    "ID", "WS"
 ];
 
 pub const _LITERAL_NAMES: [Option<&'static str>; 0] = [];
-pub const _SYMBOLIC_NAMES: [Option<&'static str>; 4] = [
-    None, Some("ID"), Some("ATN"), Some("WS")
+pub const _SYMBOLIC_NAMES: [Option<&'static str>; 3] = [
+    None, Some("ID"), Some("WS")
 ];
 lazy_static! {
 	    static ref _shared_context_cache: Arc<PredictionContextCache> = Arc::new(PredictionContextCache::new());
 		static ref VOCABULARY: Box<dyn Vocabulary> = Box::new(VocabularyImpl::new(_LITERAL_NAMES.iter(), _SYMBOLIC_NAMES.iter(), None));
 	}
 
-impl Deref for ReferenceToATNLexer {
+impl Deref for SimpleLRLexer {
     type Target = BaseLexer;
 
     fn deref(&self) -> &Self::Target {
@@ -56,20 +55,19 @@ impl Deref for ReferenceToATNLexer {
     }
 }
 
-impl DerefMut for ReferenceToATNLexer {
+impl DerefMut for SimpleLRLexer {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.base
     }
 }
 
 
-
-pub struct ReferenceToATNLexer {
+pub struct SimpleLRLexer {
     base: BaseLexer,
 //	static { RuntimeMetaData.checkVersion("4.7.1", RuntimeMetaData.VERSION); }
 }
 
-impl ReferenceToATNLexer {
+impl SimpleLRLexer {
     fn get_rule_names(&self) -> &'static [&'static str] {
         &ruleNames
     }
@@ -90,7 +88,7 @@ impl ReferenceToATNLexer {
     }
 
     fn get_grammar_file_name(&self) -> &'static str {
-        "ReferenceToATNLexer.g4"
+        "SimpleLRLexer.g4"
     }
 
     pub fn new(input: Box<dyn CharStream>) -> Self {
@@ -101,28 +99,28 @@ impl ReferenceToATNLexer {
                     _ATN.clone(),
                     _decision_to_DFA.clone(),
                     _shared_context_cache.clone(),
-                    Box::new(ReferenceToATNLexerActions {}),
+                    Box::new(SimpleLRLexerActions {}),
                 ),
             )
         }
     }
 }
 
-struct ReferenceToATNLexerActions {}
+struct SimpleLRLexerActions {}
 
-impl ReferenceToATNLexerActions {}
+impl SimpleLRLexerActions {}
 
-impl LexerRecog for ReferenceToATNLexerActions {}
+impl LexerRecog for SimpleLRLexerActions {}
 
-impl Recognizer for ReferenceToATNLexerActions {}
+impl Recognizer for SimpleLRLexerActions {}
 
-impl Actions for ReferenceToATNLexerActions {
+impl Actions for SimpleLRLexerActions {
     type Recog = BaseLexer;
 }
 
-impl ReferenceToATNLexerActions {}
+impl SimpleLRLexerActions {}
 
-impl TokenSource for ReferenceToATNLexer {
+impl TokenSource for SimpleLRLexer {
     fn next_token(&mut self) -> Box<dyn Token> {
         self.base.next_token()
     }
@@ -166,16 +164,12 @@ lazy_static! {
 
 const _serializedATN: &'static str =
     "\x03\u{608b}\u{a72a}\u{8133}\u{b9ed}\u{417c}\u{3be7}\u{7786}\u{5964}\x02\
-		\x05\x17\x08\x01\x04\x02\x09\x02\x04\x03\x09\x03\x04\x04\x09\x04\x03\x02\
-		\x06\x02\x0b\x0a\x02\x0d\x02\x0e\x02\x0c\x03\x03\x06\x03\x10\x0a\x03\x0d\
-		\x03\x0e\x03\x11\x03\x04\x03\x04\x03\x04\x03\x04\x02\x02\x05\x03\x03\x05\
-		\x04\x07\x05\x03\x02\x03\x04\x02\x0c\x0c\x22\x22\x02\x18\x02\x03\x03\x02\
-		\x02\x02\x02\x05\x03\x02\x02\x02\x02\x07\x03\x02\x02\x02\x03\x0a\x03\x02\
-		\x02\x02\x05\x0f\x03\x02\x02\x02\x07\x13\x03\x02\x02\x02\x09\x0b\x04\x63\
-		\x7c\x02\x0a\x09\x03\x02\x02\x02\x0b\x0c\x03\x02\x02\x02\x0c\x0a\x03\x02\
-		\x02\x02\x0c\x0d\x03\x02\x02\x02\x0d\x04\x03\x02\x02\x02\x0e\x10\x04\x32\
-		\x3b\x02\x0f\x0e\x03\x02\x02\x02\x10\x11\x03\x02\x02\x02\x11\x0f\x03\x02\
-		\x02\x02\x11\x12\x03\x02\x02\x02\x12\x06\x03\x02\x02\x02\x13\x14\x09\x02\
-		\x02\x02\x14\x15\x03\x02\x02\x02\x15\x16\x08\x04\x02\x02\x16\x08\x03\x02\
-		\x02\x02\x05\x02\x0c\x11\x03\x08\x02\x02";
+		\x04\x10\x08\x01\x04\x02\x09\x02\x04\x03\x09\x03\x03\x02\x06\x02\x09\x0a\
+		\x02\x0d\x02\x0e\x02\x0a\x03\x03\x03\x03\x03\x03\x03\x03\x02\x02\x04\x03\
+		\x03\x05\x04\x03\x02\x03\x04\x02\x0c\x0c\x22\x22\x02\x10\x02\x03\x03\x02\
+		\x02\x02\x02\x05\x03\x02\x02\x02\x03\x08\x03\x02\x02\x02\x05\x0c\x03\x02\
+		\x02\x02\x07\x09\x04\x63\x7c\x02\x08\x07\x03\x02\x02\x02\x09\x0a\x03\x02\
+		\x02\x02\x0a\x08\x03\x02\x02\x02\x0a\x0b\x03\x02\x02\x02\x0b\x04\x03\x02\
+		\x02\x02\x0c\x0d\x09\x02\x02\x02\x0d\x0e\x03\x02\x02\x02\x0e\x0f\x08\x03\
+		\x02\x02\x0f\x06\x03\x02\x02\x02\x04\x02\x0a\x03\x08\x02\x02";
 

@@ -119,7 +119,7 @@ impl DefaultErrorStrategy {
         println!("expecting {}", expecting.to_token_string(recognizer.get_vocabulary()));
         if expecting.contains(next_token_type) {
             self.report_unwanted_token(recognizer);
-            recognizer.consume();
+            recognizer.consume(self);
             self.report_match(recognizer);
             let matched_symbol = recognizer.get_current_token();
             return Some(matched_symbol);
@@ -156,10 +156,10 @@ impl DefaultErrorStrategy {
         return recover_set
     }
 
-    fn consume_until(&self, recognizer: &mut dyn Parser, set: &IntervalSet) {
+    fn consume_until(&mut self, recognizer: &mut dyn Parser, set: &IntervalSet) {
         let mut ttype = recognizer.get_input_stream().la(1);
         while ttype != TOKEN_EOF && !set.contains(ttype) {
-            recognizer.consume();
+            recognizer.consume(self);
             ttype = recognizer.get_input_stream().la(1);
         }
     }
@@ -173,7 +173,7 @@ impl ErrorStrategy for DefaultErrorStrategy {
     fn recover_inline(&mut self, recognizer: &mut dyn Parser) -> Result<OwningToken, ANTLRError> {
         let t = self.single_token_deletion(recognizer).map(|it| it.to_owned());
         if let Some(t) = t {
-            recognizer.consume();
+            recognizer.consume(self);
             return Ok(t);
         }
 
@@ -189,7 +189,7 @@ impl ErrorStrategy for DefaultErrorStrategy {
         if self.last_error_index == recognizer.get_input_stream().index()
             && self.last_error_states.is_some()
             && self.last_error_states.as_ref().unwrap().contains(recognizer.get_state()) {
-            recognizer.consume()
+            recognizer.consume(self)
         }
 
         self.last_error_index = recognizer.get_input_stream().index();

@@ -1,10 +1,12 @@
 use std::any::Any;
+use std::cell::{Cell, Ref, RefCell};
 use std::ops::{Deref, DerefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
 use crate::errors::ANTLRError;
 use crate::interval_set::Interval;
+use crate::parser::{Parser, ParserRecog};
 use crate::recognizer::Recognizer;
 use crate::rule_context::{BaseRuleContext, CustomRuleContext, EmptyCustomRuleContext, RuleContext};
 use crate::token::{OwningToken, Token};
@@ -14,18 +16,18 @@ use crate::trees;
 pub trait ParserRuleContext: RuleContext + CustomRuleContext + ParseTree {
     fn set_exception(&mut self, e: ANTLRError);
 
-    fn set_start(&mut self, t: isize);
+    fn set_start(&self, t: isize);
     fn get_start(&self) -> isize;
 
-    fn set_stop(&mut self, t: isize);
+    fn set_stop(&self, t: isize);
     fn get_stop(&self) -> isize;
 
 
-    fn add_token_node(&mut self, token: TerminalNode) -> Rc<dyn ParserRuleContext>;
-    fn add_error_node(&mut self, bad_token: ErrorNode) -> Rc<dyn ParserRuleContext>;
+    fn add_token_node(&self, token: TerminalNode) -> Rc<dyn ParserRuleContext>;
+    fn add_error_node(&self, bad_token: ErrorNode) -> Rc<dyn ParserRuleContext>;
 
-    fn add_child(&mut self, child: Rc<dyn ParserRuleContext>);
-    fn remove_last_child(&mut self);
+    fn add_child(&self, child: ParserRuleContextType);
+    fn remove_last_child(&self);
 }
 
 //requires ParserRuleContext to be Sync
@@ -39,18 +41,19 @@ pub(crate) fn empty_ctx() -> Box<dyn ParserRuleContext> {
     Box::new(BaseParserRuleContext::new_parser_ctx(None, -1, EmptyCustomRuleContext))
 }
 
+pub type ParserRuleContextType = Rc<dyn ParserRuleContext>;
 
 pub struct BaseParserRuleContext<Ctx: CustomRuleContext> {
     base: BaseRuleContext<Ctx>,
 
-    start: isize,
-    stop: isize,
+    start: Cell<isize>,
+    stop: Cell<isize>,
     exception: Option<Box<ANTLRError>>,
     /// List of children of current node
     /// Editing is done via Rc::try_unwrap or Rc::get_mut
     /// because in well-formed tree strong ref count should be one
     /// But Rc is still needed for Weak references to parent
-    children: Vec<Rc<dyn ParserRuleContext>>,
+    pub(crate) children: RefCell<Vec<ParserRuleContextType>>,
 }
 
 impl<Ctx: CustomRuleContext> RuleContext for BaseParserRuleContext<Ctx> {
@@ -66,12 +69,16 @@ impl<Ctx: CustomRuleContext> RuleContext for BaseParserRuleContext<Ctx> {
         self.base.is_empty()
     }
 
-    fn get_parent_ctx(&self) -> &Option<Weak<dyn ParserRuleContext>> {
+    fn get_parent_ctx(&self) -> Option<Rc<dyn ParserRuleContext>> {
         self.base.get_parent_ctx()
     }
 
-    fn peek_parent(&self) -> Option<Rc<dyn ParserRuleContext>> {
+    fn peek_parent(&self) -> Option<ParserRuleContextType> {
         self.base.peek_parent()
+    }
+
+    fn set_parent(&self, parent: &Option<Rc<dyn ParserRuleContext>>) {
+        self.base.set_parent(parent)
     }
 }
 
@@ -94,70 +101,76 @@ impl<Ctx: CustomRuleContext> ParserRuleContext for BaseParserRuleContext<Ctx> {
         self.exception = Some(Box::new(e));
     }
 
-    fn set_start(&mut self, t: isize) {
-        self.start = t;
+    fn set_start(&self, t: isize) {
+        self.start.set(t);
     }
 
     fn get_start(&self) -> isize {
-        self.start
+        self.start.get()
     }
 
-    fn set_stop(&mut self, t: isize) {
-        self.stop = t;
+    fn set_stop(&self, t: isize) {
+        self.stop.set(t);
     }
 
     fn get_stop(&self) -> isize {
-        self.stop
+        self.stop.get()
     }
 
-    fn add_token_node(&mut self, token: TerminalNode) -> Rc<dyn ParserRuleContext> {
-        unimplemented!()
+    fn add_token_node(&self, token: TerminalNode) -> Rc<dyn ParserRuleContext> {
+        let node: Rc<dyn ParserRuleContext> = Rc::new(token);
+        self.children.borrow_mut().push(node.clone());
+        node
     }
 
-    fn add_error_node(&mut self, bad_token: ErrorNode) -> Rc<dyn ParserRuleContext> {
-        unimplemented!()
+    fn add_error_node(&self, bad_token: ErrorNode) -> Rc<dyn ParserRuleContext> {
+//        bad_token.base.parent_ctx =
+        let node: Rc<dyn ParserRuleContext> = Rc::new(bad_token);
+
+        self.children.borrow_mut().push(node.clone());
+        node
     }
 
-    fn add_child(&mut self, child: Rc<dyn ParserRuleContext>) {
-        unimplemented!()
+    fn add_child(&self, child: ParserRuleContextType) {
+        self.children.borrow_mut().push(child);
     }
 
-    fn remove_last_child(&mut self) {
-        self.children.pop();
+    fn remove_last_child(&self) {
+        self.children.borrow_mut().pop();
     }
 }
 
 impl<Ctx: CustomRuleContext> BaseParserRuleContext<Ctx> {
-    pub fn new_parser_ctx(parent_ctx: Option<Rc<dyn ParserRuleContext>>, invoking_state: isize, ext: Ctx) -> Self {
+    pub fn new_parser_ctx(parent_ctx: Option<ParserRuleContextType>, invoking_state: isize, ext: Ctx) -> Self {
         BaseParserRuleContext {
             base: BaseRuleContext::new_ctx(parent_ctx, invoking_state, ext),
-            start: -1,
-            stop: -1,
+            start: Cell::new(-1),
+            stop: Cell::new(-1),
             exception: None,
-            children: vec![],
+            children: RefCell::new(vec![]),
         }
     }
 }
 
 impl<Ctx: CustomRuleContext> Tree for BaseParserRuleContext<Ctx> {
-    fn get_parent(&self) -> Option<&Rc<dyn ParserRuleContext>> {
+    fn get_parent(&self) -> Option<&ParserRuleContextType> {
         unimplemented!()
     }
 
-    fn get_payload(&self) -> Box<Any> {
+    fn get_payload(&self) -> Box<dyn Any> {
         unimplemented!()
     }
 
-    fn get_child(&self, i: usize) -> Option<&Rc<dyn ParserRuleContext>> {
-        self.children.get(i)
+    fn get_child(&self, i: usize) -> Option<ParserRuleContextType> {
+        self.children.borrow().get(i).cloned()
     }
 
     fn get_child_count(&self) -> usize {
-        self.children.len()
+        self.children.borrow().len()
     }
 
-    fn get_children(&self) -> &Vec<Rc<dyn ParserRuleContext>> {
-        &self.children
+    fn get_children(&self) -> Ref<Vec<ParserRuleContextType>> {
+        self.children.borrow()
     }
 }
 
@@ -172,7 +185,7 @@ impl<Ctx: CustomRuleContext> ParseTree for BaseParserRuleContext<Ctx> {
         unimplemented!()
     }
 
-    fn to_string_tree(&self, r: &dyn Recognizer) -> String {
+    fn to_string_tree(&self, r: &dyn Parser) -> String {
         trees::string_tree(self, r.get_rule_names())
     }
 }

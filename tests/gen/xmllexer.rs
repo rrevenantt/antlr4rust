@@ -14,11 +14,11 @@ use antlr_rust::char_stream::CharStream;
 use antlr_rust::common_token_factory::TokenFactory;
 use antlr_rust::dfa::DFA;
 use antlr_rust::error_listener::ErrorListener;
-use antlr_rust::lexer::{BaseLexer, Lexer};
+use antlr_rust::lexer::{BaseLexer, Lexer, LexerRecog};
 use antlr_rust::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
 use antlr_rust::parser_rule_context::ParserRuleContext;
 use antlr_rust::prediction_context::PredictionContextCache;
-use antlr_rust::recognizer::Recognizer;
+use antlr_rust::recognizer::{Actions, Recognizer};
 use antlr_rust::rule_context::BaseRuleContext;
 use antlr_rust::token::*;
 use antlr_rust::token_source::TokenSource;
@@ -74,8 +74,8 @@ lazy_static! {
 		static ref VOCABULARY: Box<dyn Vocabulary> = Box::new(VocabularyImpl::new(_LITERAL_NAMES.iter(), _SYMBOLIC_NAMES.iter(), None));
 	}
 
-impl<'a> Deref for XMLLexer {
-    type Target = BaseLexer<'static>;
+impl Deref for XMLLexer {
+    type Target = BaseLexer;
 
     fn deref(&self) -> &Self::Target {
         &self.base
@@ -91,7 +91,7 @@ impl DerefMut for XMLLexer {
 
 
 pub struct XMLLexer {
-    base: BaseLexer<'static>,
+    base: BaseLexer,
 //	static { RuntimeMetaData.checkVersion("4.7.1", RuntimeMetaData.VERSION); }
 }
 
@@ -131,29 +131,35 @@ impl XMLLexer {
                 ),
             )
         }
-	}
+    }
 }
 
 struct XMLLexerActions {}
 
 impl XMLLexerActions {}
 
-impl Recognizer for XMLLexerActions {
+impl LexerRecog for XMLLexerActions {}
+
+impl Recognizer for XMLLexerActions {}
+
+impl Actions for XMLLexerActions {
+    type Recog = BaseLexer;
+
     fn action(&mut self, _localctx: Option<&dyn ParserRuleContext>, rule_index: isize, action_index: isize,
-              lexer: &mut BaseLexer,
+              recog: &mut BaseLexer,
     ) {
         match rule_index {
             10 =>
-                self.CLOSE_action(_localctx, action_index, lexer),
+                self.CLOSE_action(_localctx, action_index, recog),
             _ => {}
         }
     }
-    fn sempred(&mut self, _localctx: Option<&dyn ParserRuleContext>, rule_index: isize, pred_index: isize,
-               lexer: &mut BaseLexer,
+    fn sempred(&self, _localctx: Option<&dyn ParserRuleContext>, rule_index: isize, pred_index: isize,
+               recog: &BaseLexer,
     ) -> bool {
         match rule_index {
             0 =>
-                self.COMMENT_sempred(_localctx, pred_index, lexer),
+                self.COMMENT_sempred(_localctx, pred_index, recog),
             _ => true
         }
     }
@@ -172,8 +178,8 @@ impl XMLLexerActions {
         }
     }
 
-    fn COMMENT_sempred(&mut self, _localctx: Option<&dyn ParserRuleContext>, pred_index: isize,
-                       lexer: &mut BaseLexer,
+    fn COMMENT_sempred(&self, _localctx: Option<&dyn ParserRuleContext>, pred_index: isize,
+                       recog: &<Self as Actions>::Recog,
     ) -> bool {
         match pred_index {
             0 => {

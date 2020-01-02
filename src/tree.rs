@@ -1,22 +1,24 @@
 use std::any::Any;
+use std::cell::Ref;
 use std::ops::Deref;
 use std::rc::Rc;
 
 use crate::atn::INVALID_ALT;
 use crate::interval_set::Interval;
-use crate::parser_rule_context::{BaseParserRuleContext, ParserRuleContext};
+use crate::parser::{Parser, ParserRecog};
+use crate::parser_rule_context::{BaseParserRuleContext, ParserRuleContext, ParserRuleContextType};
 use crate::recognizer::Recognizer;
 use crate::rule_context::CustomRuleContext;
 use crate::token::{OwningToken, Token};
 
 //todo try to make in more generic
 pub trait Tree: NodeText {
-    fn get_parent(&self) -> Option<&Rc<dyn ParserRuleContext>>;
+    fn get_parent(&self) -> Option<&ParserRuleContextType>;
     //    fn set_parent(&self, tree: Self);
     fn get_payload(&self) -> Box<dyn Any>;
-    fn get_child(&self, i: usize) -> Option<&Rc<dyn ParserRuleContext>>;
+    fn get_child(&self, i: usize) -> Option<ParserRuleContextType>;
     fn get_child_count(&self) -> usize;
-    fn get_children(&self) -> &Vec<Rc<dyn ParserRuleContext>>;
+    fn get_children(&self) -> Ref<Vec<ParserRuleContextType>>;
 }
 
 pub trait SyntaxTree: Tree {
@@ -27,7 +29,7 @@ pub trait ParseTree: SyntaxTree {
     //    fn accept(&self, v: ParseTreeVisitor) -> interface;
     fn get_text(&self) -> String;
 
-    fn to_string_tree(&self, r: &dyn Recognizer) -> String;
+    fn to_string_tree(&self, r: &dyn Parser) -> String;
 }
 
 pub trait NodeText {
@@ -81,7 +83,7 @@ impl NodeText for TerminalNode {
 pub type ErrorNode = BaseParserRuleContext<ErrorNodeCtx>;
 
 //not type alias because we would like to use it in downcasting
-pub struct ErrorNodeCtx(TerminalNodeCtx);
+pub struct ErrorNodeCtx(pub TerminalNodeCtx);
 
 impl CustomRuleContext for ErrorNodeCtx {
     fn get_rule_index(&self) -> usize {
@@ -122,8 +124,8 @@ impl Deref for ErrorNodeCtx {
 //}
 
 pub trait ParseTreeListener: 'static {
-    //    fn visit_terminal(&self, node: TerminalNode) {}
-//    fn visit_error_node(&self, node: ErrorNode) {}
+    fn visit_terminal(&self, node: &TerminalNode) {}
+    fn visit_error_node(&self, node: &ErrorNode) {}
     fn enter_every_rule(&self, ctx: &ParserRuleContext) {}
     fn exit_every_rule(&self, ctx: &ParserRuleContext) {}
 }

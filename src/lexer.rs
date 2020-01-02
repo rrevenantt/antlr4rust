@@ -1,22 +1,19 @@
+use std::borrow::{Borrow, BorrowMut};
+use std::cell::{RefCell, RefMut};
+use std::ops::{Deref, DerefMut};
+use std::rc::Rc;
+use std::time::Duration;
+
 use crate::char_stream::CharStream;
 //use lexer_atn_simulator::ILexerATNSimulator;
 use crate::common_token_factory::TokenFactory;
-use crate::error_listener::{ErrorListener, ConsoleErrorListener};
+use crate::error_listener::{ConsoleErrorListener, ErrorListener};
 use crate::errors::ANTLRError;
+use crate::int_stream::EOF;
 use crate::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
-use crate::recognizer::Recognizer;
-
-use std::borrow::{Borrow, BorrowMut};
-
+use crate::recognizer::{Actions, Recognizer};
 use crate::token::{Token, TOKEN_INVALID_TYPE};
 use crate::token_source::TokenSource;
-use std::cell::{RefCell, RefMut};
-
-use std::rc::Rc;
-use crate::int_stream::EOF;
-use std::time::Duration;
-use std::ops::{DerefMut, Deref};
-
 
 pub trait Lexer: TokenSource {
     fn set_channel(&mut self, v: isize);
@@ -36,12 +33,14 @@ pub trait Lexer: TokenSource {
     fn reset(&mut self);
 }
 
-pub struct BaseLexer<'b: 'static> {
+pub trait LexerRecog: Recognizer + Actions<Recog=BaseLexer> {}
+
+pub struct BaseLexer {
     interpreter: Option<LexerATNSimulator>,
     input: Option<Box<dyn CharStream>>,
 //    recog: Rc<RefCell<Box<dyn Recognizer>>>,
 
-    factory: &'b TokenFactory,
+    factory: &'static TokenFactory,
 
     error_listeners: RefCell<Vec<Box<ErrorListener>>>,
 
@@ -79,7 +78,7 @@ pub const lexer_hidden: isize = super::token::TOKEN_HIDDEN_CHANNEL;
 pub const LEXER_MIN_CHAR_VALUE: isize = 0x0000;
 pub const LEXER_MAX_CHAR_VALUE: isize = 0x10FFFF;
 
-impl<'b> BaseLexer<'b> {
+impl BaseLexer {
     pub fn get_interpreter(&self) -> Option<&LexerATNSimulator> { self.interpreter.as_ref() }
 
     fn safe_match(&self) {
@@ -164,7 +163,7 @@ impl<'b> BaseLexer<'b> {
         input: Box<dyn CharStream>,
         interpreter: LexerATNSimulator,
 //        recog:Rc<RefCell<Box<dyn Recognizer>>>
-    ) -> BaseLexer<'static> {
+    ) -> BaseLexer {
         BaseLexer {
             interpreter: Some(interpreter),
             input: Some(input),
@@ -186,7 +185,7 @@ impl<'b> BaseLexer<'b> {
     }
 }
 
-impl<'b> TokenSource for BaseLexer<'b> {
+impl TokenSource for BaseLexer {
     fn next_token(&mut self) -> Box<Token> {
         assert!(self.input.is_some());
 
@@ -276,7 +275,7 @@ impl<'b> TokenSource for BaseLexer<'b> {
     }
 }
 
-fn notify_listeners(_liseners: &mut Vec<Box<ErrorListener>>, e: &ANTLRError, lexer: &BaseLexer<'static>) {
+fn notify_listeners(_liseners: &mut Vec<Box<ErrorListener>>, e: &ANTLRError, lexer: &BaseLexer) {
     let text = format!("token recognition error at: '{}'", lexer.input.as_ref().unwrap().get_text(lexer.token_start_char_index, lexer.get_char_index()));
     for listener in _liseners.iter_mut() {
         listener.syntax_error(lexer, None, lexer.token_start_line, lexer.token_start_column, &text, Some(e))
@@ -284,7 +283,7 @@ fn notify_listeners(_liseners: &mut Vec<Box<ErrorListener>>, e: &ANTLRError, lex
 }
 
 
-impl<'b> Lexer for BaseLexer<'b> {
+impl Lexer for BaseLexer {
     fn set_channel(&mut self, v: isize) {
         self.channel = v;
     }

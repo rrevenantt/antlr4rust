@@ -1,8 +1,7 @@
-use crate::token_source::TokenSource;
 use crate::char_stream::CharStream;
-use crate::token::Token;
-
 use crate::token::OwningToken;
+use crate::token::Token;
+use crate::token_source::TokenSource;
 
 lazy_static! {
     pub static ref CommonTokenFactoryDEFAULT: Box<TokenFactory> =
@@ -12,14 +11,14 @@ lazy_static! {
 pub trait TokenFactory: Sync {
     fn create(
         &self,
-        source: Option<&mut CharStream>,
+        source: Option<&mut dyn CharStream>,
         ttype: isize,
         channel: isize,
         start: isize,
         stop: isize,
         line: isize,
         column: isize,
-    ) -> Box<Token>;
+    ) -> Box<dyn Token>;
 }
 
 pub struct CommonTokenFactory {
@@ -29,14 +28,14 @@ pub struct CommonTokenFactory {
 impl TokenFactory for CommonTokenFactory {
     fn create(
         &self,
-        source: Option<&mut CharStream>,
+        source: Option<&mut dyn CharStream>,
         ttype: isize,
         channel: isize,
         start: isize,
         stop: isize,
         line: isize,
         column: isize,
-    ) -> Box<Token> {
+    ) -> Box<dyn Token> {
         Box::new(OwningToken {
             token_type: ttype,
             channel,
@@ -46,19 +45,19 @@ impl TokenFactory for CommonTokenFactory {
             line,
             column,
             text: source.map(|x| x.get_text(start, stop)).unwrap_or(String::new()),
-            readOnly: false,
+            read_only: false,
         })
     }
 }
 
 impl CommonTokenFactory {
-    pub fn new(copyText: bool) -> CommonTokenFactory {
+    pub fn new(copy_text: bool) -> CommonTokenFactory {
         CommonTokenFactory {
-            copy_text: copyText,
+            copy_text: copy_text,
         }
     }
 
-    fn create_thin(&self, _ttype: isize, _text: String) -> Box<Token> {
+    fn create_thin(&self, _ttype: isize, _text: String) -> Box<dyn Token> {
         unimplemented!()
     }
 }

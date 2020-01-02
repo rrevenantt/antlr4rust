@@ -1,12 +1,12 @@
-use crate::interval_set::IntervalSet;
+use std::borrow::Cow;
+use std::fmt::Debug;
+use std::mem;
 
 use crate::atn_state::ATNStateRef;
-use std::mem;
-use crate::lexer::{LEXER_MAX_CHAR_VALUE, LEXER_MIN_CHAR_VALUE};
-use std::fmt::Debug;
-use crate::semantic_context::SemanticContext;
-use std::borrow::Cow;
 use crate::dfa::ScopeExt;
+use crate::interval_set::IntervalSet;
+use crate::lexer::{LEXER_MAX_CHAR_VALUE, LEXER_MIN_CHAR_VALUE};
+use crate::semantic_context::SemanticContext;
 
 const TransitionNames: [&'static str; 11] = [
     "INVALID",
@@ -384,12 +384,15 @@ impl Transition for PrecedencePredicateTransition {
 
     fn is_epsilon(&self) -> bool { true }
 
-
     fn get_serialization_type(&self) -> TransitionType {
         TransitionType::TRANSITION_PRECEDENCE
     }
 
     fn matches(&self, _symbol: isize, _minVocabSymbol: isize, _maxVocabSymbol: isize) -> bool {
         unimplemented!()
+    }
+
+    fn get_predicate(&self) -> Option<SemanticContext> {
+        Some(SemanticContext::Precedence(self.precedence))
     }
 }

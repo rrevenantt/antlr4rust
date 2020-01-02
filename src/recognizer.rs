@@ -1,14 +1,14 @@
-use crate::rule_context::{RuleContext, BaseRuleContext};
-use crate::error_listener::ErrorListener;
-use crate::atn::ATN;
-use crate::errors::ANTLRError;
-use crate::token::Token;
 use std::iter::Map;
-
 use std::sync::Arc;
-use crate::lexer::{Lexer, BaseLexer};
+
+use crate::atn::ATN;
 use crate::char_stream::CharStream;
+use crate::error_listener::ErrorListener;
+use crate::errors::ANTLRError;
+use crate::lexer::{BaseLexer, Lexer};
 use crate::parser_rule_context::ParserRuleContext;
+use crate::rule_context::{BaseRuleContext, RuleContext};
+use crate::token::Token;
 use crate::vocabulary::Vocabulary;
 
 pub trait Recognizer {
@@ -18,28 +18,30 @@ pub trait Recognizer {
 //    fn get_symbolic_names(&self) -> &[Option<&str>] {
 //        &[]
 //    }
+//    fn sempred(&mut self, _localctx: Option<&dyn ParserRuleContext>, rule_index: isize, action_index: isize) -> bool { true }
+//    fn action(&mut self, _localctx: Option<&dyn ParserRuleContext>, rule_index: isize, action_index: isize) {}
+
     fn get_rule_names(&self) -> &[&str] {
         &[]
     }
     fn get_vocabulary(&self) -> &dyn Vocabulary { unimplemented!() }
 
     fn get_grammar_file_name(&self) -> &str { "" }
-    fn sempred(&mut self, _localctx: Option<&dyn ParserRuleContext>, _ruleIndex: isize, _actionIndex: isize,
-               lexer: &mut BaseLexer,
-    ) -> bool {
-        true
-    }
-    fn precpred(&mut self, _localctx: Option<&dyn ParserRuleContext>, _precedence: isize
-                , lexer: &mut BaseLexer,
-    ) -> bool {
-        true
-    }
-
-    fn action(&mut self, _localctx: Option<&dyn ParserRuleContext>, rule_index: isize, action_index: isize
-              , lexer: &mut BaseLexer,
-    ) {}
     fn get_atn(&self) -> &ATN { unimplemented!() }
+}
 
+pub trait Actions {
+    type Recog: ?Sized;
+    //todo make self and recog mutable,
+    fn sempred(&self, _localctx: Option<&dyn ParserRuleContext>, rule_index: isize, action_index: isize,
+               recog: &Self::Recog,
+    ) -> bool {
+        true
+    }
+
+    fn action(&mut self, _localctx: Option<&dyn ParserRuleContext>, rule_index: isize, action_index: isize,
+              recog: &mut Self::Recog,
+    ) {}
 }
 
 //impl Recognizer for BaseRecognizer {

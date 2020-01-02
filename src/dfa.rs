@@ -41,7 +41,7 @@ impl<Any: Sized> ScopeExt for Any {}
 pub struct DFA {
     pub atn_start_state: ATNStateRef,
 
-    decision: isize,
+    pub decision: isize,
 
     /// Set of all dfa states.
     pub states: RwLock<Vec<DFAState>>,
@@ -120,7 +120,7 @@ impl DFA {
             self.states
                 .write().unwrap()[*x]
                 .edges
-                .apply(|edges| {
+                .apply(|mut edges| {
                     if edges.len() <= precedence {
                         edges.resize(precedence + 1, 0);
                     }
@@ -157,7 +157,7 @@ impl DFA {
         unimplemented!()
     }
 
-    pub fn to_lexer_String(&self) -> String {
+    pub fn to_lexer_string(&self) -> String {
         format!(
             "{}",
             DFASerializer::new(self, &|x| format!(

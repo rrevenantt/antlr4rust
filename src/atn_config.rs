@@ -1,4 +1,5 @@
 use std::hash::{Hash, Hasher};
+use std::ops::DerefMut;
 
 use murmur3::murmur3_32::MurmurHasher;
 
@@ -59,7 +60,7 @@ impl Hash for ATNConfig {
 }
 
 #[derive(Clone)]
-pub struct ATNConfig {
+pub struct ATNConfig<T: DerefMut<Target=PredictionContext> = Box<PredictionContext>> {
     precedence_filter_suppressed: bool,
     state: ATNStateRef,
     alt: isize,
@@ -67,7 +68,8 @@ pub struct ATNConfig {
     //another todo check if Arc is actually faster,
     // but looks like cloning is enough, PredictionContext size is most of the time very small
     // or maybe transform it into local variant with Rc because prediction for particular symbol is done in one thread
-    context: Option<Box<PredictionContext>>,
+    // or PredictionContext might be behind Box<dyn DerefMut<Target=PredictionContext>> to choose Rc/Arc at runtime
+    context: Option<T>,
     pub semantic_context: Option<Box<SemanticContext>>,
     pub reaches_into_outer_context: isize,
     pub config_type: ATNConfigType,
@@ -129,14 +131,14 @@ impl ATNConfig {
         new
     }
 
-    fn new_base_atnconfig4(_c: &ATNConfig, _state: &ATNState) -> ATNConfig {
+    fn new_base_atnconfig4(_c: &ATNConfig, _state: &dyn ATNState) -> ATNConfig {
         unimplemented!()
     }
 
     fn new_base_atnconfig3(
         _c: &ATNConfig,
-        _state: &ATNState,
-        _semanticContext: &SemanticContext,
+        _state: &dyn ATNState,
+        _semantic_context: &SemanticContext,
     ) -> ATNConfig {
         unimplemented!()
     }
@@ -177,7 +179,7 @@ impl ATNConfig {
 
     //fn new_lexer_atnconfig5(state: &ATNState, alt: isize, context: PredictionContext, lexerActionExecutor: LexerActionExecutor) ->  LexerATNConfig { unimplemented!() }
 
-    fn new_lexer_atnconfig4(_c: &ATNConfig, _state: &ATNState) -> ATNConfig {
+    fn new_lexer_atnconfig4(_c: &ATNConfig, _state: &dyn ATNState) -> ATNConfig {
         unimplemented!()
     }
 
@@ -189,13 +191,13 @@ impl ATNConfig {
 ////        Self::new_lexer_atnconfig2(c, state, prediction_context)
 //    }
 
-    pub fn cloned_with_new_semantic(&self, target: &ATNState, ctx: Option<Box<SemanticContext>>) -> ATNConfig {
+    pub fn cloned_with_new_semantic(&self, target: &dyn ATNState, ctx: Option<Box<SemanticContext>>) -> ATNConfig {
         let mut new = self.cloned(target);
         new.semantic_context = ctx;
         new
     }
 
-    pub fn cloned(&self, target: &ATNState) -> ATNConfig {
+    pub fn cloned(&self, target: &dyn ATNState) -> ATNConfig {
 //        println!("depth {}",PredictionContext::size(self.context.as_deref()));
         let mut new = self.clone();
         new.state = target.get_state_number();
@@ -205,7 +207,7 @@ impl ATNConfig {
         new
     }
 
-    pub fn cloned_with_new_ctx(&self, target: &ATNState, ctx: Option<PredictionContext>) -> ATNConfig {
+    pub fn cloned_with_new_ctx(&self, target: &dyn ATNState, ctx: Option<PredictionContext>) -> ATNConfig {
         let mut new = self.cloned(target);
         new.context = ctx.map(Box::new);
 //        if let ATNConfigType::LexerATNConfig { passed_through_non_greedy_decision,.. } = &mut new.config_type{
@@ -215,7 +217,7 @@ impl ATNConfig {
         new
     }
 
-    pub fn cloned_with_new_exec(&self, target: &ATNState, exec: Option<LexerActionExecutor>) -> ATNConfig {
+    pub fn cloned_with_new_exec(&self, target: &dyn ATNState, exec: Option<LexerActionExecutor>) -> ATNConfig {
         let mut new = self.cloned(target);
         if let ATNConfigType::LexerATNConfig {
             lexer_action_executor, passed_through_non_greedy_decision
@@ -235,7 +237,7 @@ impl ATNConfig {
 //    }
 
     fn new_lexer_atnconfig1(
-        _state: &ATNState,
+        _state: &dyn ATNState,
         _alt: isize,
         _context: &PredictionContext,
     ) -> ATNConfig {
@@ -294,7 +296,7 @@ impl ATNConfig {
 }
 
 
-fn check_non_greedy_decision(source: &ATNConfig, target: &ATNState) -> bool {
+fn check_non_greedy_decision(source: &ATNConfig, target: &dyn ATNState) -> bool {
     if let LexerATNConfig {
         passed_through_non_greedy_decision: true, ..
     } = source.get_type()

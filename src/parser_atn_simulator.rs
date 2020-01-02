@@ -7,11 +7,12 @@
 //)
 
 
-use std::borrow::BorrowMut;
+use std::borrow::{Borrow, BorrowMut};
 use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
+use std::rc::Rc;
 use std::sync::Arc;
 use std::usize;
 
@@ -54,10 +55,11 @@ pub struct ParserATNSimulator {
 //    outer_context: Option<Box<dyn RuleContext>>,
 }
 
+/// Just a helper structure to spoil function parameters as little as possible
 struct Local<'a, 'b> {
     //    input:&'a mut dyn TokenStream,
 //    start_index:isize,
-//    outer_context: &'a dyn ParserRuleContext,
+    outer_context: Rc<dyn ParserRuleContext>,
     dfa: &'a DFA,
     merge_cache: &'b mut HashMap<(u64, u64), PredictionContext, MurmurHasherBuilder>,
     precedence: isize,
@@ -67,7 +69,7 @@ struct Local<'a, 'b> {
 impl Local<'_, '_> {
     fn input(&mut self) -> &mut dyn TokenStream { self.parser.get_input_stream() }
     fn seek(&mut self, i: isize) { self.input().seek(i) }
-    fn outer_context(&self) -> &dyn ParserRuleContext { self.parser.get_parser_rule_context().deref() }
+    fn outer_context(&self) -> &dyn ParserRuleContext { self.outer_context.deref() }
 }
 
 pub type MergeCache = HashMap<(u64, u64), PredictionContext, MurmurHasherBuilder>;
@@ -99,7 +101,7 @@ impl ParserATNSimulator {
         let mut local = Local {
 //            input,
 //            start_index,
-//            outer_context,
+            outer_context: parser.get_parser_rule_context().clone(),
             dfa: &self.decision_to_dfa()[decision as usize],
             merge_cache: &mut merge_cache,
             precedence: parser.get_precedence(),
@@ -148,7 +150,7 @@ impl ParserATNSimulator {
         Ok(result)
     }
 
-
+    #[allow(non_snake_case)]
     fn exec_atn(&self, local: &mut Local, s0: DFAStateRef) -> Result<isize, ANTLRError> {
         let mut previousD = s0;
 
@@ -243,6 +245,7 @@ impl ParserATNSimulator {
         }
     }
 
+    #[allow(non_snake_case)]
     fn get_existing_target_state(&self, dfa: &DFA, previousD: DFAStateRef, t: isize) -> Option<DFAStateRef> {
         dfa.states.read().unwrap()[previousD]
             .edges
@@ -253,6 +256,7 @@ impl ParserATNSimulator {
             })
     }
 
+    #[allow(non_snake_case)]
     fn compute_target_state(&self, dfa: &DFA, previousD: DFAStateRef, t: isize, local: &mut Local) -> DFAStateRef {
         let reach = self.compute_reach_set(
             dfa.states.read().unwrap()[previousD].configs.as_ref(),
@@ -285,8 +289,8 @@ impl ParserATNSimulator {
         }
 
         if D.is_accept_state && D.configs.has_semantic_context() {
-            //todo
-            unimplemented!()
+            let decision_state = self.atn().decision_to_state[dfa.decision as usize];
+            self.predicate_dfa_state(&mut D, self.atn().states[decision_state].deref())
         }
 
 
@@ -295,7 +299,22 @@ impl ParserATNSimulator {
         D
     }
 
-//    fn predicate_dfastate(&self, dfaState: * DFAState, decisionState: DecisionState) { unimplemented!() }
+    fn predicate_dfa_state(&self, dfa_state: &mut DFAState, decision_state: &dyn ATNState) {
+        let nalts = decision_state.get_transitions().len();
+        let alts_to_collect_preds_from = self.get_conflicting_alts_or_unique_alt(dfa_state.configs.as_ref());
+        let alt_to_pred = self.get_preds_for_ambig_alts(
+            &alts_to_collect_preds_from,
+            dfa_state.configs.as_ref(),
+            nalts,
+        );
+        if let Some(alt_to_pred) = alt_to_pred {
+            dfa_state.predicates = self.get_predicate_predictions(&alts_to_collect_preds_from, alt_to_pred);
+            dfa_state.prediction = INVALID_ALT;
+        } else {
+            dfa_state.prediction = alts_to_collect_preds_from.iter()
+                .next().unwrap_or(0/*in java it is -1 but looks like 0 is good enough*/) as isize;
+        }
+    }
 
     fn exec_atn_with_full_context(&self, local: &mut Local, D: &DFAState, s0: ATNConfigSet) -> Result<isize, ANTLRError> {
         let full_ctx = true;
@@ -489,14 +508,47 @@ impl ParserATNSimulator {
         }
         None
     }
-//
-//    fn get_preds_for_ambig_alts(&self, ambigAlts: * BitSet, configs: ATNConfigSet, nalts: isize) -> Vec<SemanticContext> { unimplemented!() }
-//
-//    fn get_predicate_predictions(&self, ambigAlts: * BitSet, altToPred Vec<SemanticContext>) -> &Vec<PredPrediction> { unimplemented!() }
+
+    fn get_preds_for_ambig_alts(&self, ambig_alts: &BitSet, configs: &ATNConfigSet, nalts: usize) -> Option<Vec<SemanticContext>> {
+        let mut alt_to_pred = Vec::with_capacity(nalts + 1);
+        alt_to_pred.resize_with(nalts + 1, || SemanticContext::NONE);
+        for c in configs.configs.iter() {
+            let alt = c.get_alt() as usize;
+            if ambig_alts.contains(alt) {
+                alt_to_pred[alt] = SemanticContext::or(Some(&alt_to_pred[alt]), c.semantic_context.as_deref());
+            }
+        }
+
+        let npred_alts = alt_to_pred
+            .iter()
+            .filter(|it| **it != SemanticContext::NONE)
+            .count();
+
+        if npred_alts == 0 {
+            return None
+        }
+
+        return Some(alt_to_pred)
+    }
+
+    fn get_predicate_predictions(&self, ambig_alts: &BitSet, alt_to_pred: Vec<SemanticContext>) -> Vec<PredPrediction> {
+        let mut pairs = vec![];
+        let mut contains_predicate = false;
+        for (i, pred) in alt_to_pred.into_iter().skip(1).enumerate() {
+            if pred != SemanticContext::NONE { contains_predicate = true }
+
+            if ambig_alts.contains(i) {
+                pairs.push(PredPrediction { alt: i as isize, pred })
+            }
+        }
+        if !contains_predicate { return Vec::new() }
+
+        pairs
+    }
 
     fn get_syn_valid_or_sem_invalid_alt_that_finished_decision_entry_rule(&self,
                                                                           configs: &ATNConfigSet,
-                                                                          local: &Local,
+                                                                          local: &mut Local,
     ) -> isize {
         let (sem_valid_configs, sem_invalid_configs) =
             self.split_according_to_semantic_validity(configs, local);
@@ -512,13 +564,13 @@ impl ParserATNSimulator {
         INVALID_ALT
     }
 
-    fn split_according_to_semantic_validity(&self, configs: &ATNConfigSet, local: &Local) -> (ATNConfigSet, ATNConfigSet) {
+    fn split_according_to_semantic_validity(&self, configs: &ATNConfigSet, local: &mut Local) -> (ATNConfigSet, ATNConfigSet) {
         let mut succeeded = ATNConfigSet::new_base_atnconfig_set(configs.full_context());
         let mut failed = ATNConfigSet::new_base_atnconfig_set(configs.full_context());
         for c in configs.get_items() {
             let clone = Box::new(c.clone());
             if c.get_semantic_context().map(|sem| sem != &SemanticContext::NONE) == Some(true) {
-                let predicate_eval_result = c.get_semantic_context().unwrap().evaluate(local.parser);
+                let predicate_eval_result = self.eval_predicate(local, c.get_semantic_context().unwrap(), c.get_alt(), configs.full_context());
                 if predicate_eval_result {
                     succeeded.add(clone);
                 } else {
@@ -544,7 +596,7 @@ impl ParserATNSimulator {
         return alts.get_min().unwrap_or(INVALID_ALT);
     }
 
-    fn eval_semantic_context(&self, local: &Local, pred_predictions: &Vec<PredPrediction>, complete: bool) -> BitSet {
+    fn eval_semantic_context(&self, local: &mut Local, pred_predictions: &Vec<PredPrediction>, complete: bool) -> BitSet {
         let mut predictions = BitSet::new();
         for pred in pred_predictions {
             if pred.pred == SemanticContext::NONE {
@@ -555,7 +607,7 @@ impl ParserATNSimulator {
             }
 
             let full_ctx = false;
-            let predicate_evaluation_result = pred.pred.evaluate(local.parser);
+            let predicate_evaluation_result = self.eval_predicate(local, &pred.pred, pred.alt, full_ctx);
 
             if predicate_evaluation_result {
                 predictions.insert(pred.alt as usize);
@@ -563,6 +615,10 @@ impl ParserATNSimulator {
             }
         }
         predictions
+    }
+
+    fn eval_predicate(&self, local: &mut Local, pred: impl Borrow<SemanticContext>, alt: isize, full_ctx: bool) -> bool {
+        pred.borrow().evaluate(local.parser, &*local.outer_context)
     }
 
     fn closure(&self,
@@ -698,6 +754,7 @@ impl ParserATNSimulator {
                 depth == 0,
                 full_ctx,
                 treat_eofas_epsilon,
+                local
             );
             if let Some(mut c) = c {
                 let mut new_depth = depth;
@@ -761,27 +818,30 @@ impl ParserATNSimulator {
                           in_context: bool,
                           full_ctx: bool,
                           treat_eofas_epsilon: bool,
+                          local: &mut Local
     ) -> Option<ATNConfig> {
         match t.get_serialization_type() {
             TransitionType::TRANSITION_EPSILON => Some(config.cloned(self.atn().states[t.get_target()].as_ref())),
             TransitionType::TRANSITION_RULE => Some(self.rule_transition(config, unsafe { cast::<RuleTransition>(t) })),
             TransitionType::TRANSITION_PREDICATE =>
-                Some(self.pred_transition(
+                self.pred_transition(
                     config,
                     unsafe { cast::<PredicateTransition>(t) },
                     collect_predicates,
                     in_context,
                     full_ctx,
-                )),
+                    local,
+                ),
             TransitionType::TRANSITION_ACTION => Some(self.action_transition(config, unsafe { cast::<ActionTransition>(t) })),
             TransitionType::TRANSITION_PRECEDENCE =>
-                Some(self.precedence_transition(
+                self.precedence_transition(
                     config,
                     unsafe { cast::<PrecedencePredicateTransition>(t) },
                     collect_predicates,
                     in_context,
                     full_ctx,
-                )),
+                    local,
+                ),
             TransitionType::TRANSITION_ATOM |
             TransitionType::TRANSITION_SET |
             TransitionType::TRANSITION_RANGE =>
@@ -805,7 +865,28 @@ impl ParserATNSimulator {
                              collect_predicates: bool,
                              in_context: bool,
                              full_ctx: bool,
-    ) -> ATNConfig { unimplemented!() }
+                             local: &mut Local,
+    ) -> Option<ATNConfig> {
+        let target = self.atn().states[pt.target].deref();
+        if collect_predicates && in_context {
+            if full_ctx {
+                let curr_pos = local.input().index();
+                local.input().seek(self.start_index.get());
+                let prec_succeeds = self.eval_predicate(local, pt.get_predicate().unwrap(), config.get_alt(), full_ctx);
+                local.input().seek(curr_pos);
+                if prec_succeeds {
+                    return Some(config.cloned(target))
+                }
+            } else {
+                let new_sem_ctx = SemanticContext::and(config.semantic_context.as_deref(), pt.get_predicate());
+                return Some(config.cloned_with_new_semantic(target, Some(Box::new(new_sem_ctx))))
+            }
+        } else {
+            return Some(config.cloned(target))
+        }
+
+        None
+    }
 
     fn pred_transition(&self,
                        config: &ATNConfig,
@@ -813,7 +894,30 @@ impl ParserATNSimulator {
                        collect_predicates: bool,
                        in_context: bool,
                        full_ctx: bool,
-    ) -> ATNConfig { unimplemented!() }
+                       local: &mut Local,
+    ) -> Option<ATNConfig> {
+        let target = self.atn().states[pt.target].deref();
+        if collect_predicates &&
+            (!pt.is_ctx_dependent || (pt.is_ctx_dependent && in_context))
+        {
+            if full_ctx {
+                let curr_pos = local.input().index();
+                local.input().seek(self.start_index.get());
+                let prec_succeeds = self.eval_predicate(local, pt.get_predicate().unwrap(), config.get_alt(), full_ctx);
+                local.input().seek(curr_pos);
+                if prec_succeeds {
+                    return Some(config.cloned(target))
+                }
+            } else {
+                let new_sem_ctx = SemanticContext::and(config.semantic_context.as_deref(), pt.get_predicate());
+                return Some(config.cloned_with_new_semantic(target, Some(Box::new(new_sem_ctx))))
+            }
+        } else {
+            return Some(config.cloned(target))
+        }
+
+        None
+    }
 
     fn rule_transition(&self, config: &ATNConfig, t: &RuleTransition) -> ATNConfig {
         let new_ctx = PredictionContext::new_singleton(
@@ -825,9 +929,16 @@ impl ParserATNSimulator {
     //
     fn get_conflicting_alts(&self, configs: &ATNConfigSet) -> BitSet { unimplemented!() }
     //
-//
-//    fn get_conflicting_alts_or_unique_alt(&self, configs: ATNConfigSet) -> * BitSet { unimplemented!() }
-//
+
+    //todo can return Cow
+    fn get_conflicting_alts_or_unique_alt(&self, configs: &ATNConfigSet) -> BitSet {
+        return if configs.get_unique_alt() != INVALID_ALT {
+            BitSet::new().modify_with(|it| { it.insert(configs.get_unique_alt() as usize); })
+        } else {
+            configs.get_conflicting_alts().clone()
+        }
+    }
+    //
 //    fn get_token_name(&self, t: isize) -> String { unimplemented!() }
 //
 //    fn get_lookahead_name(&self, input: TokenStream) -> String { unimplemented!() }

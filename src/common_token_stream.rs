@@ -1,7 +1,7 @@
-use crate::token_source::TokenSource;
-use crate::token::{Token, TOKEN_DEFAULT_CHANNEL};
-use crate::int_stream::{IntStream, EOF, IterWrapper};
 use crate::errors::ANTLRError;
+use crate::int_stream::{EOF, IntStream, IterWrapper};
+use crate::token::{Token, TOKEN_DEFAULT_CHANNEL};
+use crate::token_source::TokenSource;
 use crate::token_stream::{TokenStream, UnbufferedTokenStream};
 
 pub struct CommonTokenStream<T: TokenSource> {
@@ -68,19 +68,19 @@ impl<T: TokenSource> TokenStream for CommonTokenStream<T> {
         self.base.get(index)
     }
 
-    fn get_token_source(&self) -> &TokenSource {
+    fn get_token_source(&self) -> &dyn TokenSource {
         self.base.get_token_source()
     }
 
     fn get_all_text(&self) -> String {
-        self.base.get_all_text()
+        self.get_text_from_interval(0, self.size() - 1)
     }
 
     fn get_text_from_interval(&self, start: isize, stop: isize) -> String {
         self.base.get_text_from_interval(start, stop)
     }
 
-    fn get_text_from_tokens(&self, a: &Token, b: &Token) -> String {
+    fn get_text_from_tokens(&self, a: &dyn Token, b: &dyn Token) -> String {
         self.base.get_text_from_tokens(a, b)
     }
 }

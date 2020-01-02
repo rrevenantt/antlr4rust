@@ -14,13 +14,13 @@ use antlr_rust::atn::{ATN, INVALID_ALT};
 use antlr_rust::atn_deserializer::ATNDeserializer;
 use antlr_rust::dfa::DFA;
 use antlr_rust::error_strategy::{DefaultErrorStrategy, ErrorStrategy};
-use antlr_rust::errors::{ANTLRError, NoViableAltError};
+use antlr_rust::errors::*;
 use antlr_rust::int_stream::EOF;
-use antlr_rust::parser::{BaseParser, Parser};
+use antlr_rust::parser::{BaseParser, Parser, ParserRecog};
 use antlr_rust::parser_atn_simulator::ParserATNSimulator;
-use antlr_rust::parser_rule_context::{BaseParserRuleContext, ParserRuleContext};
+use antlr_rust::parser_rule_context::{BaseParserRuleContext, ParserRuleContext, ParserRuleContextType};
 use antlr_rust::prediction_context::PredictionContextCache;
-use antlr_rust::recognizer::Recognizer;
+use antlr_rust::recognizer::{Actions, Recognizer};
 use antlr_rust::rule_context::{BaseRuleContext, CustomRuleContext, RuleContext};
 use antlr_rust::token::TOKEN_EOF;
 use antlr_rust::token_source::TokenSource;
@@ -98,12 +98,18 @@ impl DerefMut for ReferenceToATNParser {
 
 pub struct ReferenceToATNParserExt;
 
+impl ParserRecog for ReferenceToATNParserExt {}
+
 impl Recognizer for ReferenceToATNParserExt {
     fn get_grammar_file_name(&self) -> &str { "ReferenceToATN.g4" }
 
     fn get_rule_names(&self) -> &[&str] { &ruleNames }
 
     fn get_vocabulary(&self) -> &dyn Vocabulary { &**VOCABULARY }
+}
+
+impl Actions for ReferenceToATNParserExt {
+    type Recog = dyn Parser;
 }
 
 pub struct AContext {
@@ -151,7 +157,7 @@ impl AContext {
         unimplemented!()
         //getToken(ReferenceToATNParser.ID, i)
     }
-    pub fn new(parent: Option<Rc<dyn ParserRuleContext>>, invoking_state: isize) -> Rc<dyn ParserRuleContext> {
+    pub fn new(parent: Option<ParserRuleContextType>, invoking_state: isize) -> Rc<dyn ParserRuleContext> {
         Rc::new(
             BaseParserRuleContext::new_parser_ctx(parent, invoking_state, AContextExt {}),
         )
@@ -160,13 +166,13 @@ impl AContext {
 
 
 impl ReferenceToATNParser {
-    pub fn a(&mut self) -> Result<()/*AContext*/, ANTLRError> {
+    pub fn a(&mut self) -> Result<Rc<dyn ParserRuleContext>/*AContext*/, ANTLRError> {
         let _parentctx = self.ctx.take();
         let mut _localctx = AContext::new(_parentctx.clone(), self.base.get_state());
         //let mut _localctx = BaseRuleContext::new(self.ctx.take(), self.base.get_state());
         //self.ctx = Some(_localctx);
         //let mut _localctx = self.ctx.as_deref_mut().unwrap();
-        self.base.enter_rule(_localctx, 0, RULE_a);
+        self.base.enter_rule(_localctx.clone(), 0, RULE_a);
         let mut _la: isize;
         let result: Result<(), ANTLRError> = try {
             let mut _alt: isize;
@@ -186,7 +192,7 @@ impl ReferenceToATNParser {
                                 } else {
                                     if self.base.input.la(1) == TOKEN_EOF { self.base.matched_eof = true };
                                     self.err_handler.report_match(&mut self.base);
-                                    self.base.consume();
+                                    self.base.consume(self.err_handler.as_mut());
                                 }
                             }
                         }
@@ -221,7 +227,7 @@ impl ReferenceToATNParser {
         }
         self.base.exit_rule();
 
-        Ok(())
+        Ok(_localctx)
     }
 }
 lazy_static! {

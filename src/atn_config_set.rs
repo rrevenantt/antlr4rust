@@ -37,7 +37,7 @@ use crate::semantic_context::SemanticContext;
 //    fn set_has_semantic_context(&mut self, v: bool);
 //
 //    fn read_only(&self) -> bool;
-//    fn set_read_only(&self, readOnly: bool);
+//    fn set_read_only(&self, read_only: bool);
 //
 ////    fn get_conflicting_alts(&self) -> * BitSet;
 ////    fn set_conflicting_alts(&self, v: * BitSet);
@@ -191,7 +191,7 @@ impl ATNConfigSet {
         self.configs.iter().map(|c| c.as_ref())
     }
 
-    pub fn optimize_configs(&self, interpreter: &IATNSimulator) {
+    pub fn optimize_configs(&self, interpreter: &dyn IATNSimulator) {
         //todo
     }
 
@@ -219,7 +219,7 @@ impl ATNConfigSet {
         unimplemented!()
     }
 
-    pub fn String(&self) -> String {
+    pub fn string(&self) -> String {
         unimplemented!()
     }
 

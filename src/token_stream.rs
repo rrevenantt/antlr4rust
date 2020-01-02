@@ -1,13 +1,14 @@
-use crate::int_stream::{IntStream, IterWrapper};
-use crate::token::{Token, TOKEN_EOF, OwningToken};
-use crate::token_source::TokenSource;
-use crate::interval_set::Interval;
-use crate::rule_context::RuleContext;
-use crate::errors::ANTLRError;
 use std::cmp::min;
 use std::intrinsics::copy_nonoverlapping;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
+
+use crate::errors::ANTLRError;
+use crate::int_stream::{IntStream, IterWrapper};
+use crate::interval_set::Interval;
+use crate::rule_context::RuleContext;
+use crate::token::{OwningToken, Token, TOKEN_EOF};
+use crate::token_source::TokenSource;
 
 pub trait TokenStream: IntStream {
     fn lt(&mut self, k: isize) -> &dyn Token;
@@ -17,7 +18,7 @@ pub trait TokenStream: IntStream {
     fn get_all_text(&self) -> String;
     fn get_text_from_interval(&self, start: isize, stop: isize) -> String;
     //    fn get_text_from_rule_context(&self,context: RuleContext) -> String;
-    fn get_text_from_tokens(&self, a: &Token, b: &Token) -> String;
+    fn get_text_from_tokens(&self, a: &dyn Token, b: &dyn Token) -> String;
 }
 
 pub struct TokenIter<'a, T: TokenStream>(&'a mut T, bool);
@@ -118,7 +119,7 @@ impl<T: TokenSource> TokenStream for UnbufferedTokenStream<T> {
         self.tokens[(index - self.get_buffer_start_index()) as usize].as_ref()
     }
 
-    fn get_token_source(&self) -> &TokenSource {
+    fn get_token_source(&self) -> &dyn TokenSource {
         unimplemented!()
     }
 
@@ -128,7 +129,7 @@ impl<T: TokenSource> TokenStream for UnbufferedTokenStream<T> {
 //    }
 
     fn get_all_text(&self) -> String {
-        unimplemented!()
+        String::new()
     }
 
     fn get_text_from_interval(&self, start: isize, stop: isize) -> String {
@@ -147,6 +148,7 @@ impl<T: TokenSource> TokenStream for UnbufferedTokenStream<T> {
         let mut buf = String::new();
         for i in a..=b {
             let t = &self.tokens[i as usize];
+            if t.get_token_type() == TOKEN_EOF { break }
             buf.extend(t.get_text().chars());
         }
 

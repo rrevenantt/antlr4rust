@@ -1,7 +1,9 @@
-use crate::lexer::{Lexer, BaseLexer};
 use std::hash::Hash;
-use crate::recognizer::Recognizer;
+
 use crate::char_stream::CharStream;
+use crate::lexer::{BaseLexer, Lexer, LexerRecog};
+use crate::recognizer::Recognizer;
+
 //use std::mem::discriminant;
 //use std::intrinsics::discriminant_value;
 
@@ -80,7 +82,7 @@ impl LexerAction {
             _ => false
         }
     }
-    pub(crate) fn execute(&self, lexer: &mut BaseLexer, recog: &mut dyn Recognizer) {
+    pub(crate) fn execute(&self, lexer: &mut BaseLexer, recog: &mut dyn LexerRecog) {
         match self {
             &LexerAction::LexerChannelAction(channel) => lexer.set_channel(channel),
             &LexerAction::LexerCustomAction { rule_index, action_index } => {

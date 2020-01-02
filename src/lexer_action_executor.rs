@@ -1,13 +1,15 @@
-use crate::lexer_action::LexerAction;
-use crate::lexer::{Lexer, BaseLexer};
-use crate::int_stream::IntStream;
+use std::hash::{Hash, Hasher};
 use std::mem;
-use crate::lexer_action::LexerAction::LexerIndexedCustomAction;
+
+use murmur3::murmur3_32::MurmurHasher;
+
 use crate::char_stream::CharStream;
+use crate::int_stream::IntStream;
+use crate::lexer::{BaseLexer, Lexer, LexerRecog};
+use crate::lexer_action::LexerAction;
+use crate::lexer_action::LexerAction::LexerIndexedCustomAction;
 use crate::recognizer::Recognizer;
 use crate::token_source::TokenSource;
-use std::hash::{Hash, Hasher};
-use murmur3::murmur3_32::MurmurHasher;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct LexerActionExecutor {
@@ -55,7 +57,7 @@ impl LexerActionExecutor {
         self
     }
 
-    pub fn execute(&self, lexer: &mut BaseLexer, recog: &mut dyn Recognizer, start_index: isize) {
+    pub fn execute(&self, lexer: &mut BaseLexer, recog: &mut dyn LexerRecog, start_index: isize) {
         let mut requires_seek = false;
         let stop_index = lexer.get_input_stream().index();
         for action in self.lexer_actions.iter() {

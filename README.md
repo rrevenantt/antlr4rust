@@ -8,23 +8,24 @@ and [tests/my_tests.rs](tests/my_test.rs) for usage
 
 # Implementation status
 
-WIP, some basic things are working but still not quite useful yet
+WIP, most of the logic is working(almost all antls test suit tests related to parsing/lexing logic are passing) but you should still expect bugs/panics.
+If you are not going to use yet unimplemented features you might find it useful already.
 
-Missing features(everything else is pretty much implemented, but you should still expect bugs/panics):
+Missing features:
 - [ ] Lexer
-  - [ ] Some corner cases from ANTLR4 test suit are still failing
+  - [ ] Couple corner cases from ANTLR4 test suit are still failing
 - [ ] Parser
   - [ ] recovery/error reporting is partially working
   - [ ] some internal optimizations
-  - [ ] labeled alternatives
-  - [ ] left recursion
-  - [ ] syntax tree
-  - [ ] Full testing with ANTLR4 test suit(currently about 50% parser logic tests are passing )
+  - [ ] labeled alternatives/childs
+  - [ ] return values
+  - [ ] Full testing with ANTLR4 test suit(currently about 95% parser logic tests are passing )
 - [ ] Generator
   - [ ] Rebase to upstream
   - [ ] CI
 - [ ] Documentation
-- [ ] API stabilization 
+- [ ] API stabilization
+  - [ ] Rust api guidelines compliance   
 
 # Licence
 

@@ -17,14 +17,16 @@ pub fn string_tree(tree: &(impl Tree + ?Sized), rule_names: &[&str]) -> String {
     let mut result = String::new();
     result.push('(');
     result.extend(s.chars());
-    tree.get_children()
+    result = tree.get_children()
         .iter()
         .map(|child| string_tree(child.deref(), rule_names))
         .fold(result, |mut acc, text| {
             acc.push(' ');
             acc.extend(text.chars());
             acc
-        })
+        });
+    result.push(')');
+    result
 }
 
 
