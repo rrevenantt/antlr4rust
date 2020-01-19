@@ -1,8 +1,10 @@
 #![allow(non_snake_case)]
 
+use std::any::Any;
+
 use antlr_rust::parser::ListenerCaller;
-use antlr_rust::parser_rule_context::ParserRuleContext;
-// Generated from SimpleLR.g4 by ANTLR 4.7.1
+use antlr_rust::parser_rule_context::{cast, ParserRuleContext};
+// Generated from SimpleLR.g4 by ANTLR 4.7.2
 use antlr_rust::tree::ParseTreeListener;
 
 use super::simplelrparser::*;
@@ -34,25 +36,13 @@ pub trait SimpleLRListener: ParseTreeListener {
 pub struct SimpleLRListenerCaller;
 
 impl ListenerCaller<dyn SimpleLRListener> for SimpleLRListenerCaller {
-    fn enter_rule(ctx: &dyn ParserRuleContext, listener: &mut dyn SimpleLRListener) {
+    fn enter_rule(ctx: &dyn ParserRuleContext, listener: &mut Box<dyn SimpleLRListener>) {
         listener.enter_every_rule(ctx);
-        match ctx.get_rule_index() {
-            RULE_s => listener.enter_s(unsafe { &*(ctx as *const dyn ParserRuleContext as *const SContext) }),
-
-            RULE_a => listener.enter_a(unsafe { &*(ctx as *const dyn ParserRuleContext as *const AContext) }),
-
-            _ => panic!("invalid rule")
-        }
+        ctx.enter_rule(listener as &mut dyn Any);
     }
 
-    fn exit_rule(ctx: &dyn ParserRuleContext, listener: &mut dyn SimpleLRListener) {
+    fn exit_rule(ctx: &dyn ParserRuleContext, listener: &mut Box<dyn SimpleLRListener>) {
         listener.exit_every_rule(ctx);
-        match ctx.get_rule_index() {
-            RULE_s => listener.exit_s(unsafe { &*(ctx as *const dyn ParserRuleContext as *const SContext) }),
-
-            RULE_a => listener.exit_a(unsafe { &*(ctx as *const dyn ParserRuleContext as *const AContext) }),
-
-            _ => panic!("invalid rule")
-        }
+        ctx.exit_rule(listener as &mut dyn Any);
     }
 }

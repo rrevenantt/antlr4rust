@@ -1,32 +1,36 @@
-use std::any::Any;
-use std::cell::Ref;
+use std::any::{Any, TypeId};
+use std::cell::{Ref, RefCell};
+use std::fmt::{Debug, Display, Error, Formatter, Write};
+use std::marker::PhantomData;
 use std::ops::Deref;
 use std::rc::Rc;
 
 use crate::atn::INVALID_ALT;
+use crate::dfa::ScopeExt;
+use crate::int_stream::EOF;
 use crate::interval_set::Interval;
 use crate::parser::{Parser, ParserRecog};
-use crate::parser_rule_context::{BaseParserRuleContext, ParserRuleContext, ParserRuleContextType};
+use crate::parser_rule_context::{BaseParserRuleContext, cast, ParserRuleContext, ParserRuleContextType};
 use crate::recognizer::Recognizer;
 use crate::rule_context::CustomRuleContext;
 use crate::token::{OwningToken, Token};
 
 //todo try to make in more generic
 pub trait Tree: NodeText {
-    fn get_parent(&self) -> Option<&ParserRuleContextType>;
+    fn get_parent(&self) -> Option<ParserRuleContextType>;
+    fn has_parent(&self) -> bool;
     //    fn set_parent(&self, tree: Self);
     fn get_payload(&self) -> Box<dyn Any>;
     fn get_child(&self, i: usize) -> Option<ParserRuleContextType>;
     fn get_child_count(&self) -> usize;
     fn get_children(&self) -> Ref<Vec<ParserRuleContextType>>;
+    fn get_children_full(&self) -> &RefCell<Vec<ParserRuleContextType>>;
 }
 
-pub trait SyntaxTree: Tree {
-    fn get_source_interval(&self) -> Interval;
-}
-
-pub trait ParseTree: SyntaxTree {
+pub trait ParseTree: Tree {
     //    fn accept(&self, v: ParseTreeVisitor) -> interface;
+    fn get_source_interval(&self) -> Interval;
+
     fn get_text(&self) -> String;
 
     fn to_string_tree(&self, r: &dyn Parser) -> String;
@@ -99,6 +103,37 @@ impl Deref for ErrorNodeCtx {
     }
 }
 
+impl NodeText for ErrorNode {
+    fn get_node_text(&self, rule_names: &[&str]) -> String {
+        self.symbol.get_text().to_owned()
+    }
+}
+
+
+impl Debug for BaseParserRuleContext<TerminalNodeCtx> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        f.write_str(if self.symbol.get_token_type() == EOF {
+            "<EOF>"
+        } else {
+            self.symbol.get_text()
+        }
+        );
+        Ok(())
+    }
+}
+
+impl Debug for BaseParserRuleContext<ErrorNodeCtx> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        f.write_str(if self.symbol.get_token_type() == EOF {
+            "<EOF>"
+        } else {
+            self.symbol.get_text()
+        }
+        );
+        Ok(())
+    }
+}
+
 //pub trait TerminalNode: ParseTree {
 //    fn get_symbol(&self) -> &dyn Token;
 //}
@@ -129,6 +164,22 @@ pub trait ParseTreeListener: 'static {
     fn enter_every_rule(&self, ctx: &ParserRuleContext) {}
     fn exit_every_rule(&self, ctx: &ParserRuleContext) {}
 }
+
+//impl<T:ParseTreeListener> AsRef<dyn ParseTreeListener> for T{
+//    fn as_ref(&self) -> &dyn ParseTreeListener {
+//        self
+//    }
+//}
+
+//pub trait ListenerAcceptor{
+//    fn enter(&self, listener: &mut dyn Any);
+//    fn exit(&self, listener: &mut dyn Any);
+//}
+//
+//impl<Ctx:CustomRuleContext> ListenerAcceptor for BaseParserRuleContext<Ctx>{
+//    default fn enter(&self, listener: &mut dyn Any) {}
+//    default fn exit(& self, listener: &mut dyn Any) {}
+//}
 
 //pub struct BaseParseTreeListener {  }
 //
@@ -193,17 +244,37 @@ pub trait ParseTreeListener: 'static {
 //    return v.VisitErrorNode(e)
 //    }
 //}
-//pub struct ParseTreeWalker { }
-//
-//impl ParseTreeWalker {
-//    fn new_parse_tree_walker() -> * ParseTreeWalker { unimplemented!() }
-//
-//    fn walk(&self, listener: ParseTreeListener, t: Tree) { unimplemented!() }
-//
+pub struct ParseTreeWalker;
+
+impl ParseTreeWalker {
+    fn new() -> ParseTreeWalker { ParseTreeWalker }
+
+    pub fn walk<T: ParseTreeListener + ?Sized, Ctx: ParserRuleContext + ?Sized>(&self, mut listener: &mut Box<T>, t: &Ctx) {
+        if t.type_id() == TypeId::of::<ErrorNode>() {
+            let err = cast::<_, ErrorNode>(t);
+            listener.visit_error_node(err);
+            return
+        }
+        if t.type_id() == TypeId::of::<TerminalNode>() {
+            let leaf = cast::<_, TerminalNode>(t);
+            listener.visit_terminal(leaf);
+            return
+        }
+
+        listener.enter_every_rule(t.upcast());
+        t.enter_rule(listener as &mut dyn Any);
+
+        for child in t.get_children().iter() {
+            self.walk(listener, child.deref())
+        }
+
+        t.exit_rule(listener as &mut dyn Any);
+        listener.exit_every_rule(t.upcast());
+    }
+
 //    fn enter_rule(&self, listener: ParseTreeListener, r: RuleNode) { unimplemented!() }
 //
 //    fn exit_rule(&self, listener: ParseTreeListener, r: RuleNode) { unimplemented!() }
-//
-////var ParseTreeWalkerDefault = NewParseTreeWalker()
-//}
-//
+
+//var ParseTreeWalkerDefault = NewParseTreeWalker()
+}

@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::{RefCell, RefMut};
 use std::ops::{Deref, DerefMut};
@@ -11,50 +12,74 @@ use crate::error_listener::{ConsoleErrorListener, ErrorListener};
 use crate::errors::ANTLRError;
 use crate::int_stream::EOF;
 use crate::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
+use crate::parser_rule_context::ParserRuleContext;
 use crate::recognizer::{Actions, Recognizer};
 use crate::token::{Token, TOKEN_INVALID_TYPE};
 use crate::token_source::TokenSource;
 
-pub trait Lexer: TokenSource {
+pub trait Lexer: TokenSource + Recognizer {
+    /// Sets channel where current token will be pushed
+    /// By default two channels are available
+    ///  - `LEXER_DEFAULT_TOKEN_CHANNEL`
+    ///  - `LEXER_HIDDEN`
     fn set_channel(&mut self, v: isize);
 
+    /// Pushes current mode to internal mode stack and sets `m` as current lexer mode
+    /// `pop_mode should be used to recover previous mode
     fn push_mode(&mut self, m: isize);
 
+    /// Pops mode from internal mode stack
     fn pop_mode(&mut self) -> Option<isize>;
 
+    /// Sets type of the current token
+    /// Called from action to override token that will be emitted by lexer
     fn set_type(&mut self, t: isize);
 
+    /// Sets lexer mode discarding current one
     fn set_mode(&mut self, m: isize);
 
+    /// Used to informs lexer that it should consider next token as a continution of the current one
     fn more(&mut self);
 
+    /// Tells lexer to completely ignore and not emit current token.
     fn skip(&mut self);
 
     fn reset(&mut self);
 }
 
-pub trait LexerRecog: Recognizer + Actions<Recog=BaseLexer> {}
+pub trait LexerRecog: Recognizer + Actions {}
 
-pub struct BaseLexer {
+pub struct BaseLexer<T: LexerRecog<Recog=Self> + 'static> {
     interpreter: Option<LexerATNSimulator>,
     input: Option<Box<dyn CharStream>>,
-//    recog: Rc<RefCell<Box<dyn Recognizer>>>,
+    recog: Box<T>,
 
-    factory: &'static TokenFactory,
+    factory: &'static dyn TokenFactory,
 
-    error_listeners: RefCell<Vec<Box<ErrorListener>>>,
+    error_listeners: RefCell<Vec<Box<dyn ErrorListener>>>,
 
     token_start_char_index: isize,
     pub token_start_line: isize,
     pub token_start_column: isize,
     token_type: isize,
-    token: Option<Box<Token>>,
+    token: Option<Box<dyn Token>>,
     hit_eof: bool,
     channel: isize,
     mode_stack: Vec<isize>,
     mode: isize,
     text: String,
 }
+
+impl<T: LexerRecog<Recog=Self> + 'static> Recognizer for BaseLexer<T> {
+    fn sempred(&mut self, _localctx: &dyn ParserRuleContext, rule_index: isize, action_index: isize) -> bool {
+        <T as Actions>::sempred(_localctx, rule_index, action_index, self)
+    }
+
+    fn action(&mut self, _localctx: &dyn ParserRuleContext, rule_index: isize, action_index: isize) {
+        <T as Actions>::action(_localctx, rule_index, action_index, self)
+    }
+}
+
 
 //pub struct CoreLexer<'b>{
 //    pub(crate) lexer:BaseLexer<'b>,
@@ -73,12 +98,12 @@ pub const LEXER_DEFAULT_MODE: isize = 0;
 pub const LEXER_MORE: isize = -2;
 pub const LEXER_SKIP: isize = -3;
 
-pub const lexer_default_token_channel: isize = super::token::TOKEN_DEFAULT_CHANNEL;
-pub const lexer_hidden: isize = super::token::TOKEN_HIDDEN_CHANNEL;
+pub const LEXER_DEFAULT_TOKEN_CHANNEL: isize = super::token::TOKEN_DEFAULT_CHANNEL;
+pub const LEXER_HIDDEN: isize = super::token::TOKEN_HIDDEN_CHANNEL;
 pub const LEXER_MIN_CHAR_VALUE: isize = 0x0000;
 pub const LEXER_MAX_CHAR_VALUE: isize = 0x10FFFF;
 
-impl BaseLexer {
+impl<T: LexerRecog<Recog=Self> + 'static> BaseLexer<T> {
     pub fn get_interpreter(&self) -> Option<&LexerATNSimulator> { self.interpreter.as_ref() }
 
     fn safe_match(&self) {
@@ -89,7 +114,7 @@ impl BaseLexer {
 //        self.input = Some(RefCell::new(input));
 //    }
 
-    fn emit_token(&mut self, token: Box<Token>) {
+    fn emit_token(&mut self, token: Box<dyn Token>) {
         self.token = Some(token);
     }
 
@@ -114,7 +139,7 @@ impl BaseLexer {
         let token = self.factory.create(
             None,
             super::int_stream::EOF,
-            lexer_default_token_channel,
+            LEXER_DEFAULT_TOKEN_CHANNEL,
             self.get_char_index(),
             self.get_char_index() - 1,
             self.get_line(),
@@ -139,7 +164,7 @@ impl BaseLexer {
         unimplemented!()
     }
 
-    fn get_all_tokens(&self) -> Vec<Box<Token>> {
+    fn get_all_tokens(&self) -> Vec<Box<dyn Token>> {
         unimplemented!()
     }
 
@@ -151,7 +176,8 @@ impl BaseLexer {
         unimplemented!()
     }
 
-    pub fn add_error_listener(&mut self, listener: Box<ErrorListener>) {
+    /// Add error listener
+    pub fn add_error_listener(&mut self, listener: Box<dyn ErrorListener>) {
         self.error_listeners.borrow_mut().push(listener);
     }
 
@@ -162,12 +188,12 @@ impl BaseLexer {
     pub fn new_base_lexer(
         input: Box<dyn CharStream>,
         interpreter: LexerATNSimulator,
-//        recog:Rc<RefCell<Box<dyn Recognizer>>>
-    ) -> BaseLexer {
+        recog: Box<T>,
+    ) -> BaseLexer<T> {
         BaseLexer {
             interpreter: Some(interpreter),
             input: Some(input),
-//            recog,
+            recog,
             factory: super::common_token_factory::CommonTokenFactoryDEFAULT.as_ref(),
             error_listeners: RefCell::new(vec![Box::new(ConsoleErrorListener {})]),
             token_start_char_index: 0,
@@ -185,8 +211,8 @@ impl BaseLexer {
     }
 }
 
-impl TokenSource for BaseLexer {
-    fn next_token(&mut self) -> Box<Token> {
+impl<T: LexerRecog<Recog=Self> + 'static> TokenSource for BaseLexer<T> {
+    fn next_token(&mut self) -> Box<dyn Token> {
         assert!(self.input.is_some());
 
         let _marker = self.input.as_mut().unwrap().mark();
@@ -196,7 +222,7 @@ impl TokenSource for BaseLexer {
                 break;
             }
             self.token = None;
-            self.channel = lexer_default_token_channel;
+            self.channel = LEXER_DEFAULT_TOKEN_CHANNEL;
             self.token_start_column = self.interpreter.as_ref().unwrap().get_char_position_in_line();
             self.token_start_line = self.interpreter.as_ref().unwrap().get_line();
             self.text = String::new();
@@ -270,12 +296,12 @@ impl TokenSource for BaseLexer {
 //        self.factory = f;
 //    }
 
-    fn get_token_factory(&self) -> &TokenFactory {
+    fn get_token_factory(&self) -> &dyn TokenFactory {
         self.factory
     }
 }
 
-fn notify_listeners(_liseners: &mut Vec<Box<ErrorListener>>, e: &ANTLRError, lexer: &BaseLexer) {
+fn notify_listeners<T: LexerRecog<Recog=BaseLexer<T>> + 'static>(_liseners: &mut Vec<Box<dyn ErrorListener>>, e: &ANTLRError, lexer: &BaseLexer<T>) {
     let text = format!("token recognition error at: '{}'", lexer.input.as_ref().unwrap().get_text(lexer.token_start_char_index, lexer.get_char_index()));
     for listener in _liseners.iter_mut() {
         listener.syntax_error(lexer, None, lexer.token_start_line, lexer.token_start_column, &text, Some(e))
@@ -283,7 +309,7 @@ fn notify_listeners(_liseners: &mut Vec<Box<ErrorListener>>, e: &ANTLRError, lex
 }
 
 
-impl Lexer for BaseLexer {
+impl<T: LexerRecog<Recog=Self> + 'static> Lexer for BaseLexer<T> {
     fn set_channel(&mut self, v: isize) {
         self.channel = v;
     }

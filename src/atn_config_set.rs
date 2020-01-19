@@ -1,6 +1,7 @@
 use std::cell::Cell;
 use std::cmp::max;
 use std::collections::{HashMap, HashSet};
+use std::fmt::{Debug, Error, Formatter};
 use std::hash::{Hash, Hasher};
 
 use bit_set::BitSet;
@@ -8,7 +9,9 @@ use murmur3::murmur3_32::MurmurHasher;
 
 use crate::atn_config::ATNConfig;
 use crate::atn_simulator::{BaseATNSimulator, IATNSimulator};
+use crate::dfa::ScopeExt;
 use crate::parser_atn_simulator::MergeCache;
+use crate::parser_rule_context::empty_ctx;
 use crate::prediction_context::{MurmurHasherBuilder, PredictionContext};
 use crate::semantic_context::SemanticContext;
 
@@ -51,15 +54,16 @@ use crate::semantic_context::SemanticContext;
 //    fn set_dips_into_outer_context(&self, v: bool);
 //}
 
-#[derive(Eq, PartialEq)]
+//#[derive(Debug)]
 pub struct ATNConfigSet {
     cached_hash: u64,
 
     config_lookup: HashMap<u64, usize>,
 
+    //todo remove box?
     pub(crate) configs: Vec<Box<ATNConfig>>,
 
-    conflicting_alts: BitSet,
+    pub(crate) conflicting_alts: BitSet,
 
     dips_into_outer_context: bool,
 
@@ -70,7 +74,28 @@ pub struct ATNConfigSet {
     read_only: bool,
 
     unique_alt: isize,
+
+    hasher: fn(&ATNConfig) -> u64,
 }
+
+impl Debug for ATNConfigSet {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        unimplemented!()
+    }
+}
+
+impl PartialEq for ATNConfigSet {
+    fn eq(&self, other: &Self) -> bool {
+        self.configs == other.configs &&
+            self.full_ctx == other.full_ctx &&
+            self.unique_alt == other.unique_alt &&
+            self.conflicting_alts == other.conflicting_alts &&
+            self.has_semantic_context == other.has_semantic_context &&
+            self.dips_into_outer_context == other.dips_into_outer_context
+    }
+}
+
+impl Eq for ATNConfigSet {}
 
 impl Hash for ATNConfigSet {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -94,6 +119,7 @@ impl ATNConfigSet {
             has_semantic_context: false,
             read_only: false,
             unique_alt: 0,
+            hasher: Self::atn_config_local_hash
         }
     }
 
@@ -101,10 +127,11 @@ impl ATNConfigSet {
         unimplemented!()
     }
 
-    fn new_ordered_atnconfig_set() -> ATNConfigSet {
-        let a = ATNConfigSet::new_base_atnconfig_set(true);
-        //        a.config_lookup =
-        unimplemented!();
+    pub fn new_ordered_atnconfig_set() -> ATNConfigSet {
+        let mut a = ATNConfigSet::new_base_atnconfig_set(true);
+
+        a.hasher = Self::atn_config_full_hash;
+//        unimplemented!();
         a
     }
 
@@ -116,16 +143,26 @@ impl ATNConfigSet {
     //impl ATNConfigSet for BaseATNConfigSet {
 
     //    fn add(&self, config: ATNConfig, mergeCache: * DoubleDict) -> bool { unimplemented!() }
-    fn atn_config_local_hash(config: &ATNConfig) -> u64 {
+    fn atn_config_full_hash(config: &ATNConfig) -> u64 {
         let mut hashcode = 7u64;
         hashcode = 31 * hashcode + config.get_state() as u64;
         hashcode = 31 * hashcode + config.get_alt() as u64;
         let mut hasher = MurmurHasher::default();
         config.get_context().hash(&mut hasher);
+        config.get_semantic_context().hash(&mut hasher);
         hashcode = 31 * hashcode + hasher.finish();
 
-        //todo semantic context
-//        hashcode = 31* hashcode + config
+        hashcode
+    }
+
+
+    fn atn_config_local_hash(config: &ATNConfig) -> u64 {
+        let mut hashcode = 7u64;
+        hashcode = 31 * hashcode + config.get_state() as u64;
+        hashcode = 31 * hashcode + config.get_alt() as u64;
+        let mut hasher = MurmurHasher::default();
+        config.get_semantic_context().hash(&mut hasher);
+        hashcode = 31 * hashcode + hasher.finish();
 
         hashcode
     }
@@ -136,15 +173,18 @@ impl ATNConfigSet {
         merge_cache: Option<&mut MergeCache>,
     ) -> bool {
         assert!(!self.read_only);
-        //todo semantic context
-        if config.get_semantic_context().is_some() {
+
+        if config.get_semantic_context().is_some() && *config.get_semantic_context().unwrap() != SemanticContext::NONE {
             self.has_semantic_context = true
         }
+
+//        assert!(config.get_context().unwrap().is_consistent());
 
         if config.get_reaches_into_outer_context() > 0 {
             self.dips_into_outer_context = true
         }
-        let hash = Self::atn_config_local_hash(config.as_ref());
+        let hasher = self.hasher;
+        let hash = hasher(config.as_ref());
 
         if let Some(existing) = self.config_lookup.get(&hash) {
             let existing = self.configs.get_mut(*existing).unwrap().as_mut();
@@ -154,13 +194,14 @@ impl ATNConfigSet {
                 config.take_context(),
                 root_is_wildcard,
             );
+
             merged.calc_hash();
 
             existing.set_reaches_into_outer_context(
                 max(existing.get_reaches_into_outer_context(), config.get_reaches_into_outer_context())
             );
 
-            if config.get_precedence_filter_suppressed() {
+            if config.is_precedence_filter_suppressed() {
                 existing.set_precedence_filter_suppressed(true)
             }
 
@@ -243,9 +284,15 @@ impl ATNConfigSet {
         self.full_ctx
     }
 
-    pub fn get_conflicting_alts(&self) -> &BitSet { &self.conflicting_alts }
-
-    pub fn set_conflicting_alts(&mut self, v: BitSet) { self.conflicting_alts = v }
+    //duplicate of the self.conflicting_alts???
+    pub fn get_alts(&self) -> BitSet {
+        self.configs
+            .iter()
+            .fold(BitSet::new(), |mut acc, c| {
+                acc.insert(c.get_alt() as usize);
+                acc
+            })
+    }
 
     pub fn get_unique_alt(&self) -> isize {
         self.unique_alt
@@ -256,10 +303,10 @@ impl ATNConfigSet {
     }
 
     pub fn get_dips_into_outer_context(&self) -> bool {
-        unimplemented!()
+        self.dips_into_outer_context
     }
 
-    pub fn set_dips_into_outer_context(&self, _v: bool) {
-        unimplemented!()
+    pub fn set_dips_into_outer_context(&mut self, _v: bool) {
+        self.dips_into_outer_context = _v
     }
 }

@@ -2,8 +2,11 @@
 name = "antlr-rust"
 version = "0.1.0"
 authors = ["Konstantin Anisimov <rrevenantt@gmail.com>"]
+description = "ANTLR4 runtime for Rust"
 edition = "2018"
-build = false
+license = "BSD-3-Clause"
+keywords = ["ANTLR","ANTLR4","parsing","runtime"]
+categories = ["parsing"]
 
 [dependencies]
 lazy_static = "1.4.*"
@@ -12,6 +15,7 @@ byteorder = "1"
 murmur3 = "0.4"
 bit-set = "0.5.*"
 once_cell = "1.2.*"
+backtrace = "0.3"
 
 [lib]
 

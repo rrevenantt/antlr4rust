@@ -2,6 +2,7 @@ use std::hash::Hash;
 
 use crate::char_stream::CharStream;
 use crate::lexer::{BaseLexer, Lexer, LexerRecog};
+use crate::parser_rule_context::empty_ctx;
 use crate::recognizer::Recognizer;
 
 //use std::mem::discriminant;
@@ -82,11 +83,11 @@ impl LexerAction {
             _ => false
         }
     }
-    pub(crate) fn execute(&self, lexer: &mut BaseLexer, recog: &mut dyn LexerRecog) {
+    pub(crate) fn execute(&self, lexer: &mut dyn Lexer) {
         match self {
             &LexerAction::LexerChannelAction(channel) => lexer.set_channel(channel),
             &LexerAction::LexerCustomAction { rule_index, action_index } => {
-                recog.action(None, rule_index, action_index, lexer);
+                lexer.action(&*empty_ctx(), rule_index, action_index);
             },
             &LexerAction::LexerModeAction(mode) => lexer.set_mode(mode),
             &LexerAction::LexerMoreAction => lexer.more(),
@@ -94,7 +95,7 @@ impl LexerAction {
             &LexerAction::LexerPushModeAction(mode) => lexer.push_mode(mode),
             &LexerAction::LexerSkipAction => lexer.skip(),
             &LexerAction::LexerTypeAction(ty) => lexer.set_type(ty),
-            &LexerAction::LexerIndexedCustomAction { ref action, .. } => action.execute(lexer, recog),
+            &LexerAction::LexerIndexedCustomAction { ref action, .. } => action.execute(lexer),
         }
     }
 }

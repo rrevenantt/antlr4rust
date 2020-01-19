@@ -1,9 +1,11 @@
-// Generated from ReferenceToATN.g4 by ANTLR 4.7.1
+// Generated from ReferenceToATN.g4 by ANTLR 4.7.2
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 #![feature(try_blocks)]
 
+use std::any::Any;
+use std::borrow::{Borrow, BorrowMut};
 use std::cell::RefCell;
 use std::convert::TryFrom;
 use std::ops::{Deref, DerefMut};
@@ -18,14 +20,14 @@ use antlr_rust::errors::*;
 use antlr_rust::int_stream::EOF;
 use antlr_rust::parser::{BaseParser, Parser, ParserRecog};
 use antlr_rust::parser_atn_simulator::ParserATNSimulator;
-use antlr_rust::parser_rule_context::{BaseParserRuleContext, ParserRuleContext, ParserRuleContextType};
+use antlr_rust::parser_rule_context::{BaseParserRuleContext, cast, cast_mut, ParserRuleContext, ParserRuleContextType};
 use antlr_rust::prediction_context::PredictionContextCache;
 use antlr_rust::recognizer::{Actions, Recognizer};
 use antlr_rust::rule_context::{BaseRuleContext, CustomRuleContext, RuleContext};
-use antlr_rust::token::TOKEN_EOF;
+use antlr_rust::token::{OwningToken, Token, TOKEN_EOF};
 use antlr_rust::token_source::TokenSource;
 use antlr_rust::token_stream::TokenStream;
-use antlr_rust::tree::TerminalNode;
+use antlr_rust::tree::{ParseTree, TerminalNode};
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
 
 use super::referencetoatnlistener::*;
@@ -38,6 +40,7 @@ pub const ruleNames: [&'static str; 1] = [
     "a"
 ];
 
+
 pub const _LITERAL_NAMES: [Option<&'static str>; 0] = [];
 pub const _SYMBOLIC_NAMES: [Option<&'static str>; 4] = [
     None, Some("ID"), Some("ATN"), Some("WS")
@@ -47,13 +50,17 @@ lazy_static! {
 		static ref VOCABULARY: Box<dyn Vocabulary> = Box::new(VocabularyImpl::new(_LITERAL_NAMES.iter(), _SYMBOLIC_NAMES.iter(), None));
 	}
 
+
+type BaseParserType = BaseParser<ReferenceToATNParserExt, dyn ReferenceToATNListener, ReferenceToATNListenerCaller>;
+
 pub struct ReferenceToATNParser {
     base: BaseParser<ReferenceToATNParserExt, dyn ReferenceToATNListener, ReferenceToATNListenerCaller>,
     interpreter: Arc<ParserATNSimulator>,
     _shared_context_cache: Box<PredictionContextCache>,
-    err_handler: Box<dyn ErrorStrategy>,
+    pub err_handler: Box<dyn ErrorStrategy>,
 
 }
+
 
 impl ReferenceToATNParser {
     pub fn get_serialized_atn() -> &'static str { unimplemented!() }
@@ -73,7 +80,7 @@ impl ReferenceToATNParser {
             base: BaseParser::new_base_parser(
                 input,
                 Arc::clone(&interpreter),
-                ReferenceToATNParserExt,
+                ReferenceToATNParserExt {},
             ),
             interpreter,
             _shared_context_cache: Box::new(PredictionContextCache::new()),
@@ -96,7 +103,9 @@ impl DerefMut for ReferenceToATNParser {
     }
 }
 
-pub struct ReferenceToATNParserExt;
+pub struct ReferenceToATNParserExt {}
+
+impl ReferenceToATNParserExt {}
 
 impl ParserRecog for ReferenceToATNParserExt {}
 
@@ -109,127 +118,142 @@ impl Recognizer for ReferenceToATNParserExt {
 }
 
 impl Actions for ReferenceToATNParserExt {
-    type Recog = dyn Parser;
+    type Recog = BaseParser<ReferenceToATNParserExt, dyn ReferenceToATNListener, ReferenceToATNListenerCaller>;
 }
+//------------------- a ----------------
+//pub struct AContext  {
+//  base:BaseParserRuleContext<AContextExt>,
+//}
+//
+//impl Deref for AContext{
+//    type Target = BaseParserRuleContext<AContextExt>;
+//
+//    fn deref(&self) -> &Self::Target {
+//        &self.base
+//    }
+//}
+//
+//impl DerefMut for AContext{
+//    fn deref_mut(&mut self) -> &mut Self::Target {
+//        &mut self.base
+//    }
+//}
 
-pub struct AContext {
-    base: BaseParserRuleContext<AContextExt>,
+pub type AContext = BaseParserRuleContext<AContextExt>;
 
-}
-
-impl Deref for AContext {
-    type Target = BaseParserRuleContext<AContextExt>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.base
-    }
-}
-
-impl DerefMut for AContext {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.base
-    }
-}
-
+#[derive(Clone)]
 pub struct AContextExt {}
 
 impl CustomRuleContext for AContextExt {
     fn get_rule_index(&self) -> usize {
         RULE_a
     }
+    fn enter(ctx: &BaseParserRuleContext<Self>, listener: &mut dyn Any) where Self: Sized {
+        listener.downcast_mut::<Box<dyn ReferenceToATNListener>>()
+            .map(|it| it.enter_a(ctx));
+    }
+    fn exit(ctx: &BaseParserRuleContext<Self>, listener: &mut dyn Any) where Self: Sized {
+        listener.downcast_mut::<Box<dyn ReferenceToATNListener>>()
+            .map(|it| it.exit_a(ctx));
+    }
 }
 
-
-impl AContext {
-    pub fn ATNs(&self) -> Vec<&TerminalNode> {
-        unimplemented!()
-        //getTokens(ReferenceToATNParser.ATN)
-    }
-    pub fn ATN(&self, i: usize) -> &TerminalNode {
-        unimplemented!()
-        //getToken(ReferenceToATNParser.ATN, i)
-    }
-    pub fn IDs(&self) -> Vec<&TerminalNode> {
-        unimplemented!()
-        //getTokens(ReferenceToATNParser.ID)
-    }
-    pub fn ID(&self, i: usize) -> &TerminalNode {
-        unimplemented!()
-        //getToken(ReferenceToATNParser.ID, i)
-    }
-    pub fn new(parent: Option<ParserRuleContextType>, invoking_state: isize) -> Rc<dyn ParserRuleContext> {
+impl AContextExt {
+    fn new(parent: Option<ParserRuleContextType>, invoking_state: isize) -> Rc<BaseParserRuleContext<AContextExt>> {
         Rc::new(
             BaseParserRuleContext::new_parser_ctx(parent, invoking_state, AContextExt {}),
         )
     }
 }
 
+pub trait AContextAttrs: ParserRuleContext + BorrowMut<AContextExt> {
+    fn ATN_all(&self) -> Vec<Rc<TerminalNode>> where Self: Sized {
+        self.children_of_type()
+    }
+    fn ATN(&self, i: usize) -> Rc<TerminalNode> where Self: Sized {
+        self.get_token(ATN, i)
+    }
+    fn ID_all(&self) -> Vec<Rc<TerminalNode>> where Self: Sized {
+        self.children_of_type()
+    }
+    fn ID(&self, i: usize) -> Rc<TerminalNode> where Self: Sized {
+        self.get_token(ID, i)
+    }
+}
+
+impl AContextAttrs for AContext {}
+
+//impl AContext{
+
+//}
 
 impl ReferenceToATNParser {
-    pub fn a(&mut self) -> Result<Rc<dyn ParserRuleContext>/*AContext*/, ANTLRError> {
-        let _parentctx = self.ctx.take();
-        let mut _localctx = AContext::new(_parentctx.clone(), self.base.get_state());
-        //let mut _localctx = BaseRuleContext::new(self.ctx.take(), self.base.get_state());
-        //self.ctx = Some(_localctx);
-        //let mut _localctx = self.ctx.as_deref_mut().unwrap();
-        self.base.enter_rule(_localctx.clone(), 0, RULE_a);
+    pub fn a(&mut self) -> Result<Rc<dyn AContextAttrs>, ANTLRError> {
+        let mut recog = self;
+        let _parentctx = recog.ctx.take();
+        let mut _localctx = AContextExt::new(_parentctx.clone(), recog.base.get_state());
+        recog.base.enter_rule(_localctx.clone(), 0, RULE_a);
+        /**/
         let mut _la: isize;
         let result: Result<(), ANTLRError> = try {
             let mut _alt: isize;
-            self.base.enter_outer_alt(None, 1);
+            //recog.base.enter_outer_alt(_localctx.clone(), 1);
+            recog.base.enter_outer_alt(None, 1);
             {
-                self.base.set_state(5);
-                self.err_handler.sync(&mut self.base)?;
-                _alt = self.interpreter.adaptive_predict(0, &mut self.base)?;
+                recog.base.set_state(5);
+                recog.err_handler.sync(&mut recog.base)?;
+                _alt = recog.interpreter.adaptive_predict(0, &mut recog.base)?;
                 while { _alt != 2 && _alt != INVALID_ALT } {
                     if _alt == 1 {
                         {
                             {
-                                self.base.set_state(2);
-                                _la = self.base.input.la(1);
+                                recog.base.set_state(2);
+                                _la = recog.base.input.la(1);
                                 if { !(_la == ID || _la == ATN) } {
-                                    self.err_handler.recover_inline(&mut self.base);
+                                    recog.err_handler.recover_inline(&mut recog.base)?;
                                 } else {
-                                    if self.base.input.la(1) == TOKEN_EOF { self.base.matched_eof = true };
-                                    self.err_handler.report_match(&mut self.base);
-                                    self.base.consume(self.err_handler.as_mut());
+                                    if recog.base.input.la(1) == TOKEN_EOF { recog.base.matched_eof = true };
+                                    recog.err_handler.report_match(&mut recog.base);
+                                    recog.base.consume(recog.err_handler.as_mut());
                                 }
                             }
                         }
                     }
-                    self.base.set_state(7);
-                    self.err_handler.sync(&mut self.base)?;
-                    _alt = self.interpreter.adaptive_predict(0, &mut self.base)?;
+                    recog.base.set_state(7);
+                    recog.err_handler.sync(&mut recog.base)?;
+                    _alt = recog.interpreter.adaptive_predict(0, &mut recog.base)?;
                 }
-                self.base.set_state(9);
-                self.err_handler.sync(&mut self.base)?;
-                _la = self.base.input.la(1);
+                recog.base.set_state(9);
+                recog.err_handler.sync(&mut recog.base)?;
+                _la = recog.base.input.la(1);
                 if _la == ATN {
                     {
-                        self.base.set_state(8);
-                        self.base.match_token(ATN, self.err_handler.as_mut())?;
+                        recog.base.set_state(8);
+                        recog.base.match_token(ATN, recog.err_handler.as_mut())?;
                     }
                 }
 
                 println!("{}", {
-                    let temp = self.base.input.index() - 1;
-                    self.base.input.get_text_from_interval(self.get_parser_rule_context().get_start(), temp)
+                    let temp = recog.base.input.index() - 1;
+                    recog.input.get_text_from_interval(recog.get_parser_rule_context().get_start().unwrap().get_token_index(), temp)
                 });
             }
         };
         match result {
             Ok(_) => {},
+            Err(e @ ANTLRError::FallThrough(_)) => return Err(e),
             Err(ref re) => {
                 //_localctx.exception = re;
-                self.err_handler.report_error(&mut self.base, re);
-                self.err_handler.recover(&mut self.base, re);
+                recog.err_handler.report_error(&mut recog.base, re);
+                recog.err_handler.recover(&mut recog.base, re);
             }
         }
-        self.base.exit_rule();
+        recog.base.exit_rule();
 
         Ok(_localctx)
     }
 }
+
 lazy_static! {
     static ref _ATN: Arc<ATN> =
         Arc::new(ATNDeserializer::new(None).deserialize(_serializedATN.chars()));

@@ -1,20 +1,31 @@
-use crate::atn_config_set::ATNConfigSet;
+use std::fmt::{Display, Error, Formatter};
 use std::hash::{Hash, Hasher};
+use std::sync::atomic::AtomicI64;
+
 use murmur3::murmur3_32::MurmurHasher;
-use crate::lexer_atn_simulator::{MAX_DFA_EDGE, MIN_DFA_EDGE};
+
+use crate::atn_config_set::ATNConfigSet;
 use crate::lexer_action_executor::LexerActionExecutor;
+use crate::lexer_atn_simulator::{MAX_DFA_EDGE, MIN_DFA_EDGE};
 use crate::semantic_context::SemanticContext;
 
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Debug)]
 pub struct PredPrediction {
     pub(crate) alt: isize,
     pub(crate) pred: SemanticContext,
 }
 
+impl Display for PredPrediction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        unimplemented!()
+//        f.write_fmt(format_args!("({},{})",self.pred,self.alt))
+    }
+}
+
 //todo rewrite as wrapper with helper methods
 pub type DFAStateRef = usize;
 
-#[derive(Eq, PartialEq)]
+#[derive(Eq)]
 pub struct DFAState {
     pub state_number: usize,
     pub configs: Box<ATNConfigSet>,
@@ -28,6 +39,12 @@ pub struct DFAState {
     pub lexer_action_executor: Option<Box<LexerActionExecutor>>,
     pub requires_full_context: bool,
     pub predicates: Vec<PredPrediction>,
+}
+
+impl PartialEq for DFAState {
+    fn eq(&self, other: &Self) -> bool {
+        self.configs == other.configs
+    }
 }
 
 //impl Hash for *DFAState{

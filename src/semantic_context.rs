@@ -22,7 +22,7 @@ fn empty() -> SemanticContext {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub enum SemanticContext {
     Predicate {
         rule_index: isize,
@@ -44,7 +44,7 @@ impl SemanticContext {
         match self {
             SemanticContext::Predicate { rule_index, pred_index, is_ctx_dependent } => {
                 let localctx = if *is_ctx_dependent { Some(outer_context) } else { None };
-                parser.sempred(Some(outer_context), *rule_index, *pred_index)
+                parser.sempred(outer_context, *rule_index, *pred_index)
             }
             SemanticContext::Precedence(prec) =>
                 parser.precpred(Some(outer_context), *prec),
@@ -171,7 +171,7 @@ impl SemanticContext {
         let precedence_predicates = filter_precedence_predicate(&mut operands);
         if !precedence_predicates.is_empty() {
             let reduced = precedence_predicates.iter()
-                .min_by(sort_prec_pred);
+                .max_by(sort_prec_pred);
             operands.insert(reduced.unwrap().clone());
         }
 
@@ -179,7 +179,7 @@ impl SemanticContext {
             return operands.into_iter().next().unwrap();
         }
 
-        SemanticContext::AND(operands.into_iter().collect())
+        SemanticContext::OR(operands.into_iter().collect())
     }
 
     pub fn and(a: Option<impl Borrow<SemanticContext>>, b: Option<impl Borrow<SemanticContext>>) -> SemanticContext {

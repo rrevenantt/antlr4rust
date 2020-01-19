@@ -22,7 +22,7 @@ TEXT        :   ~[<&]+ ;        // match any 16 bit char other than < and &
 // ----------------- Everything INSIDE of a tag ---------------------
 mode INSIDE;
 
-CLOSE       :   '>'                     {lexer.pop_mode();} ;
+CLOSE       :   '>'                     {recog.pop_mode();} ;
 SPECIAL_CLOSE:  '?>'                    -> popMode ; // close <?xml...?>
 SLASH_CLOSE :   '/>'                    -> popMode ;
 SLASH       :   '/' ;

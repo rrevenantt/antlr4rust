@@ -1,12 +1,13 @@
 //use tree::RuleNode;
 
+use std::any::{Any, TypeId};
 use std::borrow::{BorrowMut, Cow};
 use std::cell::{Cell, Ref, RefCell};
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
 
 use crate::atn::INVALID_ALT;
-use crate::parser_rule_context::{ParserRuleContext, ParserRuleContextType};
+use crate::parser_rule_context::{BaseParserRuleContext, cast, ParserRuleContext, ParserRuleContextType};
 use crate::tree::ParseTreeListener;
 
 //pub trait RuleContext:RuleNode {
@@ -14,7 +15,9 @@ pub trait RuleContext {
     fn get_invoking_state(&self) -> isize;
     fn set_invoking_state(&self, t: isize);
 
-    fn is_empty(&self) -> bool;
+    fn is_empty(&self) -> bool {
+        self.get_invoking_state() == -1
+    }
 
 
     //todo rewrite into take and get
@@ -23,7 +26,7 @@ pub trait RuleContext {
     fn set_parent(&self, parent: &Option<Rc<dyn ParserRuleContext>>);
 }
 
-pub(crate) struct EmptyCustomRuleContext;
+pub struct EmptyCustomRuleContext;
 
 impl CustomRuleContext for EmptyCustomRuleContext {
     fn get_rule_index(&self) -> usize {
@@ -31,15 +34,13 @@ impl CustomRuleContext for EmptyCustomRuleContext {
     }
 }
 
-pub trait CustomRuleContext {
+pub trait CustomRuleContext: 'static {
     fn get_rule_index(&self) -> usize;
     fn get_alt_number(&self) -> isize { INVALID_ALT }
     fn set_alt_number(&self, alt_number: isize) {}
-//    fn enter(&self, listener: &dyn ParseTreeListener) ;
-//
-//    fn exit(&self, listener: &dyn ParseTreeListener) ;
+    fn enter(ctx: &BaseParserRuleContext<Self>, listener: &mut dyn Any) where Self: Sized {}
+    fn exit(ctx: &BaseParserRuleContext<Self>, listener: &mut dyn Any) where Self: Sized {}
 }
-
 
 pub struct BaseRuleContext<Ctx: CustomRuleContext> {
     pub(crate) parent_ctx: RefCell<Option<Weak<dyn ParserRuleContext>>>,
@@ -64,10 +65,6 @@ impl<Ctx: CustomRuleContext> RuleContext for BaseRuleContext<Ctx> {
 
     fn set_invoking_state(&self, t: isize) {
         self.invoking_state.set(t)
-    }
-
-    fn is_empty(&self) -> bool {
-        unimplemented!()
     }
 
     fn get_parent_ctx(&self) -> Option<Rc<dyn ParserRuleContext>> {

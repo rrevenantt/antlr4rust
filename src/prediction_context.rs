@@ -50,6 +50,7 @@ pub struct SingletonPredictionContext {
 impl SingletonPredictionContext {
     fn is_empty(&self) -> bool {
         self.return_state == PREDICTION_CONTEXT_EMPTY_RETURN_STATE
+            && self.parent_ctx == None
     }
 }
 
@@ -204,7 +205,7 @@ impl PredictionContext {
         ) = self {
             return singleton.is_empty();
         }
-        false
+        self.get_return_state(0) == PREDICTION_CONTEXT_EMPTY_RETURN_STATE
     }
 
     pub fn has_empty_path(&self) -> bool {
@@ -219,6 +220,17 @@ impl PredictionContext {
             => *cached_hash,
         }
     }
+
+//    pub fn is_consistent(&self) -> bool {
+//        match self {
+//            Singleton(x) => {x.parent_ctx.is_some() || x.return_state == PREDICTION_CONTEXT_EMPTY_RETURN_STATE},
+//            Array(ArrayPredictionContext{ cached_hash, parents, return_states }) => {
+//                parents.iter().zip(return_states.iter())
+//                    .all(|(a,&b)|
+//                        (a.is_some() && a.as_deref().unwrap().is_consistent()) || b == PREDICTION_CONTEXT_EMPTY_RETURN_STATE)
+//            },
+//        }
+//    }
 
     fn into_array(self) -> ArrayPredictionContext {
         match self {
@@ -236,7 +248,7 @@ impl PredictionContext {
     pub fn merge(a: PredictionContext, b: PredictionContext, root_is_wildcard: bool) -> PredictionContext {
         if a == b { return a; }
 
-        match (a, b) {
+        let r = match (a, b) {
             (PredictionContext::Singleton(a), PredictionContext::Singleton(b)) => {
                 Self::merge_singletons(a, b, root_is_wildcard)
             }
@@ -248,7 +260,8 @@ impl PredictionContext {
 
                 Self::merge_arrays(a.into_array(), b.into_array(), root_is_wildcard)
             }
-        }
+        };
+        return r;
     }
 
     fn merge_singletons(mut a: SingletonPredictionContext, mut b: SingletonPredictionContext, root_is_wildcard: bool/*, mergeCache: * DoubleDict*/) -> PredictionContext {
@@ -304,9 +317,9 @@ impl PredictionContext {
         let mut i = 0;
         let mut j = 0;
 
-        while i < a.return_states.len() && j < b.return_states.len() {
-            let a_parent = a.parents[i].take();
-            let b_parent = b.parents[i].take();
+        while i < a.parents.len() && j < b.parents.len() {
+            let a_parent = &mut a.parents[i];
+            let b_parent = &mut b.parents[j];
             if a.return_states[i] == b.return_states[j] {
                 let payload = a.return_states[i];
                 let both = payload == PREDICTION_CONTEXT_EMPTY_RETURN_STATE
@@ -316,9 +329,9 @@ impl PredictionContext {
 
                 if both || ax_ax {
                     merged.return_states.push(payload);
-                    merged.parents.push(a_parent);
+                    merged.parents.push(a_parent.take());
                 } else {
-                    let merged_parent = Self::merge(*a_parent.unwrap(), *b_parent.unwrap(), root_is_wildcard);
+                    let merged_parent = Self::merge(*a_parent.take().unwrap(), *b_parent.take().unwrap(), root_is_wildcard);
                     merged.return_states.push(payload);
                     merged.parents.push(Some(Box::new(merged_parent)));
                 }
@@ -326,11 +339,11 @@ impl PredictionContext {
                 j += 1;
             } else if a.return_states[i] < b.return_states[j] {
                 merged.return_states.push(a.return_states[i]);
-                merged.parents.push(a_parent);
+                merged.parents.push(a_parent.take());
                 i += 1;
             } else {
-                merged.return_states.push(b.return_states[i]);
-                merged.parents.push(b_parent);
+                merged.return_states.push(b.return_states[j]);
+                merged.parents.push(b_parent.take());
                 j += 1;
             }
         }
@@ -341,20 +354,23 @@ impl PredictionContext {
                 merged.return_states.push(a.return_states[p]);
             }
         }
-        if i < b.return_states.len() {
-            for p in i..b.return_states.len() {
+        if j < b.return_states.len() {
+            for p in j..b.return_states.len() {
                 merged.parents.push(b.parents[p].take());
                 merged.return_states.push(b.return_states[p]);
             }
         }
 
-        if merged.parents.len() == 1 {
-            return Self::new_singleton(merged.parents[0].take(), merged.return_states[0]);
+        if merged.parents.len() < a.return_states.len() + b.return_states.len() {
+            if merged.parents.len() == 1 {
+                return Self::new_singleton(merged.parents[0].take(), merged.return_states[0]);
+            }
+            merged.return_states.shrink_to_fit();
+            merged.parents.shrink_to_fit();
         }
 
-        merged.return_states.shrink_to_fit();
-        merged.parents.shrink_to_fit();
 
+        PredictionContext::combine_common_parents(&mut merged);
         //todo combine common parents?????
 
         return Array(merged);
@@ -380,9 +396,10 @@ impl PredictionContext {
 
         PredictionContext::new_singleton(Some(Box::new(parent)), transition.follow_state as isize)
     }
-    //    fn combine_common_parents(array: &mut ArrayPredictionContext) {
-//
-//    }
+
+    fn combine_common_parents(array: &mut ArrayPredictionContext) {
+        //todo, useless for now
+    }
 }
 
 

@@ -1,9 +1,10 @@
-use std::cmp::{max, min, Ordering};
-use crate::prediction_mode::resolves_to_just_one_viable_alt;
-use crate::vocabulary::Vocabulary;
-use crate::token::{TOKEN_EOF, TOKEN_EPSILON};
 use std::borrow::Cow;
 use std::borrow::Cow::Borrowed;
+use std::cmp::{max, min, Ordering};
+
+use crate::prediction_mode::resolves_to_just_one_viable_alt;
+use crate::token::{TOKEN_EOF, TOKEN_EPSILON};
+use crate::vocabulary::Vocabulary;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Interval {
@@ -234,7 +235,7 @@ impl IntervalSet {
     }
 
     fn length(&self) -> isize {
-        unimplemented!()
+        self.intervals.iter().fold(0, |acc, it| acc + it.b - it.a + 1)
     }
 
     fn remove_range(&self, _v: &Interval) {
@@ -301,18 +302,17 @@ impl IntervalSet {
         if self.length() > 1 {
             buf += "{";
         }
-
         let mut iter = self.intervals.iter();
         while let Some(int) = iter.next() {
             if int.a == int.b {
                 buf += self.element_name(vocabulary, int.a).as_ref();
             } else {
-                for i in int.a..=int.b {
+                for i in int.a..(int.b + 1) {
                     if i > int.a { buf += ", "; }
                     buf += self.element_name(vocabulary, i).as_ref();
                 }
             }
-            if !iter.len() == 0 {
+            if iter.len() > 0 {
                 buf += ", ";
             }
         }
@@ -339,7 +339,7 @@ impl IntervalSet {
 }
 
 mod test {
-    use crate::interval_set::{IntervalSet, Interval};
+    use crate::interval_set::{Interval, IntervalSet};
 
     #[test]
     fn test_add_1() {

@@ -3,6 +3,7 @@ use crate::errors::ANTLRError;
 pub const EOF: isize = -1;
 
 pub trait IntStream {
+    //todo handle return error everywhere
     fn consume(&mut self) -> Result<(), ANTLRError>;
     fn la(&mut self, i: isize) -> isize;
     fn mark(&mut self) -> isize;

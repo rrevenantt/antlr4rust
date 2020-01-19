@@ -8,25 +8,31 @@ and [tests/my_tests.rs](tests/my_test.rs) for usage
 
 # Implementation status
 
-WIP, most of the logic is working(almost all antls test suit tests related to parsing/lexing logic are passing) but you should still expect bugs/panics.
-If you are not going to use yet unimplemented features you might find it useful already.
+WIP, almost all tests are passing, but you should still expect bugs/panics.
+You might find it useful already, but it is not ready for production yet.
+Also API very likely will have some changes.
 
-Missing features:
-- [ ] Lexer
-  - [ ] Couple corner cases from ANTLR4 test suit are still failing
+Currently requires nightly version of rust. 
+This very likely will be the case until specialization is stabilized. 
+
+Remaining things:
 - [ ] Parser
-  - [ ] recovery/error reporting is partially working
   - [ ] some internal optimizations
-  - [ ] labeled alternatives/childs
-  - [ ] return values
-  - [ ] Full testing with ANTLR4 test suit(currently about 95% parser logic tests are passing )
+  - [ ] retrieve child by index if children have labeled alternatives
 - [ ] Generator
-  - [ ] Rebase to upstream
   - [ ] CI
 - [ ] Documentation
 - [ ] API stabilization
   - [ ] Rust api guidelines compliance   
+  
+#    
+  
+# Future improvements:
+ - make parsing zero copy(i.e. use &str instead String in token and &Token in tree nodes)
+ - use & instead of Rc for nodes in parser
+ - support no_std(although alloc would still be required)
+ - support stable rust
 
 # Licence
 
-MIT 
+BSD 3-clause 

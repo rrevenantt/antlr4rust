@@ -57,7 +57,7 @@ pub trait Transition: Sync + Send + Debug {
         None
     }
     fn get_serialization_type(&self) -> TransitionType;
-    fn matches(&self, symbol: isize, minVocabSymbol: isize, maxVocabSymbol: isize) -> bool;
+    fn matches(&self, symbol: isize, min_vocab_symbol: isize, max_vocab_symbol: isize) -> bool;
     fn get_predicate(&self) -> Option<SemanticContext> {
         None
     }
@@ -138,7 +138,7 @@ impl Transition for AtomTransition {
         TransitionType::TRANSITION_ATOM
     }
 
-    fn matches(&self, _symbol: isize, _minVocabSymbol: isize, _maxVocabSymbol: isize) -> bool {
+    fn matches(&self, _symbol: isize, _min_vocab_symbol: isize, _max_vocab_symbol: isize) -> bool {
         _symbol == self.label
     }
 }
@@ -167,7 +167,7 @@ impl Transition for RuleTransition {
         TransitionType::TRANSITION_RULE
     }
 
-    fn matches(&self, _symbol: isize, _minVocabSymbol: isize, _maxVocabSymbol: isize) -> bool {
+    fn matches(&self, _symbol: isize, _min_vocab_symbol: isize, _max_vocab_symbol: isize) -> bool {
         unimplemented!()
     }
 }
@@ -194,7 +194,7 @@ impl Transition for EpsilonTransition {
         TransitionType::TRANSITION_EPSILON
     }
 
-    fn matches(&self, _symbol: isize, _minVocabSymbol: isize, _maxVocabSymbol: isize) -> bool {
+    fn matches(&self, _symbol: isize, _min_vocab_symbol: isize, _max_vocab_symbol: isize) -> bool {
         false
     }
 }
@@ -224,7 +224,7 @@ impl Transition for RangeTransition {
         TransitionType::TRANSITION_RANGE
     }
 
-    fn matches(&self, _symbol: isize, _minVocabSymbol: isize, _maxVocabSymbol: isize) -> bool {
+    fn matches(&self, _symbol: isize, _min_vocab_symbol: isize, _max_vocab_symbol: isize) -> bool {
         _symbol >= self.start && _symbol <= self.stop
     }
 
@@ -255,7 +255,7 @@ impl Transition for ActionTransition {
         TransitionType::TRANSITION_ACTION
     }
 
-    fn matches(&self, _symbol: isize, _minVocabSymbol: isize, _maxVocabSymbol: isize) -> bool {
+    fn matches(&self, _symbol: isize, _min_vocab_symbol: isize, _max_vocab_symbol: isize) -> bool {
         false
     }
 }
@@ -282,7 +282,7 @@ impl Transition for SetTransition {
         TransitionType::TRANSITION_SET
     }
 
-    fn matches(&self, _symbol: isize, _minVocabSymbol: isize, _maxVocabSymbol: isize) -> bool {
+    fn matches(&self, _symbol: isize, _min_vocab_symbol: isize, _max_vocab_symbol: isize) -> bool {
         self.set.contains(_symbol)
     }
 
@@ -310,8 +310,8 @@ impl Transition for NotSetTransition {
         TransitionType::TRANSITION_NOTSET
     }
 
-    fn matches(&self, _symbol: isize, _minVocabSymbol: isize, _maxVocabSymbol: isize) -> bool {
-        _symbol >= _minVocabSymbol && _symbol <= _maxVocabSymbol
+    fn matches(&self, _symbol: isize, _min_vocab_symbol: isize, _max_vocab_symbol: isize) -> bool {
+        _symbol >= _min_vocab_symbol && _symbol <= _max_vocab_symbol
             && !self.set.contains(_symbol)
     }
 }
@@ -333,8 +333,8 @@ impl Transition for WildcardTransition {
         TransitionType::TRANSITION_WILDCARD
     }
 
-    fn matches(&self, _symbol: isize, _minVocabSymbol: isize, _maxVocabSymbol: isize) -> bool {
-        _symbol < _maxVocabSymbol && _symbol > _minVocabSymbol
+    fn matches(&self, _symbol: isize, _min_vocab_symbol: isize, _max_vocab_symbol: isize) -> bool {
+        _symbol < _max_vocab_symbol && _symbol > _min_vocab_symbol
     }
 }
 
@@ -363,8 +363,16 @@ impl Transition for PredicateTransition {
         TransitionType::TRANSITION_PREDICATE
     }
 
-    fn matches(&self, _symbol: isize, _minVocabSymbol: isize, _maxVocabSymbol: isize) -> bool {
-        unimplemented!()
+    fn matches(&self, _symbol: isize, _min_vocab_symbol: isize, _max_vocab_symbol: isize) -> bool {
+        false
+    }
+
+    fn get_predicate(&self) -> Option<SemanticContext> {
+        Some(SemanticContext::Predicate {
+            rule_index: self.rule_index,
+            pred_index: self.pred_index,
+            is_ctx_dependent: self.is_ctx_dependent,
+        })
     }
 }
 
@@ -388,8 +396,8 @@ impl Transition for PrecedencePredicateTransition {
         TransitionType::TRANSITION_PRECEDENCE
     }
 
-    fn matches(&self, _symbol: isize, _minVocabSymbol: isize, _maxVocabSymbol: isize) -> bool {
-        unimplemented!()
+    fn matches(&self, _symbol: isize, _min_vocab_symbol: isize, _max_vocab_symbol: isize) -> bool {
+        false
     }
 
     fn get_predicate(&self) -> Option<SemanticContext> {

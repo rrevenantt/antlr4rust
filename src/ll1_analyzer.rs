@@ -1,17 +1,19 @@
+use std::collections::HashSet;
+use std::ops::Deref;
+
+use bit_set::BitSet;
+
 use crate::atn::ATN;
-use crate::prediction_context::PredictionContext;
+use crate::atn_config::ATNConfig;
+use crate::atn_deserializer::cast;
 use crate::atn_state::{ATNState, ATNStateType};
 use crate::interval_set::IntervalSet;
 use crate::parser_rule_context::ParserRuleContext;
-use crate::transition::{RuleTransition, TransitionType};
-use std::collections::HashSet;
-use bit_set::BitSet;
-use crate::atn_config::ATNConfig;
-use crate::token::{TOKEN_EPSILON, TOKEN_EOF, TOKEN_INVALID_TYPE, TOKEN_MIN_USER_TOKEN_TYPE};
-use crate::atn_deserializer::cast;
+use crate::prediction_context::PredictionContext;
 use crate::semantic_context::SemanticContext::Precedence;
+use crate::token::{TOKEN_EOF, TOKEN_EPSILON, TOKEN_INVALID_TYPE, TOKEN_MIN_USER_TOKEN_TYPE};
+use crate::transition::{RuleTransition, TransitionType};
 use crate::transition::TransitionType::TRANSITION_NOTSET;
-use std::ops::Deref;
 
 pub struct LL1Analyzer<'a> {
     atn: &'a ATN,
@@ -35,15 +37,14 @@ impl LL1Analyzer<'_> {
         let mut looks_busy: HashSet<ATNConfig> = HashSet::new();
         let mut called_rule_stack = BitSet::new();
         self.look_work(
-//            atn,
-s,
-stop_state,
-look_ctx,
-&mut r,
-&mut looks_busy,
-&mut called_rule_stack,
-true,
-true,
+            s,
+            stop_state,
+            look_ctx,
+            &mut r,
+            &mut looks_busy,
+            &mut called_rule_stack,
+            true,
+            true,
         );
         r
     }
@@ -61,7 +62,7 @@ true,
                  add_eof: bool,
     ) {
         let c = ATNConfig::new(s.get_state_number(), 0, ctx.clone());
-        if !look_busy.insert(c) { return }
+        if !look_busy.insert(c) { return; }
 
         if Some(s.get_state_number()) == stop_state.map(|x| x.get_state_number()) {
             match ctx {
@@ -106,7 +107,7 @@ true,
                         called_rule_stack.insert(s.get_rule_index());
                     }
 
-                    return
+                    return;
                 }
                 _ => {}
             }
@@ -117,7 +118,7 @@ true,
             match tr.get_serialization_type() {
                 TransitionType::TRANSITION_RULE => {
                     let rule_tr = unsafe { cast::<RuleTransition>(tr.as_ref()) };
-                    if called_rule_stack.contains(target.get_rule_index()) { continue }
+                    if called_rule_stack.contains(target.get_rule_index()) { continue; }
 
                     let new_ctx = PredictionContext::new_singleton(ctx.clone().map(Box::new), rule_tr.follow_state as isize);
 
@@ -153,6 +154,5 @@ true,
             }
         }
     }
-
 }
  

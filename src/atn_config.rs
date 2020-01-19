@@ -33,9 +33,12 @@ impl Eq for ATNConfig {}
 
 impl PartialEq for ATNConfig {
     fn eq(&self, other: &Self) -> bool {
-        self.get_state() == other.get_state() && self.get_alt() == other.get_alt()
+        self.get_state() == other.get_state()
+            && self.get_alt() == other.get_alt()
             && self.get_context() == other.get_context()
             && self.get_type() == other.get_type()
+            && self.semantic_context == other.semantic_context
+            && self.precedence_filter_suppressed == other.precedence_filter_suppressed
         // && semantic context
     }
 }
@@ -48,7 +51,7 @@ impl Hash for ATNConfig {
             None => state.write_i32(0),
             Some(c) => c.hash(state),
         }
-        //todo semantic context
+        self.semantic_context.hash(state);
         if let LexerATNConfig { lexer_action_executor, passed_through_non_greedy_decision } = &self.config_type {
             state.write_i32(if *passed_through_non_greedy_decision { 1 } else { 0 });
             match lexer_action_executor {
@@ -59,9 +62,11 @@ impl Hash for ATNConfig {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ATNConfig<T: DerefMut<Target=PredictionContext> = Box<PredictionContext>> {
     precedence_filter_suppressed: bool,
+    //todo since ATNState is immutable when we started working with ATNConfigs
+    // looks like it is possible to have usual reference here
     state: ATNStateRef,
     alt: isize,
     //todo maybe option is unnecessary and PredictionContext::EMPTY would be enough
@@ -70,12 +75,13 @@ pub struct ATNConfig<T: DerefMut<Target=PredictionContext> = Box<PredictionConte
     // or maybe transform it into local variant with Rc because prediction for particular symbol is done in one thread
     // or PredictionContext might be behind Box<dyn DerefMut<Target=PredictionContext>> to choose Rc/Arc at runtime
     context: Option<T>,
+    //todo looks like here option is also unnesesary
     pub semantic_context: Option<Box<SemanticContext>>,
     pub reaches_into_outer_context: isize,
     pub config_type: ATNConfigType,
 }
 
-#[derive(Eq, PartialEq, Clone)]
+#[derive(Eq, PartialEq, Clone, Debug)]
 pub enum ATNConfigType {
     BaseATNConfig,
     LexerATNConfig {
@@ -114,7 +120,7 @@ impl ATNConfig {
             alt,
             context: context.map(Box::new),
 //            semantic_context: SemanticContext::empty(),
-            semantic_context: None,
+            semantic_context: Some(Box::new(SemanticContext::NONE)),
             reaches_into_outer_context: 0,
             config_type: ATNConfigType::BaseATNConfig,
         }
@@ -286,7 +292,7 @@ impl ATNConfig {
         self.reaches_into_outer_context = _v
     }
 
-    pub fn get_precedence_filter_suppressed(&self) -> bool {
+    pub fn is_precedence_filter_suppressed(&self) -> bool {
         self.precedence_filter_suppressed
     }
 

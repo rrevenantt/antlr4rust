@@ -4,6 +4,8 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Once;
 
+use backtrace::Backtrace;
+
 use crate::atn_deserializer::cast;
 use crate::atn_state::ATNState;
 use crate::atn_state::ATNStateRef;
@@ -66,7 +68,7 @@ impl ATN {
 //    }
 
     pub fn next_tokens<'a>(&self, s: &'a dyn ATNState) -> &'a IntervalSet {
-        s.get_next_token_within_rule().get_or_init(|| {
+        s.get_next_tokens_within_rule().get_or_init(|| {
             self.next_tokens_in_ctx(s, None)
                 .modify_with(|r| {
 //                    println!("expecting {:?}", r);
@@ -124,7 +126,6 @@ impl ATN {
         if following.contains(TOKEN_EPSILON) {
             expected.add_one(TOKEN_EOF);
         }
-
         expected
     }
 }

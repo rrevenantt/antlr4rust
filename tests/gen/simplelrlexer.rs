@@ -1,4 +1,4 @@
-// Generated from SimpleLR.g4 by ANTLR 4.7.1
+// Generated from SimpleLR.g4 by ANTLR 4.7.2
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
@@ -16,7 +16,7 @@ use antlr_rust::dfa::DFA;
 use antlr_rust::error_listener::ErrorListener;
 use antlr_rust::lexer::{BaseLexer, Lexer, LexerRecog};
 use antlr_rust::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
-use antlr_rust::parser_rule_context::ParserRuleContext;
+use antlr_rust::parser_rule_context::{cast, LexerContext, ParserRuleContext};
 use antlr_rust::prediction_context::PredictionContextCache;
 use antlr_rust::recognizer::{Actions, Recognizer};
 use antlr_rust::rule_context::BaseRuleContext;
@@ -38,6 +38,7 @@ pub const ruleNames: [&'static str; 2] = [
     "ID", "WS"
 ];
 
+
 pub const _LITERAL_NAMES: [Option<&'static str>; 0] = [];
 pub const _SYMBOLIC_NAMES: [Option<&'static str>; 3] = [
     None, Some("ID"), Some("WS")
@@ -47,8 +48,13 @@ lazy_static! {
 		static ref VOCABULARY: Box<dyn Vocabulary> = Box::new(VocabularyImpl::new(_LITERAL_NAMES.iter(), _SYMBOLIC_NAMES.iter(), None));
 	}
 
+pub struct SimpleLRLexer {
+    base: BaseLexer<SimpleLRLexerActions>,
+//	static { RuntimeMetaData.checkVersion("4.7.2", RuntimeMetaData.VERSION); }
+}
+
 impl Deref for SimpleLRLexer {
-    type Target = BaseLexer;
+    type Target = BaseLexer<SimpleLRLexerActions>;
 
     fn deref(&self) -> &Self::Target {
         &self.base
@@ -61,11 +67,6 @@ impl DerefMut for SimpleLRLexer {
     }
 }
 
-
-pub struct SimpleLRLexer {
-    base: BaseLexer,
-//	static { RuntimeMetaData.checkVersion("4.7.1", RuntimeMetaData.VERSION); }
-}
 
 impl SimpleLRLexer {
     fn get_rule_names(&self) -> &'static [&'static str] {
@@ -99,14 +100,14 @@ impl SimpleLRLexer {
                     _ATN.clone(),
                     _decision_to_DFA.clone(),
                     _shared_context_cache.clone(),
-                    Box::new(SimpleLRLexerActions {}),
                 ),
+                Box::new(SimpleLRLexerActions {}),
             )
         }
     }
 }
 
-struct SimpleLRLexerActions {}
+pub struct SimpleLRLexerActions {}
 
 impl SimpleLRLexerActions {}
 
@@ -115,7 +116,7 @@ impl LexerRecog for SimpleLRLexerActions {}
 impl Recognizer for SimpleLRLexerActions {}
 
 impl Actions for SimpleLRLexerActions {
-    type Recog = BaseLexer;
+    type Recog = BaseLexer<SimpleLRLexerActions>;
 }
 
 impl SimpleLRLexerActions {}
@@ -141,6 +142,7 @@ impl TokenSource for SimpleLRLexer {
         self.base.get_token_factory()
     }
 }
+
 
 
 lazy_static! {

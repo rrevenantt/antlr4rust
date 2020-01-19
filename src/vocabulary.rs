@@ -1,11 +1,13 @@
-use std::cmp::max;
-use crate::token::TOKEN_EOF;
+use std::borrow::Borrow;
 //use std::borrow::Cow;
 use std::borrow::Cow::{self, Borrowed, Owned};
-use crate::dfa::ScopeExt;
-use std::borrow::Borrow;
+use std::cmp::max;
+use std::fmt::Debug;
 
-pub trait Vocabulary: Sync {
+use crate::dfa::ScopeExt;
+use crate::token::TOKEN_EOF;
+
+pub trait Vocabulary: Sync + Debug {
     fn get_max_token_type(&self) -> isize;
     fn get_literal_name(&self, token_type: isize) -> Option<&str>;
     fn get_symbolic_name(&self, token_type: isize) -> Option<&str>;

@@ -71,7 +71,7 @@ if (x < x && a > 0) then duh
             let mut token_source = UnbufferedTokenStream::new_unbuffered(&mut _lexer);
             while token_source.la(1) != TOKEN_EOF {
                 {
-                    let token = token_source.lt(1);
+                    let token = token_source.lt(1).unwrap();
 
                     let len = token.get_stop() as usize + 1 - token.get_start() as usize;
                     string.extend(

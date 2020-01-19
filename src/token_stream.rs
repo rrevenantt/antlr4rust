@@ -7,11 +7,11 @@ use crate::errors::ANTLRError;
 use crate::int_stream::{IntStream, IterWrapper};
 use crate::interval_set::Interval;
 use crate::rule_context::RuleContext;
-use crate::token::{OwningToken, Token, TOKEN_EOF};
+use crate::token::{OwningToken, Token, TOKEN_EOF, TOKEN_INVALID_TYPE};
 use crate::token_source::TokenSource;
 
 pub trait TokenStream: IntStream {
-    fn lt(&mut self, k: isize) -> &dyn Token;
+    fn lt(&mut self, k: isize) -> Option<&dyn Token>;
     fn get(&self, index: isize) -> &dyn Token;
     fn get_token_source(&self) -> &dyn TokenSource;
     //    fn set_token_source(&self,source: Box<TokenSource>);
@@ -28,7 +28,7 @@ impl<'a, T: TokenStream> Iterator for TokenIter<'a, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.1 { return None }
-        let result = self.0.lt(1).to_owned();
+        let result = self.0.lt(1).unwrap().to_owned();
         self.0.consume();
         if result.get_token_type() == TOKEN_EOF { self.1 = true; }
         Some(result)
@@ -47,6 +47,7 @@ impl<'a, T: TokenStream> Iterator for TokenIter<'a, T> {
 pub struct UnbufferedTokenStream<T: TokenSource> {
     token_source: T,
     pub(crate) tokens: Vec<Box<dyn Token>>,
+    //todo prev token for lt(-1)
     pub(crate) current_token_index: isize,
     markers_count: isize,
     pub(crate) p: isize,
@@ -105,14 +106,14 @@ impl<T: TokenSource> UnbufferedTokenStream<T> {
 }
 
 impl<T: TokenSource> TokenStream for UnbufferedTokenStream<T> {
-    fn lt(&mut self, i: isize) -> &dyn Token {
+    fn lt(&mut self, i: isize) -> Option<&dyn Token> {
         if i == -1 {
-            return self.tokens[self.p as usize - 1].as_ref()
+            return self.tokens.get(self.p as usize - 1).map(Deref::deref)
         }
 
         self.sync(i);
 
-        self.tokens[(self.p + i - 1) as usize].as_ref()
+        self.tokens.get((self.p + i - 1) as usize).map(Deref::deref)
     }
 
     fn get(&self, index: isize) -> &dyn Token {
@@ -120,7 +121,7 @@ impl<T: TokenSource> TokenStream for UnbufferedTokenStream<T> {
     }
 
     fn get_token_source(&self) -> &dyn TokenSource {
-        unimplemented!()
+        &self.token_source
     }
 
 
@@ -146,7 +147,7 @@ impl<T: TokenSource> TokenStream for UnbufferedTokenStream<T> {
         let b = stop - buffer_start_index;
 
         let mut buf = String::new();
-        for i in a..=b {
+        for i in a..(b + 1) {
             let t = &self.tokens[i as usize];
             if t.get_token_type() == TOKEN_EOF { break }
             buf.extend(t.get_text().chars());
@@ -179,7 +180,7 @@ impl<T: TokenSource> IntStream for UnbufferedTokenStream<T> {
     }
 
     fn la(&mut self, i: isize) -> isize {
-        self.lt(i).get_token_type()
+        self.lt(i).map(Token::get_token_type).unwrap_or(TOKEN_INVALID_TYPE)
     }
 
     fn mark(&mut self) -> isize {

@@ -36,6 +36,7 @@ impl TokenFactory for CommonTokenFactory {
         line: isize,
         column: isize,
     ) -> Box<dyn Token> {
+
         Box::new(OwningToken {
             token_type: ttype,
             channel,
@@ -44,7 +45,10 @@ impl TokenFactory for CommonTokenFactory {
             token_index: -1,
             line,
             column,
-            text: source.map(|x| x.get_text(start, stop)).unwrap_or(String::new()),
+            text: source.map(|x| {
+                if stop >= x.size() || start >= x.size() { "<EOF>".to_owned() } else { x.get_text(start, stop) }
+            })
+                .unwrap_or(String::new()),
             read_only: false,
         })
     }

@@ -1,5 +1,6 @@
-use crate::dfa::DFA;
 use std::fmt::{Display, Formatter};
+
+use crate::dfa::DFA;
 use crate::dfa_state::DFAState;
 use crate::lexer_atn_simulator::ERROR_DFA_STATE_REF;
 
@@ -42,7 +43,12 @@ impl DFASerializer<'_, '_> {
                                    if state.requires_full_context { "^" } else { "" },
         );
         if state.is_accept_state {
-            base_str = if (false /*TODO predicates*/) { unimplemented!() } else { format!("{}=>{}", base_str, state.prediction) };
+            base_str = if !state.predicates.is_empty() {
+                unimplemented!()
+//                format!("{}=>{:?}", base_str, state.predicates)
+            } else {
+                format!("{}=>{}", base_str, state.prediction)
+            };
         }
         base_str
     }

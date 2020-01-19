@@ -1,6 +1,8 @@
+use std::ops::Deref;
+
 use crate::errors::ANTLRError;
 use crate::int_stream::{EOF, IntStream, IterWrapper};
-use crate::token::{Token, TOKEN_DEFAULT_CHANNEL};
+use crate::token::{Token, TOKEN_DEFAULT_CHANNEL, TOKEN_INVALID_TYPE};
 use crate::token_source::TokenSource;
 use crate::token_stream::{TokenStream, UnbufferedTokenStream};
 
@@ -20,7 +22,7 @@ impl<T: TokenSource> IntStream for CommonTokenStream<T> {
     }
 
     fn la(&mut self, i: isize) -> isize {
-        self.lt(i).get_token_type()
+        self.lt(i).map(Token::get_token_type).unwrap_or(TOKEN_INVALID_TYPE)
     }
 
     fn mark(&mut self) -> isize {
@@ -47,7 +49,7 @@ impl<T: TokenSource> IntStream for CommonTokenStream<T> {
 }
 
 impl<T: TokenSource> TokenStream for CommonTokenStream<T> {
-    fn lt(&mut self, k: isize) -> &dyn Token {
+    fn lt(&mut self, k: isize) -> Option<&dyn Token> {
         if k == 0 { panic!(); }
         if k < 0 { return self.lb(-k); }
         let mut i = self.base.p;
@@ -61,7 +63,7 @@ impl<T: TokenSource> TokenStream for CommonTokenStream<T> {
             n += 1;
         }
 //		if ( i>range ) range = i;
-        return self.base.tokens[i as usize].as_ref();
+        return self.base.tokens.get(i as usize).map(Deref::deref)
     }
 
     fn get(&self, index: isize) -> &dyn Token {
@@ -172,8 +174,8 @@ impl<T: TokenSource> CommonTokenStream<T> {
 //
 //    fn adjust_seek_index(&self, i: isize) -> int { unimplemented!() }
 
-    fn lb(&mut self, k: isize) -> &dyn Token {
-        if k == 0 || (self.base.p - k) < 0 { panic!("invalid index"); }
+    fn lb(&mut self, k: isize) -> Option<&dyn Token> {
+        if k == 0 || (self.base.p - k) < 0 { return None }
 
         let mut i = self.base.p;
         let mut n = 1;
@@ -184,7 +186,7 @@ impl<T: TokenSource> CommonTokenStream<T> {
             n += 1;
         }
 
-        return self.get(i);
+        return Some(self.get(i));
     }
 
 //    fn get_number_of_on_channel_tokens(&self) -> int { unimplemented!() }

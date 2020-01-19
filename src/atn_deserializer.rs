@@ -96,7 +96,8 @@ impl ATNDeserializer {
         self.read_rules(&mut atn, &mut data);
         self.read_modes(&mut atn, &mut data);
 
-        let mut sets = self.read_sets(&mut atn, &mut data, |data| data.next().unwrap());
+        let mut sets = self.read_sets(&mut atn, &mut data,
+                                      |data| data.next().unwrap() as u16 as isize);
 
         sets.extend(self.read_sets(&mut atn, &mut data,
                                    |data|
@@ -272,7 +273,7 @@ impl ATNDeserializer {
         &self,
         _atn: &mut ATN,
         data: &mut T,
-        readUnicode: fn(&mut T) -> isize,
+        read_unicode: fn(&mut T) -> isize,
     ) -> Vec<IntervalSet> {
         let nsets = data.next().unwrap();
         let mut sets = Vec::new();
@@ -281,14 +282,14 @@ impl ATNDeserializer {
 
             let mut set = IntervalSet::new();
 
+            // check if contains eof
             if data.next().unwrap() != 0 {
                 set.add_one(-1)
             }
 
-            for i in 0..intervals {
-                set.add_range(readUnicode(data), readUnicode(data));
+            for _ in 0..intervals {
+                set.add_range(read_unicode(data), read_unicode(data));
             }
-
             sets.push(set);
         }
 
@@ -302,7 +303,7 @@ impl ATNDeserializer {
         sets: &Vec<IntervalSet>,
     ) {
         let nedges = data.next().unwrap();
-        //println!("transitions {}", nedges);
+
         for _i in 0..nedges {
             let src = data.next().unwrap() as usize;
             let trg = data.next().unwrap() as usize;
@@ -312,7 +313,7 @@ impl ATNDeserializer {
             let arg3 = data.next().unwrap();
 
             let transition = self.edge_factory(atn, ttype, src, trg, arg1, arg2, arg3, sets);
-//            println!("created transition from {} {:?}", src, transition);
+
             atn.states.get_mut(src).unwrap().add_transition(transition);
         }
 
@@ -365,7 +366,7 @@ impl ATNDeserializer {
                 } => {
 
                     //                    if *end_state == 0 { panic!("invalid state")}
-
+                    // looks like it is never used during recognition
                     // todo missed part
                 }
                 //                ATNStateType::DecisionState {state:ATNDecisionState::PlusLoopBack,..} =>{

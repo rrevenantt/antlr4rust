@@ -1,11 +1,12 @@
+use std::fmt::Debug;
+use std::process::exit;
+use std::sync::Arc;
+
+use once_cell::sync::OnceCell;
+
 use crate::atn::ATN;
 use crate::interval_set::IntervalSet;
-
 use crate::transition::Transition;
-use std::sync::Arc;
-use std::process::exit;
-use std::fmt::Debug;
-use once_cell::sync::OnceCell;
 
 pub const ATNSTATE_INVALID_TYPE: isize = 0;
 pub const ATNSTATE_BASIC: isize = 1;
@@ -71,7 +72,7 @@ pub trait ATNState: Sync + Send + Debug {
     fn get_rule_index(&self) -> usize;
     fn set_rule_index(&self, v: usize);
 
-    fn get_next_token_within_rule(&self) -> &OnceCell<IntervalSet>;
+    fn get_next_tokens_within_rule(&self) -> &OnceCell<IntervalSet>;
 //    fn set_next_token_within_rule(&mut self, v: IntervalSet);
 
     fn get_state_type(&self) -> &ATNStateType;
@@ -89,7 +90,7 @@ pub trait ATNState: Sync + Send + Debug {
 
 #[derive(Debug)]
 pub struct BaseATNState {
-    next_token_within_rule: OnceCell<IntervalSet>,
+    next_tokens_within_rule: OnceCell<IntervalSet>,
 
     //    atn: Box<ATN>,
     epsilon_only_transitions: bool,
@@ -109,7 +110,7 @@ pub struct BaseATNState {
 impl BaseATNState {
     pub fn new_base_atnstate() -> BaseATNState {
         BaseATNState {
-            next_token_within_rule: OnceCell::new(),
+            next_tokens_within_rule: OnceCell::new(),
             epsilon_only_transitions: false,
             rule_index: 0,
             state_number: 0,
@@ -136,8 +137,8 @@ impl ATNState for BaseATNState {
         unimplemented!()
     }
 
-    fn get_next_token_within_rule(&self) -> &OnceCell<IntervalSet> {
-        &self.next_token_within_rule
+    fn get_next_tokens_within_rule(&self) -> &OnceCell<IntervalSet> {
+        &self.next_tokens_within_rule
     }
 
     fn get_state_type(&self) -> &ATNStateType {

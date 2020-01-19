@@ -1,4 +1,4 @@
-// Generated from ReferenceToATN.g4 by ANTLR 4.7.1
+// Generated from ReferenceToATN.g4 by ANTLR 4.7.2
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
@@ -16,7 +16,7 @@ use antlr_rust::dfa::DFA;
 use antlr_rust::error_listener::ErrorListener;
 use antlr_rust::lexer::{BaseLexer, Lexer, LexerRecog};
 use antlr_rust::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
-use antlr_rust::parser_rule_context::ParserRuleContext;
+use antlr_rust::parser_rule_context::{cast, LexerContext, ParserRuleContext};
 use antlr_rust::prediction_context::PredictionContextCache;
 use antlr_rust::recognizer::{Actions, Recognizer};
 use antlr_rust::rule_context::BaseRuleContext;
@@ -39,6 +39,7 @@ pub const ruleNames: [&'static str; 3] = [
     "ID", "ATN", "WS"
 ];
 
+
 pub const _LITERAL_NAMES: [Option<&'static str>; 0] = [];
 pub const _SYMBOLIC_NAMES: [Option<&'static str>; 4] = [
     None, Some("ID"), Some("ATN"), Some("WS")
@@ -48,8 +49,13 @@ lazy_static! {
 		static ref VOCABULARY: Box<dyn Vocabulary> = Box::new(VocabularyImpl::new(_LITERAL_NAMES.iter(), _SYMBOLIC_NAMES.iter(), None));
 	}
 
+pub struct ReferenceToATNLexer {
+    base: BaseLexer<ReferenceToATNLexerActions>,
+//	static { RuntimeMetaData.checkVersion("4.7.2", RuntimeMetaData.VERSION); }
+}
+
 impl Deref for ReferenceToATNLexer {
-    type Target = BaseLexer;
+    type Target = BaseLexer<ReferenceToATNLexerActions>;
 
     fn deref(&self) -> &Self::Target {
         &self.base
@@ -62,12 +68,6 @@ impl DerefMut for ReferenceToATNLexer {
     }
 }
 
-
-
-pub struct ReferenceToATNLexer {
-    base: BaseLexer,
-//	static { RuntimeMetaData.checkVersion("4.7.1", RuntimeMetaData.VERSION); }
-}
 
 impl ReferenceToATNLexer {
     fn get_rule_names(&self) -> &'static [&'static str] {
@@ -101,14 +101,14 @@ impl ReferenceToATNLexer {
                     _ATN.clone(),
                     _decision_to_DFA.clone(),
                     _shared_context_cache.clone(),
-                    Box::new(ReferenceToATNLexerActions {}),
                 ),
+                Box::new(ReferenceToATNLexerActions {}),
             )
         }
     }
 }
 
-struct ReferenceToATNLexerActions {}
+pub struct ReferenceToATNLexerActions {}
 
 impl ReferenceToATNLexerActions {}
 
@@ -117,7 +117,7 @@ impl LexerRecog for ReferenceToATNLexerActions {}
 impl Recognizer for ReferenceToATNLexerActions {}
 
 impl Actions for ReferenceToATNLexerActions {
-    type Recog = BaseLexer;
+    type Recog = BaseLexer<ReferenceToATNLexerActions>;
 }
 
 impl ReferenceToATNLexerActions {}
@@ -143,6 +143,7 @@ impl TokenSource for ReferenceToATNLexer {
         self.base.get_token_factory()
     }
 }
+
 
 
 lazy_static! {

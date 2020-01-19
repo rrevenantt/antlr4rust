@@ -11,6 +11,7 @@ use crate::atn_state::{ATNDecisionState, ATNState, ATNStateRef, ATNStateType};
 use crate::dfa_serializer::DFASerializer;
 use crate::dfa_state::{DFAState, DFAStateRef};
 use crate::prediction_context::MurmurHasherBuilder;
+use crate::vocabulary::Vocabulary;
 
 ///Helper trait for scope management and temporary values not living long enough
 pub(crate) trait ScopeExt: Sized {
@@ -48,7 +49,7 @@ pub struct DFA {
 
     // for faster duplicate search
     // TODO i think DFAState.edges can contain references to its elements
-    pub states_map: RwLock<HashMap</*DFAState hash*/ u64, DFAStateRef>>,
+    pub states_map: RwLock<HashMap</*DFAState hash*/ u64, Vec<DFAStateRef>>>,
     //    states_mu sync.RWMutex
     pub s0: RwLock<Option<DFAStateRef>>,
     //    s0_mu sync.RWMutex
@@ -82,7 +83,7 @@ impl DFA {
         {
             dfa.is_precedence_dfa = true;
             let mut precedence_state = DFAState::new_dfastate(
-                usize::max_value(),
+                dfa.states.read().unwrap().len(),
                 Box::new(ATNConfigSet::new_base_atnconfig_set(true)),
             );
             precedence_state.edges = vec![];
@@ -101,8 +102,12 @@ impl DFA {
         }
 
         self.s0.read().unwrap()
-            .map(|s0|
-                self.states.read().unwrap()[s0].edges[_precedence as usize]
+            .and_then(|s0|
+                self.states
+                    .read().unwrap()[s0]
+                    .edges
+                    .get(_precedence as usize)
+                    .copied()
             )
     }
 
@@ -155,6 +160,14 @@ impl DFA {
 
     fn num_states(&self) -> isize {
         unimplemented!()
+    }
+
+    pub fn to_string(&self, vocabulary: &dyn Vocabulary) -> String {
+        if self.s0.read().unwrap().is_none() { return String::new(); }
+
+        return format!("{}", DFASerializer::new(self, &|x|
+            vocabulary.get_display_name(x as isize - 1).into_owned(),
+        ));
     }
 
     pub fn to_lexer_string(&self) -> String {

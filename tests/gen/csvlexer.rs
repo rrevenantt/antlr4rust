@@ -1,4 +1,4 @@
-// Generated from CSV.g4 by ANTLR 4.7.1
+// Generated from CSV.g4 by ANTLR 4.7.2
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
@@ -16,7 +16,7 @@ use antlr_rust::dfa::DFA;
 use antlr_rust::error_listener::ErrorListener;
 use antlr_rust::lexer::{BaseLexer, Lexer, LexerRecog};
 use antlr_rust::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
-use antlr_rust::parser_rule_context::ParserRuleContext;
+use antlr_rust::parser_rule_context::{cast, LexerContext, ParserRuleContext};
 use antlr_rust::prediction_context::PredictionContextCache;
 use antlr_rust::recognizer::{Actions, Recognizer};
 use antlr_rust::rule_context::BaseRuleContext;
@@ -42,6 +42,7 @@ pub const ruleNames: [&'static str; 6] = [
     "T__0", "T__1", "T__2", "WS", "TEXT", "STRING"
 ];
 
+
 pub const _LITERAL_NAMES: [Option<&'static str>; 4] = [
     None, Some("','"), Some("'\r'"), Some("'\n'")
 ];
@@ -53,8 +54,13 @@ lazy_static! {
 		static ref VOCABULARY: Box<dyn Vocabulary> = Box::new(VocabularyImpl::new(_LITERAL_NAMES.iter(), _SYMBOLIC_NAMES.iter(), None));
 	}
 
+pub struct CSVLexer {
+    base: BaseLexer<CSVLexerActions>,
+//	static { RuntimeMetaData.checkVersion("4.7.2", RuntimeMetaData.VERSION); }
+}
+
 impl Deref for CSVLexer {
-    type Target = BaseLexer;
+    type Target = BaseLexer<CSVLexerActions>;
 
     fn deref(&self) -> &Self::Target {
         &self.base
@@ -67,12 +73,6 @@ impl DerefMut for CSVLexer {
     }
 }
 
-
-
-pub struct CSVLexer {
-    base: BaseLexer,
-//	static { RuntimeMetaData.checkVersion("4.7.1", RuntimeMetaData.VERSION); }
-}
 
 impl CSVLexer {
     fn get_rule_names(&self) -> &'static [&'static str] {
@@ -106,14 +106,14 @@ impl CSVLexer {
                     _ATN.clone(),
                     _decision_to_DFA.clone(),
                     _shared_context_cache.clone(),
-                    Box::new(CSVLexerActions {}),
                 ),
+                Box::new(CSVLexerActions {}),
             )
         }
     }
 }
 
-struct CSVLexerActions {}
+pub struct CSVLexerActions {}
 
 impl CSVLexerActions {}
 
@@ -122,7 +122,7 @@ impl LexerRecog for CSVLexerActions {}
 impl Recognizer for CSVLexerActions {}
 
 impl Actions for CSVLexerActions {
-    type Recog = BaseLexer;
+    type Recog = BaseLexer<CSVLexerActions>;
 }
 
 impl CSVLexerActions {}
@@ -148,6 +148,7 @@ impl TokenSource for CSVLexer {
         self.base.get_token_factory()
     }
 }
+
 
 
 lazy_static! {
