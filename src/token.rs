@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Display};
+use std::fmt::{Debug, Display, Error};
 use std::fmt::Formatter;
 use std::fmt::Result;
 
@@ -70,6 +70,7 @@ impl Display for OwningToken {
         ))
     }
 }
+
 
 impl Token for OwningToken {
     fn get_channel(&self) -> isize {

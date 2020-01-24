@@ -1,11 +1,12 @@
 use crate::char_stream::CharStream;
-use crate::token::OwningToken;
+use crate::token::{OwningToken, TOKEN_INVALID_TYPE};
 use crate::token::Token;
 use crate::token_source::TokenSource;
 
 lazy_static! {
     pub static ref CommonTokenFactoryDEFAULT: Box<TokenFactory> =
         Box::new(CommonTokenFactory::new(false));
+    pub static ref INVALID_TOKEN:Box<OwningToken> = Box::new(CommonTokenFactoryDEFAULT.as_ref().create(None,TOKEN_INVALID_TYPE,0,-1,-1,-1,-1).to_owned());
 }
 
 pub trait TokenFactory: Sync {

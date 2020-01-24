@@ -22,7 +22,6 @@ use murmur3::murmur3_32::MurmurHasher;
 use crate::atn::{ATN, INVALID_ALT};
 use crate::atn_config::ATNConfig;
 use crate::atn_config_set::ATNConfigSet;
-use crate::atn_deserializer::cast;
 use crate::atn_simulator::{BaseATNSimulator, IATNSimulator};
 use crate::atn_state::{ATNState, ATNStateRef};
 use crate::atn_state::ATNStateType::{DecisionState, RuleStopState};
@@ -163,6 +162,7 @@ impl ParserATNSimulator {
             let states = local.dfa.states.read().unwrap();
             if D == ERROR_DFA_STATE_REF {
                 let previousDstate = &states[previousD];
+                let err = self.no_viable_alt(local, previousDstate.configs.as_ref(), self.start_index.get());
                 local.input().seek(self.start_index.get());
                 let alt = self.get_syn_valid_or_sem_invalid_alt_that_finished_decision_entry_rule(
                     previousDstate.configs.as_ref(),
@@ -171,7 +171,7 @@ impl ParserATNSimulator {
                 if alt != INVALID_ALT {
                     return Ok(alt);
                 }
-                return Err(self.no_viable_alt(local, previousDstate.configs.as_ref(), self.start_index.get()));
+                return Err(err);
             }
 //            let states = local.dfa.states.read().unwrap();
             let Dstate = &states[D];
@@ -826,9 +826,8 @@ impl ParserATNSimulator {
                     assert!(!full_ctx);
 
                     if local.dfa.is_precedence_dfa() {
-                        if tr.get_serialization_type() != TransitionType::TRANSITION_EPSILON { panic!("cast error"); }
                         let outermost_precedence_return =
-                            unsafe { cast::<EpsilonTransition>(tr.as_ref()) }.outermost_precedence_return;
+                            tr.as_ref().cast::<EpsilonTransition>().outermost_precedence_return;
                         if outermost_precedence_return == local.dfa.atn_start_state as isize {
                             c.set_precedence_filter_suppressed(true);
                         }
@@ -885,21 +884,21 @@ impl ParserATNSimulator {
     ) -> Option<ATNConfig> {
         match t.get_serialization_type() {
             TransitionType::TRANSITION_EPSILON => Some(config.cloned(self.atn().states[t.get_target()].as_ref())),
-            TransitionType::TRANSITION_RULE => Some(self.rule_transition(config, unsafe { cast::<RuleTransition>(t) })),
+            TransitionType::TRANSITION_RULE => Some(self.rule_transition(config, t.cast::<RuleTransition>())),
             TransitionType::TRANSITION_PREDICATE =>
                 self.pred_transition(
                     config,
-                    unsafe { cast::<PredicateTransition>(t) },
+                    t.cast::<PredicateTransition>(),
                     collect_predicates,
                     in_context,
                     full_ctx,
                     local,
                 ),
-            TransitionType::TRANSITION_ACTION => Some(self.action_transition(config, unsafe { cast::<ActionTransition>(t) })),
+            TransitionType::TRANSITION_ACTION => Some(self.action_transition(config, t.cast::<ActionTransition>())),
             TransitionType::TRANSITION_PRECEDENCE =>
                 self.precedence_transition(
                     config,
-                    unsafe { cast::<PrecedencePredicateTransition>(t) },
+                    t.cast::<PrecedencePredicateTransition>(),
                     collect_predicates,
                     in_context,
                     full_ctx,
@@ -1018,7 +1017,7 @@ impl ParserATNSimulator {
         ANTLRError::NoAltError(NoViableAltError::new_full(
             local.parser,
             start_token,
-            offending_token,
+            offending_token
         ))
     }
 

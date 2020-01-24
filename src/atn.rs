@@ -6,7 +6,6 @@ use std::sync::Once;
 
 use backtrace::Backtrace;
 
-use crate::atn_deserializer::cast;
 use crate::atn_state::ATNState;
 use crate::atn_state::ATNStateRef;
 use crate::atn_type::ATNType;
@@ -115,8 +114,7 @@ impl ATN {
 
             let invoking_state = self.states[c.get_invoking_state() as usize].as_ref();
             let tr = invoking_state.get_transitions().first().unwrap().as_ref();
-            assert_eq!(tr.get_serialization_type(), TransitionType::TRANSITION_RULE);
-            let tr = unsafe { cast::<RuleTransition>(tr) };
+            let tr = tr.cast::<RuleTransition>();
             following = self.next_tokens(self.states[tr.follow_state].as_ref());
             expected.add_set(following);
             expected.remove_one(TOKEN_EPSILON);

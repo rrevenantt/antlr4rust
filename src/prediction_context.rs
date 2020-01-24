@@ -6,7 +6,6 @@ use std::ptr;
 use murmur3::murmur3_32::MurmurHasher;
 
 use crate::atn::ATN;
-use crate::atn_deserializer::cast;
 use crate::parser_rule_context::{empty_ctx, ParserRuleContext};
 use crate::prediction_context::PredictionContext::{Array, Singleton};
 use crate::transition::{RuleTransition, TransitionType};
@@ -386,13 +385,8 @@ impl PredictionContext {
         let transition = atn.states[outer_context.get_invoking_state() as usize]
             .get_transitions()
             .first().unwrap()
-            .deref();
-
-        let transition = if transition.get_serialization_type() == TransitionType::TRANSITION_RULE {
-            unsafe { cast::<RuleTransition>(transition) }
-        } else {
-            panic!("invalid state, cast error");
-        };
+            .deref()
+            .cast::<RuleTransition>();
 
         PredictionContext::new_singleton(Some(Box::new(parent)), transition.follow_state as isize)
     }

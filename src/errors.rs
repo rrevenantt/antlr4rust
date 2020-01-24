@@ -11,7 +11,6 @@ use backtrace::Backtrace;
 
 use crate::atn::ATN;
 use crate::atn_config_set::ATNConfigSet;
-use crate::atn_deserializer::cast;
 use crate::atn_simulator::IATNSimulator;
 use crate::char_stream::CharStream;
 use crate::int_stream::IntStream;
@@ -217,7 +216,7 @@ impl FailedPredicateError {
             .states[recog.get_state() as usize]
             .get_transitions().first().unwrap();
         let (rule_index, predicate_index) = if tr.get_serialization_type() == TRANSITION_PREDICATE {
-            let pr = unsafe { cast::<PredicateTransition>(tr.deref()) };
+            let pr = tr.deref().cast::<PredicateTransition>();
             (pr.rule_index, pr.pred_index)
         } else {
             (0, 0)

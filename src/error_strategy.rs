@@ -4,7 +4,6 @@ use std::fmt;
 use std::ops::Deref;
 use std::rc::Rc;
 
-use crate::atn_deserializer::cast;
 use crate::atn_simulator::IATNSimulator;
 use crate::atn_state::*;
 use crate::atn_state::ATNStateType;
@@ -206,8 +205,7 @@ impl DefaultErrorStrategy {
 
             let invoking_state = atn.states[c.get_invoking_state() as usize].as_ref();
             let tr = invoking_state.get_transitions().first().unwrap().as_ref();
-            assert_eq!(tr.get_serialization_type(), TRANSITION_RULE);
-            let tr = unsafe { cast::<RuleTransition>(tr) };
+            let tr = tr.cast::<RuleTransition>();
             let follow = atn.next_tokens(atn.states[tr.follow_state].as_ref());
             recover_set.add_set(follow);
             ctx = c.peek_parent();

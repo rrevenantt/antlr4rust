@@ -18,7 +18,6 @@ use std::usize;
 use crate::atn::ATN;
 use crate::atn_config::{ATNConfig, ATNConfigType};
 use crate::atn_config_set::ATNConfigSet;
-use crate::atn_deserializer::cast;
 use crate::atn_simulator::{BaseATNSimulator, IATNSimulator};
 use crate::atn_state::{ATNState, ATNStateType};
 use crate::atn_state::ATNStateType::RuleStopState;
@@ -39,12 +38,6 @@ use crate::token::TOKEN_EOF;
 use crate::token_source::TokenSource;
 use crate::transition::{ActionTransition, PredicateTransition, RuleTransition, Transition, TransitionType};
 
-//lazy_static! {
-//    pub static ref ERROR: DFAState = DFAState::new_dfastate(
-//        usize::MAX,
-//        Box::new(ATNConfigSet::new_base_atnconfig_set(true))
-//    );
-//}
 pub const ERROR_DFA_STATE_REF: DFAStateRef = usize::MAX;
 
 pub trait ILexerATNSimulator: IATNSimulator {
@@ -68,8 +61,6 @@ pub trait ILexerATNSimulator: IATNSimulator {
 
 pub struct LexerATNSimulator {
     base: BaseATNSimulator,
-    //todo maybe move to Lexer
-//    recog: Rc<RefCell<Box<T>>>,
 
     prediction_mode: isize,
     //    merge_cache: DoubleDict,
@@ -163,7 +154,6 @@ impl LexerATNSimulator {
         atn: Arc<ATN>,
         decision_to_dfa: Arc<Vec<DFA>>,
         shared_context_cache: Arc<PredictionContextCache>,
-//        recog: Box<T>,
     ) -> LexerATNSimulator {
         LexerATNSimulator {
             base: BaseATNSimulator::new_base_atnsimulator(atn, decision_to_dfa, shared_context_cache),
@@ -526,7 +516,7 @@ impl LexerATNSimulator {
                 result = Some(_config.cloned(target));
             }
             TransitionType::TRANSITION_RULE => {
-                let rt = unsafe { cast::<RuleTransition>(_trans) };
+                let rt = _trans.cast::<RuleTransition>();
                 //println!("rule transition follow state{}", rt.follow_state);
                 let pred_ctx = PredictionContext::new_singleton(
                     Some(Box::new(_config.take_context())),
@@ -535,7 +525,7 @@ impl LexerATNSimulator {
                 result = Some(_config.cloned_with_new_ctx(target, Some(pred_ctx)));
             }
             TransitionType::TRANSITION_PREDICATE => {
-                let tr = unsafe { cast::<PredicateTransition>(_trans) };
+                let tr = _trans.cast::<PredicateTransition>();
                 _configs.set_has_semantic_context(true);
                 if self.evaluate_predicate(tr.rule_index, tr.pred_index, _speculative, lexer) {
                     result = Some(_config.cloned(target));
@@ -545,7 +535,7 @@ impl LexerATNSimulator {
                 //println!("action transition");
                 if _config.get_context().map(|x| x.has_empty_path()) != Some(false) {
                     if let ATNConfigType::LexerATNConfig { lexer_action_executor, .. } = _config.get_type() {
-                        let tr = unsafe { cast::<ActionTransition>(_trans) };
+                        let tr = _trans.cast::<ActionTransition>();
                         let lexer_action = self.atn().lexer_actions[tr.action_index as usize].clone();
                         //dbg!(&lexer_action);
                         let lexer_action_executor = LexerActionExecutor::new_copy_append(lexer_action_executor.as_deref(), lexer_action);
@@ -555,7 +545,6 @@ impl LexerATNSimulator {
                     result = Some(_config.cloned(target));
                 }
             }
-            TransitionType::TRANSITION_WILDCARD => {}
             TransitionType::TRANSITION_RANGE |
             TransitionType::TRANSITION_SET |
             TransitionType::TRANSITION_ATOM =>
@@ -565,9 +554,8 @@ impl LexerATNSimulator {
                         result = Some(_config.cloned(target));
                     }
                 },
-            TransitionType::TRANSITION_NOTSET => {
-//                println!("TransitionType::TRANSITION_NOTSET !!!!!!!!!!!!!");
-            }
+            TransitionType::TRANSITION_WILDCARD => {}
+            TransitionType::TRANSITION_NOTSET => {}
             TransitionType::TRANSITION_PRECEDENCE => {
                 panic!("precedence predicates are not supposed to be in lexer");
             }

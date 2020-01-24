@@ -5,7 +5,6 @@ use bit_set::BitSet;
 
 use crate::atn::ATN;
 use crate::atn_config::ATNConfig;
-use crate::atn_deserializer::cast;
 use crate::atn_state::{ATNState, ATNStateType};
 use crate::interval_set::IntervalSet;
 use crate::parser_rule_context::ParserRuleContext;
@@ -20,7 +19,7 @@ pub struct LL1Analyzer<'a> {
 }
 
 impl LL1Analyzer<'_> {
-    pub fn new(atn: &ATN) -> LL1Analyzer { LL1Analyzer { atn } }
+    pub fn new(atn: &ATN) -> LL1Analyzer<'_> { LL1Analyzer { atn } }
 
     fn get_decision_lookahead(&self, s: &dyn ATNState) -> &Vec<IntervalSet> { unimplemented!() }
 
@@ -117,7 +116,7 @@ impl LL1Analyzer<'_> {
             let target = self.atn.states[tr.get_target()].as_ref();
             match tr.get_serialization_type() {
                 TransitionType::TRANSITION_RULE => {
-                    let rule_tr = unsafe { cast::<RuleTransition>(tr.as_ref()) };
+                    let rule_tr = tr.as_ref().cast::<RuleTransition>();
                     if called_rule_stack.contains(target.get_rule_index()) { continue; }
 
                     let new_ctx = PredictionContext::new_singleton(ctx.clone().map(Box::new), rule_tr.follow_state as isize);

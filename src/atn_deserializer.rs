@@ -51,12 +51,6 @@ pub struct ATNDeserializer {
     //    pd:PhantomData<*const T>
 }
 
-//todo make transition a enum and remove this
-pub unsafe fn cast<T: Transition>(tr: &dyn Transition) -> &T {
-    let to = mem::transmute::<&dyn Transition, std::raw::TraitObject>(tr).data;
-    mem::transmute::<*mut (), &T>(to)
-}
-
 impl ATNDeserializer {
     pub fn new(options: Option<ATNDeserializationOptions>) -> ATNDeserializer {
         ATNDeserializer {
@@ -323,8 +317,7 @@ impl ATNDeserializer {
                 match tr.get_serialization_type() {
                     TransitionType::TRANSITION_RULE => {
 //                        println!("TRANSITION_RULE");
-                        let tr = tr.as_ref();
-                        let tr = unsafe { cast::<RuleTransition>(tr) };
+                        let tr = tr.as_ref().cast::<RuleTransition>();
                         let target = atn.states.get(tr.get_target()).unwrap();
 
                         let outermost_prec_return =

@@ -2,7 +2,8 @@ use std::any::{Any, type_name, TypeId};
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::fmt::{Debug, Display, Error, Formatter};
-use std::ops::{Deref, DerefMut};
+use std::marker::Unsize;
+use std::ops::{CoerceUnsized, Deref, DerefMut};
 use std::ptr;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -159,6 +160,8 @@ impl<Ctx: CustomRuleContext> Debug for BaseParserRuleContext<Ctx> {
     }
 }
 
+//impl<T,U> CoerceUnsized<BaseParserRuleContext<U>> for BaseParserRuleContext<T> where T: Unsize<U> + CustomRuleContext, U: ?Sized + CustomRuleContext{}
+
 impl<Ctx: CustomRuleContext> RuleContext for BaseParserRuleContext<Ctx> {
     fn get_invoking_state(&self) -> isize {
         self.base.get_invoking_state()
@@ -242,6 +245,7 @@ impl<Ctx: CustomRuleContext> ParserRuleContext for BaseParserRuleContext<Ctx> {
     fn add_error_node(&self, bad_token: ErrorNode) -> Rc<dyn ParserRuleContext> {
 //        bad_token.base.parent_ctx =
         let node: Rc<dyn ParserRuleContext> = Rc::new(bad_token);
+//        Backtrace::new().frames()[0].symbols()[0];
 
         self.children.borrow_mut().push(node.clone());
         node
@@ -293,7 +297,7 @@ impl<Ctx: CustomRuleContext> Tree for BaseParserRuleContext<Ctx> {
         self.children.borrow().len()
     }
 
-    fn get_children(&self) -> Ref<Vec<ParserRuleContextType>> {
+    fn get_children(&self) -> Ref<'_, Vec<ParserRuleContextType>> {
         self.children.borrow()
     }
 

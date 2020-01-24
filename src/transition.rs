@@ -1,3 +1,4 @@
+use std::any::{Any, TypeId};
 use std::borrow::Cow;
 use std::fmt::Debug;
 use std::mem;
@@ -33,6 +34,7 @@ pub const TRANSITION_NOTSET: isize = 8;
 pub const TRANSITION_WILDCARD: isize = 9;
 pub const TRANSITION_PRECEDENCE: isize = 10;
 
+#[allow(non_camel_case_types)]
 #[derive(Debug, Eq, PartialEq)]
 pub enum TransitionType {
     TRANSITION_EPSILON = 1,
@@ -47,7 +49,8 @@ pub enum TransitionType {
     TRANSITION_PRECEDENCE,
 }
 
-pub trait Transition: Sync + Send + Debug {
+/// Transition between ATNStates
+pub trait Transition: Sync + Send + Debug + Any {
     fn get_target(&self) -> ATNStateRef;
     fn set_target(&mut self, s: ATNStateRef);
     fn is_epsilon(&self) -> bool {
@@ -70,48 +73,13 @@ pub trait Transition: Sync + Send + Debug {
     }
 }
 
-//impl dyn Transition{
-//    /// be sure to use `get_serialization_type` to know actual type to cast to
-//    pub unsafe fn cast<T:Transition>(&self)->&T{
-//        let to = mem::transmute::<&dyn Transition,std::raw::TraitObject>(self).data;
-//        mem::transmute::<*mut (),&T>(to)
-//    }
-//
-//}
-
-//pub struct BaseTransition {
-//    pub target: ATNStateRef,
-//    //    is_epsilon: bool,
-//    pub interval_set: IntervalSet,
-//    //    serialization_type: isize,
-//}
-
-//impl BaseTransition {
-//    pub fn new_base_transition(target: ATNStateRef) -> BaseTransition {
-//        BaseTransition {
-//            target: target,
-//            interval_set: IntervalSet::new_interval_set(),
-//        }
-//    }
-//}
-
-//impl Transition for BaseTransition {
-//    fn get_target(&self) -> ATNStateRef {
-//        self.target.clone()
-//    }
-//
-//    fn set_target(&mut self, s: ATNStateRef) {
-//        self.target = s
-//    }
-//
-//    fn get_serialization_type(&self) -> TransitionType {
-//        unimplemented!()
-//    }
-//
-//    fn matches(&self, _symbol: isize, _minVocabSymbol: isize, _maxVocabSymbol: isize) -> bool {
-//        unimplemented!()
-//    }
-//}
+impl dyn Transition {
+    #[inline]
+    pub fn cast<T: Transition>(&self) -> &T {
+        assert_eq!(self.type_id(), TypeId::of::<T>());
+        unsafe { &*(self as *const dyn Transition as *const T) }
+    }
+}
 
 #[derive(Debug)]
 pub struct AtomTransition {
