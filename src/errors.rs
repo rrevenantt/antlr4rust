@@ -1,22 +1,14 @@
-use std::borrow::Borrow;
 use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::fmt;
 use std::fmt::Formatter;
-use std::mem::discriminant;
 use std::ops::Deref;
 use std::rc::Rc;
 
-use backtrace::Backtrace;
-
 use crate::atn::ATN;
-use crate::atn_config_set::ATNConfigSet;
 use crate::atn_simulator::IATNSimulator;
-use crate::char_stream::CharStream;
-use crate::int_stream::IntStream;
 use crate::interval_set::IntervalSet;
-use crate::lexer::Lexer;
-use crate::parser::{BaseParser, Parser};
+use crate::parser::Parser;
 use crate::parser_rule_context::ParserRuleContext;
 use crate::token::{OwningToken, Token};
 use crate::transition::PredicateTransition;
@@ -70,7 +62,7 @@ impl RecognitionError for ANTLRError {
 }
 
 impl ANTLRError {
-    fn get_expected_tokens(&self, atn: &ATN) -> IntervalSet {
+    fn get_expected_tokens(&self, _atn: &ATN) -> IntervalSet {
 //        atn.get_expected_tokens(se)
         unimplemented!()
     }

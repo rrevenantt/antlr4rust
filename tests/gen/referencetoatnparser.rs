@@ -2,7 +2,6 @@
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
-#![feature(try_blocks)]
 
 use std::any::Any;
 use std::borrow::{Borrow, BorrowMut};
@@ -51,16 +50,14 @@ lazy_static! {
 	}
 
 
-type BaseParserType = BaseParser<ReferenceToATNParserExt, dyn ReferenceToATNListener, ReferenceToATNListenerCaller>;
+type BaseParserType = BaseParser<ReferenceToATNParserExt, dyn ReferenceToATNListener>;
 
 pub struct ReferenceToATNParser {
-    base: BaseParser<ReferenceToATNParserExt, dyn ReferenceToATNListener, ReferenceToATNListenerCaller>,
+    base: BaseParserType,
     interpreter: Arc<ParserATNSimulator>,
     _shared_context_cache: Box<PredictionContextCache>,
     pub err_handler: Box<dyn ErrorStrategy>,
-
 }
-
 
 impl ReferenceToATNParser {
     pub fn get_serialized_atn() -> &'static str { unimplemented!() }
@@ -68,7 +65,6 @@ impl ReferenceToATNParser {
     pub fn set_error_strategy(&mut self, strategy: Box<dyn ErrorStrategy>) {
         self.err_handler = strategy
     }
-
 
     pub fn new(input: Box<dyn TokenStream>) -> Self {
         let interpreter = Arc::new(ParserATNSimulator::new(
@@ -90,7 +86,7 @@ impl ReferenceToATNParser {
 }
 
 impl Deref for ReferenceToATNParser {
-    type Target = BaseParser<ReferenceToATNParserExt, dyn ReferenceToATNListener, ReferenceToATNListenerCaller>;
+    type Target = BaseParserType;
 
     fn deref(&self) -> &Self::Target {
         &self.base
@@ -118,26 +114,12 @@ impl Recognizer for ReferenceToATNParserExt {
 }
 
 impl Actions for ReferenceToATNParserExt {
-    type Recog = BaseParser<ReferenceToATNParserExt, dyn ReferenceToATNListener, ReferenceToATNListenerCaller>;
+    type Recog = BaseParserType;
 }
+
 //------------------- a ----------------
-//pub struct AContext  {
-//  base:BaseParserRuleContext<AContextExt>,
-//}
-//
-//impl Deref for AContext{
-//    type Target = BaseParserRuleContext<AContextExt>;
-//
-//    fn deref(&self) -> &Self::Target {
-//        &self.base
-//    }
-//}
-//
-//impl DerefMut for AContext{
-//    fn deref_mut(&mut self) -> &mut Self::Target {
-//        &mut self.base
-//    }
-//}
+pub type AContextAll = AContext;
+
 
 pub type AContext = BaseParserRuleContext<AContextExt>;
 
@@ -159,7 +141,7 @@ impl CustomRuleContext for AContextExt {
 }
 
 impl AContextExt {
-    fn new(parent: Option<ParserRuleContextType>, invoking_state: isize) -> Rc<BaseParserRuleContext<AContextExt>> {
+    fn new(parent: Option<ParserRuleContextType>, invoking_state: isize) -> Rc<AContextAll> {
         Rc::new(
             BaseParserRuleContext::new_parser_ctx(parent, invoking_state, AContextExt {}),
         )
@@ -188,12 +170,13 @@ impl AContextAttrs for AContext {}
 //}
 
 impl ReferenceToATNParser {
-    pub fn a(&mut self) -> Result<Rc<dyn AContextAttrs>, ANTLRError> {
+    pub fn a(&mut self)
+             -> Result<Rc<AContextAll>, ANTLRError> {
         let mut recog = self;
         let _parentctx = recog.ctx.take();
         let mut _localctx = AContextExt::new(_parentctx.clone(), recog.base.get_state());
         recog.base.enter_rule(_localctx.clone(), 0, RULE_a);
-        /**/
+        let mut _localctx: Rc<AContextAll> = _localctx;
         let mut _la: isize;
         let result: Result<(), ANTLRError> = try {
             let mut _alt: isize;
@@ -234,7 +217,7 @@ impl ReferenceToATNParser {
                 }
 
                 println!("{}", {
-                    let temp = recog.base.input.index() - 1;
+                    let temp = recog.base.input.lt(-1).map(|it| it.get_token_index()).unwrap_or(-1);
                     recog.input.get_text_from_interval(recog.get_parser_rule_context().get_start().unwrap().get_token_index(), temp)
                 });
             }
@@ -245,7 +228,7 @@ impl ReferenceToATNParser {
             Err(ref re) => {
                 //_localctx.exception = re;
                 recog.err_handler.report_error(&mut recog.base, re);
-                recog.err_handler.recover(&mut recog.base, re);
+                recog.err_handler.recover(&mut recog.base, re)?;
             }
         }
         recog.base.exit_rule();

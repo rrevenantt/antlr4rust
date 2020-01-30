@@ -1,14 +1,5 @@
-use std::iter::Map;
-use std::sync::Arc;
-
 use crate::atn::ATN;
-use crate::char_stream::CharStream;
-use crate::error_listener::ErrorListener;
-use crate::errors::ANTLRError;
-use crate::lexer::{BaseLexer, Lexer};
 use crate::parser_rule_context::ParserRuleContext;
-use crate::rule_context::{BaseRuleContext, RuleContext};
-use crate::token::Token;
 use crate::vocabulary::Vocabulary;
 
 pub trait Recognizer {
@@ -18,8 +9,8 @@ pub trait Recognizer {
 //    fn get_symbolic_names(&self) -> &[Option<&str>] {
 //        &[]
 //    }
-    fn sempred(&mut self, _localctx: &dyn ParserRuleContext, rule_index: isize, action_index: isize) -> bool { true }
-    fn action(&mut self, _localctx: &dyn ParserRuleContext, rule_index: isize, action_index: isize) {}
+    fn sempred(&mut self, _localctx: &dyn ParserRuleContext, _rule_index: isize, _action_index: isize) -> bool { true }
+    fn action(&mut self, _localctx: &dyn ParserRuleContext, _rule_index: isize, _action_index: isize) {}
 
     fn get_rule_names(&self) -> &[&str] {
         &[]
@@ -32,14 +23,14 @@ pub trait Recognizer {
 
 pub trait Actions {
     type Recog: ?Sized;
-    fn sempred(_localctx: &dyn ParserRuleContext, rule_index: isize, action_index: isize,
-               recog: &mut Self::Recog,
+    fn sempred(_localctx: &dyn ParserRuleContext, _rule_index: isize, _action_index: isize,
+               _recog: &mut Self::Recog,
     ) -> bool {
         true
     }
 
-    fn action(_localctx: &dyn ParserRuleContext, rule_index: isize, action_index: isize,
-              recog: &mut Self::Recog,
+    fn action(_localctx: &dyn ParserRuleContext, _rule_index: isize, _action_index: isize,
+              _recog: &mut Self::Recog,
     ) {}
 }
 

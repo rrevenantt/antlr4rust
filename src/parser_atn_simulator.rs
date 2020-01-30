@@ -7,62 +7,57 @@
 //)
 
 
+use std::{ptr, usize};
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
-use std::hash::{Hash, Hasher};
+use std::hash::Hasher;
 use std::ops::Deref;
 use std::rc::Rc;
 use std::sync::Arc;
-use std::usize;
 
 use bit_set::BitSet;
-use murmur3::murmur3_32::MurmurHasher;
+use typed_arena::Arena;
 
 use crate::atn::{ATN, INVALID_ALT};
 use crate::atn_config::ATNConfig;
 use crate::atn_config_set::ATNConfigSet;
 use crate::atn_simulator::{BaseATNSimulator, IATNSimulator};
-use crate::atn_state::{ATNState, ATNStateRef};
-use crate::atn_state::ATNStateType::{DecisionState, RuleStopState};
+use crate::atn_state::{ATNDecisionState, ATNState, ATNSTATE_BLOCK_END, ATNStateRef, ATNStateType};
+use crate::atn_state::ATNStateType::RuleStopState;
 use crate::dfa::{DFA, ScopeExt};
 use crate::dfa_state::{DFAState, DFAStateRef, PredPrediction};
 use crate::errors::{ANTLRError, NoViableAltError};
 use crate::int_stream::EOF;
 use crate::interval_set::IntervalSet;
 use crate::lexer_atn_simulator::ERROR_DFA_STATE_REF;
-use crate::parser::{BaseParser, Parser};
-use crate::parser_rule_context::{BaseParserRuleContext, empty_ctx, ParserRuleContext};
+use crate::parser::Parser;
+use crate::parser_rule_context::{empty_ctx, ParserRuleContext};
 use crate::prediction_context::{MurmurHasherBuilder, PREDICTION_CONTEXT_EMPTY_RETURN_STATE, PredictionContext, PredictionContextCache};
 use crate::prediction_mode::{all_subsets_conflict, all_subsets_equal, get_alts, get_conflicting_alt_subsets, get_single_viable_alt, has_sll_conflict_terminating_prediction, PredictionMode, resolves_to_just_one_viable_alt};
-use crate::recognizer::Recognizer;
 use crate::rule_context::RuleContext;
 use crate::semantic_context::SemanticContext;
 use crate::token::{TOKEN_EOF, TOKEN_EPSILON};
 use crate::token_stream::TokenStream;
-use crate::transition::{ActionTransition, EpsilonTransition, PrecedencePredicateTransition, PredicateTransition, RuleTransition, Transition, TRANSITION_ACTION, TransitionType};
+use crate::transition::{ActionTransition, EpsilonTransition, PrecedencePredicateTransition, PredicateTransition, RuleTransition, Transition, TransitionType};
 
 pub struct ParserATNSimulator {
     base: BaseATNSimulator,
-
-    //    parser: Parser,
     prediction_mode: Cell<PredictionMode>,
-    //    input: TokenStream,
     start_index: Cell<isize>,
-    //    dfa: * DFA,
-//    merge_cache: * DoubleDict,
-//    outer_context: Option<Box<dyn RuleContext>>,
 }
 
 /// Just a helper structure to spoil function parameters as little as possible
-struct Local<'a, 'b> {
+struct Local<'a, 'arena> {
     //    input:&'a mut dyn TokenStream,
 //    start_index:isize,
     outer_context: Rc<dyn ParserRuleContext>,
     dfa: &'a DFA,
-    merge_cache: &'b mut HashMap<(u64, u64), PredictionContext, MurmurHasherBuilder>,
+    merge_cache: &'arena mut HashMap<(&'arena PredictionContext, &'arena PredictionContext), &'arena PredictionContext, MurmurHasherBuilder>,
     precedence: isize,
     parser: &'a mut dyn Parser,
+    /// arena to prevent deep cloning of the PredictionContext when creating ATNConfigs
+    pred_ctx_arena: &'arena mut Arena<PredictionContext>,
 }
 
 impl Local<'_, '_> {
@@ -71,7 +66,7 @@ impl Local<'_, '_> {
     fn outer_context(&self) -> &dyn ParserRuleContext { self.outer_context.deref() }
 }
 
-pub type MergeCache = HashMap<(u64, u64), PredictionContext, MurmurHasherBuilder>;
+pub type MergeCache<'arena> = HashMap<(&'arena PredictionContext, &'arena PredictionContext), &'arena PredictionContext, MurmurHasherBuilder>;
 
 impl ParserATNSimulator {
     pub fn new(atn: Arc<ATN>, decision_to_dfa: Arc<Vec<DFA>>, shared_context_cache: Arc<PredictionContextCache>) -> ParserATNSimulator {
@@ -90,21 +85,19 @@ impl ParserATNSimulator {
     fn reset(&self) { unimplemented!() }
 
     pub fn adaptive_predict(&self,
-//                        input: &mut dyn TokenStream,
                             decision: isize,
-//                        outer_context: &dyn ParserRuleContext,
                             parser: &mut dyn Parser,
     ) -> Result<isize, ANTLRError> {
         self.start_index.set(parser.get_input_stream_mut().index());
         let mut merge_cache: MergeCache = HashMap::with_hasher(MurmurHasherBuilder {});
+        let mut pred_ctx_arena = Arena::new();
         let mut local = Local {
-//            input,
-//            start_index,
             outer_context: parser.get_parser_rule_context().clone(),
             dfa: &self.decision_to_dfa()[decision as usize],
             merge_cache: &mut merge_cache,
             precedence: parser.get_precedence(),
             parser,
+            pred_ctx_arena: &mut pred_ctx_arena,
         };
 
         let m = local.input().mark();
@@ -117,7 +110,7 @@ impl ParserATNSimulator {
             };
 
             let s0 = s0.unwrap_or_else(|| {
-                let mut s0_closure = self.compute_start_state(
+                let s0_closure = self.compute_start_state(
                     local.dfa.atn_start_state,
                     PredictionContext::from_rule_context(self.atn(), empty_ctx().as_ref()),
                     false,
@@ -133,7 +126,7 @@ impl ParserATNSimulator {
                     local.dfa.set_precedence_start_state(local.precedence, s0);
                     s0
                 } else {
-                    let mut s0 = self.add_dfastate(&local.dfa, DFAState::new_dfastate(0, Box::new(s0_closure)));
+                    let s0 = self.add_dfastate(&local.dfa, DFAState::new_dfastate(0, Box::new(s0_closure)));
                     local.dfa.s0.write().unwrap().replace(s0);
                     s0
                 }
@@ -173,7 +166,6 @@ impl ParserATNSimulator {
                 }
                 return Err(err);
             }
-//            let states = local.dfa.states.read().unwrap();
             let Dstate = &states[D];
 
             if Dstate.requires_full_context && self.prediction_mode.get() != PredictionMode::SLL {
@@ -327,7 +319,7 @@ impl ParserATNSimulator {
         }
     }
 
-    fn exec_atn_with_full_context(&self, local: &mut Local, D: &DFAState, s0: ATNConfigSet) -> Result<isize, ANTLRError> {
+    fn exec_atn_with_full_context(&self, local: &mut Local, _D: &DFAState, s0: ATNConfigSet) -> Result<isize, ANTLRError> {
         let full_ctx = true;
         let mut found_exact_ambig = false;
         let mut prev = s0;
@@ -615,11 +607,11 @@ impl ParserATNSimulator {
         let (sem_valid_configs, sem_invalid_configs) =
             self.split_according_to_semantic_validity(configs, local);
 
-        let mut alt = self.get_alt_that_finished_decision_entry_rule(&sem_valid_configs);
+        let alt = self.get_alt_that_finished_decision_entry_rule(&sem_valid_configs);
         if alt != INVALID_ALT { return alt; }
 
         if !sem_invalid_configs.is_empty() {
-            let mut alt = self.get_alt_that_finished_decision_entry_rule(&sem_invalid_configs);
+            let alt = self.get_alt_that_finished_decision_entry_rule(&sem_invalid_configs);
             if alt != INVALID_ALT { return alt; }
         }
 
@@ -679,7 +671,7 @@ impl ParserATNSimulator {
         predictions
     }
 
-    fn eval_predicate(&self, local: &mut Local, pred: impl Borrow<SemanticContext>, alt: isize, full_ctx: bool) -> bool {
+    fn eval_predicate(&self, local: &mut Local, pred: impl Borrow<SemanticContext>, _alt: isize, _full_ctx: bool) -> bool {
         pred.borrow().evaluate(local.parser, &*local.outer_context)
     }
 
@@ -722,7 +714,7 @@ impl ParserATNSimulator {
     ) {
         if let RuleStopState = self.atn().states[config.get_state()].get_state_type() {
             if !config.get_context().unwrap().is_empty() {
-                let temp = config.get_context().unwrap().run(|temp| {
+                let _temp = config.get_context().unwrap().run(|temp| {
                     if temp.get_return_state(temp.length() - 1) == PREDICTION_CONTEXT_EMPTY_RETURN_STATE {
                         if full_ctx {
                             let new_config = config.cloned_with_new_ctx(
@@ -866,9 +858,61 @@ impl ParserATNSimulator {
         }
     }
 
-    fn can_drop_loop_entry_edge_in_left_recursive_rule(&self, config: &ATNConfig) -> bool {
-        //todo
-        false
+    fn can_drop_loop_entry_edge_in_left_recursive_rule(&self, _config: &ATNConfig) -> bool {
+//        if std::env::var("TURN_OFF_LR_LOOP_ENTRY_BRANCH_OPT").ok()
+//            .and_then(|it|str::parse::<bool>(&it).ok()) == Some(true)
+//        { return false }
+
+        let state = self.atn().states[_config.get_state()].as_ref();
+
+        if let ATNStateType::DecisionState { state: ATNDecisionState::StarLoopEntry { is_precedence, .. }, .. } = state.get_state_type() {
+            if !*is_precedence || _config.get_context().unwrap().is_empty() || _config.get_context().unwrap().has_empty_path() {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+        let pred_ctx = _config.get_context().unwrap();
+        let ctx_len = pred_ctx.length();
+        for i in 0..ctx_len {
+            let return_state = self.atn().states[pred_ctx.get_return_state(i) as usize].as_ref();
+            if return_state.get_rule_index() != state.get_rule_index() { return false }
+        }
+
+        let decision_start_state = state.get_transitions()[0].get_target();
+        let decision_start_state = self.atn().states[decision_start_state].as_ref();
+        let block_end_state_num = if let ATNStateType::DecisionState { state: ATNDecisionState::BlockStartState { end_state, .. }, .. } = decision_start_state.get_state_type() {
+            *end_state
+        } else { unreachable!("cast error") };
+
+        for i in 0..ctx_len {
+            let return_state = self.atn().states[pred_ctx.get_return_state(i) as usize].as_ref();
+            if return_state.get_transitions().len() != 1 || !return_state.get_transitions()[0].is_epsilon() {
+                return false;
+            }
+            let return_state_target = self.atn().states[return_state.get_transitions()[0].get_target()].as_ref();
+            if return_state_target.get_state_type_id() == ATNSTATE_BLOCK_END
+                && ptr::eq(return_state_target, state) {
+                continue;
+            }
+            if return_state.get_state_number() == block_end_state_num {
+                continue;
+            }
+            if return_state_target.get_state_number() == block_end_state_num {
+                continue;
+            }
+
+            if return_state_target.get_state_type_id() == ATNSTATE_BLOCK_END
+                && return_state_target.get_transitions().len() == 1
+                && return_state.get_transitions()[0].is_epsilon()
+                && return_state.get_transitions()[0].get_target() == state.get_state_number() {
+                continue;
+            }
+            return false;
+        }
+
+        return true;
     }
 //
 //    fn get_rule_name(&self, index: isize) -> String { unimplemented!() }
@@ -1010,14 +1054,14 @@ impl ParserATNSimulator {
 //
 //    fn dump_dead_end_configs(&self, nvae: * NoViableAltError) { unimplemented!() }
 //
-    fn no_viable_alt(&self, local: &mut Local, configs: &ATNConfigSet, start_index: isize)
+    fn no_viable_alt(&self, local: &mut Local, _configs: &ATNConfigSet, start_index: isize)
                      -> ANTLRError {
         let start_token = local.parser.get_input_stream().get(start_index).to_owned();
         let offending_token = local.input().lt(1).unwrap().to_owned();
         ANTLRError::NoAltError(NoViableAltError::new_full(
             local.parser,
             start_token,
-            offending_token
+            offending_token,
         ))
     }
 

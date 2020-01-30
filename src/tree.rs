@@ -1,17 +1,13 @@
 use std::any::{Any, TypeId};
 use std::cell::{Ref, RefCell};
-use std::fmt::{Debug, Display, Error, Formatter, Write};
-use std::marker::PhantomData;
+use std::fmt::{Debug, Error, Formatter, Write};
 use std::ops::Deref;
-use std::rc::Rc;
 
 use crate::atn::INVALID_ALT;
-use crate::dfa::ScopeExt;
 use crate::int_stream::EOF;
 use crate::interval_set::Interval;
-use crate::parser::{Parser, ParserRecog};
+use crate::parser::Parser;
 use crate::parser_rule_context::{BaseParserRuleContext, cast, ParserRuleContext, ParserRuleContextType};
-use crate::recognizer::Recognizer;
 use crate::rule_context::CustomRuleContext;
 use crate::token::{OwningToken, Token};
 
@@ -41,7 +37,7 @@ pub trait NodeText {
 }
 
 impl<T: Tree> NodeText for T {
-    default fn get_node_text(&self, rule_names: &[&str]) -> String {
+    default fn get_node_text(&self, _rule_names: &[&str]) -> String {
         "<unknown>".to_owned()
     }
 }
@@ -76,7 +72,7 @@ impl CustomRuleContext for TerminalNodeCtx {
 }
 
 impl NodeText for TerminalNode {
-    fn get_node_text(&self, rule_names: &[&str]) -> String {
+    fn get_node_text(&self, _rule_names: &[&str]) -> String {
         self.symbol.get_text().to_owned()
     }
 }
@@ -104,7 +100,7 @@ impl Deref for ErrorNodeCtx {
 }
 
 impl NodeText for ErrorNode {
-    fn get_node_text(&self, rule_names: &[&str]) -> String {
+    fn get_node_text(&self, _rule_names: &[&str]) -> String {
         self.symbol.get_text().to_owned()
     }
 }
@@ -159,10 +155,10 @@ impl Debug for BaseParserRuleContext<ErrorNodeCtx> {
 //}
 
 pub trait ParseTreeListener: 'static {
-    fn visit_terminal(&self, node: &TerminalNode) {}
-    fn visit_error_node(&self, node: &ErrorNode) {}
-    fn enter_every_rule(&self, ctx: &ParserRuleContext) {}
-    fn exit_every_rule(&self, ctx: &ParserRuleContext) {}
+    fn visit_terminal(&mut self, _node: &TerminalNode) {}
+    fn visit_error_node(&mut self, _node: &ErrorNode) {}
+    fn enter_every_rule(&mut self, _ctx: &dyn ParserRuleContext) {}
+    fn exit_every_rule(&mut self, _ctx: &dyn ParserRuleContext) {}
 }
 
 //impl<T:ParseTreeListener> AsRef<dyn ParseTreeListener> for T{
@@ -249,7 +245,7 @@ pub struct ParseTreeWalker;
 impl ParseTreeWalker {
     fn new() -> ParseTreeWalker { ParseTreeWalker }
 
-    pub fn walk<T: ParseTreeListener + ?Sized, Ctx: ParserRuleContext + ?Sized>(&self, mut listener: &mut Box<T>, t: &Ctx) {
+    pub fn walk<T: ParseTreeListener + ?Sized, Ctx: ParserRuleContext + ?Sized>(&self, listener: &mut Box<T>, t: &Ctx) {
         if t.type_id() == TypeId::of::<ErrorNode>() {
             let err = cast::<_, ErrorNode>(t);
             listener.visit_error_node(err);

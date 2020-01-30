@@ -1,10 +1,5 @@
-use std::borrow::Cow;
-use std::borrow::Cow::{Borrowed, Owned};
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::sync::Once;
-
-use backtrace::Backtrace;
 
 use crate::atn_state::ATNState;
 use crate::atn_state::ATNStateRef;
@@ -16,7 +11,7 @@ use crate::ll1_analyzer::LL1Analyzer;
 use crate::parser_rule_context::ParserRuleContext;
 use crate::rule_context::RuleContext;
 use crate::token::{TOKEN_EOF, TOKEN_EPSILON};
-use crate::transition::{RuleTransition, TransitionType};
+use crate::transition::RuleTransition;
 
 pub const INVALID_ALT: isize = 0;
 
@@ -83,14 +78,15 @@ impl ATN {
     }
 
     pub fn add_state(&mut self, state: Box<dyn ATNState>) {
+        assert_eq!(state.get_state_number(), self.states.len());
         self.states.push(state)
     }
 
-    fn remove_state(&self, state: ATNStateRef) {
+    fn remove_state(&self, _state: ATNStateRef) {
         unimplemented!()
     }
 
-    fn define_decision_state(&self, s: ATNStateRef) -> isize {
+    fn define_decision_state(&self, _s: ATNStateRef) -> isize {
         unimplemented!()
     }
 

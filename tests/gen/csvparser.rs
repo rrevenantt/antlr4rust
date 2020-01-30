@@ -2,7 +2,6 @@
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
-#![feature(try_blocks)]
 
 use std::any::Any;
 use std::borrow::{Borrow, BorrowMut};
@@ -59,16 +58,14 @@ lazy_static! {
 	}
 
 
-type BaseParserType = BaseParser<CSVParserExt, dyn CSVListener, CSVListenerCaller>;
+type BaseParserType = BaseParser<CSVParserExt, dyn CSVListener>;
 
 pub struct CSVParser {
-    base: BaseParser<CSVParserExt, dyn CSVListener, CSVListenerCaller>,
+    base: BaseParserType,
     interpreter: Arc<ParserATNSimulator>,
     _shared_context_cache: Box<PredictionContextCache>,
     pub err_handler: Box<dyn ErrorStrategy>,
-
 }
-
 
 impl CSVParser {
     pub fn get_serialized_atn() -> &'static str { unimplemented!() }
@@ -76,7 +73,6 @@ impl CSVParser {
     pub fn set_error_strategy(&mut self, strategy: Box<dyn ErrorStrategy>) {
         self.err_handler = strategy
     }
-
 
     pub fn new(input: Box<dyn TokenStream>) -> Self {
         let interpreter = Arc::new(ParserATNSimulator::new(
@@ -98,7 +94,7 @@ impl CSVParser {
 }
 
 impl Deref for CSVParser {
-    type Target = BaseParser<CSVParserExt, dyn CSVListener, CSVListenerCaller>;
+    type Target = BaseParserType;
 
     fn deref(&self) -> &Self::Target {
         &self.base
@@ -126,26 +122,12 @@ impl Recognizer for CSVParserExt {
 }
 
 impl Actions for CSVParserExt {
-    type Recog = BaseParser<CSVParserExt, dyn CSVListener, CSVListenerCaller>;
+    type Recog = BaseParserType;
 }
+
 //------------------- csvFile ----------------
-//pub struct CsvFileContext  {
-//  base:BaseParserRuleContext<CsvFileContextExt>,
-//}
-//
-//impl Deref for CsvFileContext{
-//    type Target = BaseParserRuleContext<CsvFileContextExt>;
-//
-//    fn deref(&self) -> &Self::Target {
-//        &self.base
-//    }
-//}
-//
-//impl DerefMut for CsvFileContext{
-//    fn deref_mut(&mut self) -> &mut Self::Target {
-//        &mut self.base
-//    }
-//}
+pub type CsvFileContextAll = CsvFileContext;
+
 
 pub type CsvFileContext = BaseParserRuleContext<CsvFileContextExt>;
 
@@ -167,7 +149,7 @@ impl CustomRuleContext for CsvFileContextExt {
 }
 
 impl CsvFileContextExt {
-    fn new(parent: Option<ParserRuleContextType>, invoking_state: isize) -> Rc<BaseParserRuleContext<CsvFileContextExt>> {
+    fn new(parent: Option<ParserRuleContextType>, invoking_state: isize) -> Rc<CsvFileContextAll> {
         Rc::new(
             BaseParserRuleContext::new_parser_ctx(parent, invoking_state, CsvFileContextExt {}),
         )
@@ -175,13 +157,13 @@ impl CsvFileContextExt {
 }
 
 pub trait CsvFileContextAttrs: ParserRuleContext + BorrowMut<CsvFileContextExt> {
-    fn hdr(&self) -> Rc<HdrContext> where Self: Sized {
+    fn hdr(&self) -> Rc<HdrContextAll> where Self: Sized {
         self.child_of_type(0)
     }
-    fn row_all(&self) -> Vec<Rc<RowContext>> where Self: Sized {
+    fn row_all(&self) -> Vec<Rc<RowContextAll>> where Self: Sized {
         self.children_of_type()
     }
-    fn row(&self, i: usize) -> Rc<RowContext> where Self: Sized {
+    fn row(&self, i: usize) -> Rc<RowContextAll> where Self: Sized {
         self.child_of_type(i)
     }
 }
@@ -193,12 +175,13 @@ impl CsvFileContextAttrs for CsvFileContext {}
 //}
 
 impl CSVParser {
-    pub fn csvFile(&mut self) -> Result<Rc<dyn CsvFileContextAttrs>, ANTLRError> {
+    pub fn csvFile(&mut self)
+                   -> Result<Rc<CsvFileContextAll>, ANTLRError> {
         let mut recog = self;
         let _parentctx = recog.ctx.take();
         let mut _localctx = CsvFileContextExt::new(_parentctx.clone(), recog.base.get_state());
         recog.base.enter_rule(_localctx.clone(), 0, RULE_csvFile);
-        /**/
+        let mut _localctx: Rc<CsvFileContextAll> = _localctx;
         let mut _la: isize;
         let result: Result<(), ANTLRError> = try {
 
@@ -233,7 +216,7 @@ impl CSVParser {
             Err(ref re) => {
                 //_localctx.exception = re;
                 recog.err_handler.report_error(&mut recog.base, re);
-                recog.err_handler.recover(&mut recog.base, re);
+                recog.err_handler.recover(&mut recog.base, re)?;
             }
         }
         recog.base.exit_rule();
@@ -241,24 +224,10 @@ impl CSVParser {
         Ok(_localctx)
     }
 }
+
 //------------------- hdr ----------------
-//pub struct HdrContext  {
-//  base:BaseParserRuleContext<HdrContextExt>,
-//}
-//
-//impl Deref for HdrContext{
-//    type Target = BaseParserRuleContext<HdrContextExt>;
-//
-//    fn deref(&self) -> &Self::Target {
-//        &self.base
-//    }
-//}
-//
-//impl DerefMut for HdrContext{
-//    fn deref_mut(&mut self) -> &mut Self::Target {
-//        &mut self.base
-//    }
-//}
+pub type HdrContextAll = HdrContext;
+
 
 pub type HdrContext = BaseParserRuleContext<HdrContextExt>;
 
@@ -280,7 +249,7 @@ impl CustomRuleContext for HdrContextExt {
 }
 
 impl HdrContextExt {
-    fn new(parent: Option<ParserRuleContextType>, invoking_state: isize) -> Rc<BaseParserRuleContext<HdrContextExt>> {
+    fn new(parent: Option<ParserRuleContextType>, invoking_state: isize) -> Rc<HdrContextAll> {
         Rc::new(
             BaseParserRuleContext::new_parser_ctx(parent, invoking_state, HdrContextExt {}),
         )
@@ -288,7 +257,7 @@ impl HdrContextExt {
 }
 
 pub trait HdrContextAttrs: ParserRuleContext + BorrowMut<HdrContextExt> {
-    fn row(&self) -> Rc<RowContext> where Self: Sized {
+    fn row(&self) -> Rc<RowContextAll> where Self: Sized {
         self.child_of_type(0)
     }
 }
@@ -300,12 +269,13 @@ impl HdrContextAttrs for HdrContext {}
 //}
 
 impl CSVParser {
-    pub fn hdr(&mut self) -> Result<Rc<dyn HdrContextAttrs>, ANTLRError> {
+    pub fn hdr(&mut self)
+               -> Result<Rc<HdrContextAll>, ANTLRError> {
         let mut recog = self;
         let _parentctx = recog.ctx.take();
         let mut _localctx = HdrContextExt::new(_parentctx.clone(), recog.base.get_state());
         recog.base.enter_rule(_localctx.clone(), 2, RULE_hdr);
-        /**/
+        let mut _localctx: Rc<HdrContextAll> = _localctx;
         let result: Result<(), ANTLRError> = try {
 
             //recog.base.enter_outer_alt(_localctx.clone(), 1);
@@ -322,7 +292,7 @@ impl CSVParser {
             Err(ref re) => {
                 //_localctx.exception = re;
                 recog.err_handler.report_error(&mut recog.base, re);
-                recog.err_handler.recover(&mut recog.base, re);
+                recog.err_handler.recover(&mut recog.base, re)?;
             }
         }
         recog.base.exit_rule();
@@ -330,24 +300,10 @@ impl CSVParser {
         Ok(_localctx)
     }
 }
+
 //------------------- row ----------------
-//pub struct RowContext  {
-//  base:BaseParserRuleContext<RowContextExt>,
-//}
-//
-//impl Deref for RowContext{
-//    type Target = BaseParserRuleContext<RowContextExt>;
-//
-//    fn deref(&self) -> &Self::Target {
-//        &self.base
-//    }
-//}
-//
-//impl DerefMut for RowContext{
-//    fn deref_mut(&mut self) -> &mut Self::Target {
-//        &mut self.base
-//    }
-//}
+pub type RowContextAll = RowContext;
+
 
 pub type RowContext = BaseParserRuleContext<RowContextExt>;
 
@@ -369,7 +325,7 @@ impl CustomRuleContext for RowContextExt {
 }
 
 impl RowContextExt {
-    fn new(parent: Option<ParserRuleContextType>, invoking_state: isize) -> Rc<BaseParserRuleContext<RowContextExt>> {
+    fn new(parent: Option<ParserRuleContextType>, invoking_state: isize) -> Rc<RowContextAll> {
         Rc::new(
             BaseParserRuleContext::new_parser_ctx(parent, invoking_state, RowContextExt {}),
         )
@@ -377,10 +333,10 @@ impl RowContextExt {
 }
 
 pub trait RowContextAttrs: ParserRuleContext + BorrowMut<RowContextExt> {
-    fn field_all(&self) -> Vec<Rc<FieldContext>> where Self: Sized {
+    fn field_all(&self) -> Vec<Rc<FieldContextAll>> where Self: Sized {
         self.children_of_type()
     }
-    fn field(&self, i: usize) -> Rc<FieldContext> where Self: Sized {
+    fn field(&self, i: usize) -> Rc<FieldContextAll> where Self: Sized {
         self.child_of_type(i)
     }
 }
@@ -392,12 +348,13 @@ impl RowContextAttrs for RowContext {}
 //}
 
 impl CSVParser {
-    pub fn row(&mut self) -> Result<Rc<dyn RowContextAttrs>, ANTLRError> {
+    pub fn row(&mut self)
+               -> Result<Rc<RowContextAll>, ANTLRError> {
         let mut recog = self;
         let _parentctx = recog.ctx.take();
         let mut _localctx = RowContextExt::new(_parentctx.clone(), recog.base.get_state());
         recog.base.enter_rule(_localctx.clone(), 4, RULE_row);
-        /**/
+        let mut _localctx: Rc<RowContextAll> = _localctx;
         let mut _la: isize;
         let result: Result<(), ANTLRError> = try {
 
@@ -448,7 +405,7 @@ impl CSVParser {
             Err(ref re) => {
                 //_localctx.exception = re;
                 recog.err_handler.report_error(&mut recog.base, re);
-                recog.err_handler.recover(&mut recog.base, re);
+                recog.err_handler.recover(&mut recog.base, re)?;
             }
         }
         recog.base.exit_rule();
@@ -456,24 +413,10 @@ impl CSVParser {
         Ok(_localctx)
     }
 }
+
 //------------------- field ----------------
-//pub struct FieldContext  {
-//  base:BaseParserRuleContext<FieldContextExt>,
-//}
-//
-//impl Deref for FieldContext{
-//    type Target = BaseParserRuleContext<FieldContextExt>;
-//
-//    fn deref(&self) -> &Self::Target {
-//        &self.base
-//    }
-//}
-//
-//impl DerefMut for FieldContext{
-//    fn deref_mut(&mut self) -> &mut Self::Target {
-//        &mut self.base
-//    }
-//}
+pub type FieldContextAll = FieldContext;
+
 
 pub type FieldContext = BaseParserRuleContext<FieldContextExt>;
 
@@ -495,7 +438,7 @@ impl CustomRuleContext for FieldContextExt {
 }
 
 impl FieldContextExt {
-    fn new(parent: Option<ParserRuleContextType>, invoking_state: isize) -> Rc<BaseParserRuleContext<FieldContextExt>> {
+    fn new(parent: Option<ParserRuleContextType>, invoking_state: isize) -> Rc<FieldContextAll> {
         Rc::new(
             BaseParserRuleContext::new_parser_ctx(parent, invoking_state, FieldContextExt {}),
         )
@@ -518,12 +461,13 @@ impl FieldContextAttrs for FieldContext {}
 //}
 
 impl CSVParser {
-    pub fn field(&mut self) -> Result<Rc<dyn FieldContextAttrs>, ANTLRError> {
+    pub fn field(&mut self)
+                 -> Result<Rc<FieldContextAll>, ANTLRError> {
         let mut recog = self;
         let _parentctx = recog.ctx.take();
         let mut _localctx = FieldContextExt::new(_parentctx.clone(), recog.base.get_state());
         recog.base.enter_rule(_localctx.clone(), 6, RULE_field);
-        /**/
+        let mut _localctx: Rc<FieldContextAll> = _localctx;
         let result: Result<(), ANTLRError> = try {
             recog.base.set_state(33);
             recog.err_handler.sync(&mut recog.base)?;
@@ -564,7 +508,7 @@ impl CSVParser {
             Err(ref re) => {
                 //_localctx.exception = re;
                 recog.err_handler.report_error(&mut recog.base, re);
-                recog.err_handler.recover(&mut recog.base, re);
+                recog.err_handler.recover(&mut recog.base, re)?;
             }
         }
         recog.base.exit_rule();

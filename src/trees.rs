@@ -2,13 +2,10 @@
 A set of utility routines useful for all kinds of ANTLR trees.
 */
 
-use std::borrow::Borrow;
-use std::ops::Deref;
-use std::rc::Rc;
 
-use crate::parser::Parser;
-use crate::recognizer::Recognizer;
-use crate::tree::{ParseTree, Tree};
+use std::ops::Deref;
+
+use crate::tree::Tree;
 use crate::utils;
 
 pub fn string_tree(tree: &(impl Tree + ?Sized), rule_names: &[&str]) -> String {

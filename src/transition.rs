@@ -1,10 +1,8 @@
 use std::any::{Any, TypeId};
 use std::borrow::Cow;
 use std::fmt::Debug;
-use std::mem;
 
 use crate::atn_state::ATNStateRef;
-use crate::dfa::ScopeExt;
 use crate::interval_set::IntervalSet;
 use crate::lexer::{LEXER_MAX_CHAR_VALUE, LEXER_MIN_CHAR_VALUE};
 use crate::semantic_context::SemanticContext;

@@ -3,8 +3,7 @@ use std::borrow::Cow::{Borrowed, Owned};
 use std::cmp::Ordering;
 use std::collections::HashSet;
 
-use crate::dfa::ScopeExt;
-use crate::parser::{BaseParser, Parser};
+use crate::parser::Parser;
 use crate::parser_rule_context::ParserRuleContext;
 use crate::recognizer::Recognizer;
 use crate::rule_context::RuleContext;
@@ -43,7 +42,7 @@ impl SemanticContext {
     pub(crate) fn evaluate(&self, parser: &mut dyn Parser, outer_context: &dyn ParserRuleContext) -> bool {
         match self {
             SemanticContext::Predicate { rule_index, pred_index, is_ctx_dependent } => {
-                let localctx = if *is_ctx_dependent { Some(outer_context) } else { None };
+                let _localctx = if *is_ctx_dependent { Some(outer_context) } else { None };
                 parser.sempred(outer_context, *rule_index, *pred_index)
             }
             SemanticContext::Precedence(prec) =>
@@ -88,7 +87,7 @@ impl SemanticContext {
                 }
 
                 let mut operands = operands.drain(..);
-                let mut result = operands.next().unwrap();
+                let result = operands.next().unwrap();
                 Some(operands
                     .fold(result, |acc, it|
                         Owned(SemanticContext::or(Some(acc), Some(it))),
@@ -119,7 +118,7 @@ impl SemanticContext {
                 }
 
                 let mut operands = operands.drain(..);
-                let mut result = operands.next().unwrap();
+                let result = operands.next().unwrap();
                 Some(operands
                     .fold(result, |acc, it|
                         Owned(SemanticContext::and(Some(acc), Some(it))),

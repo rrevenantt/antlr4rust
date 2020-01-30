@@ -1,16 +1,13 @@
-use std::any::Any;
-use std::borrow::{Borrow, BorrowMut};
-use std::cell::{RefCell, RefMut};
-use std::ops::{Deref, DerefMut};
+use std::borrow::BorrowMut;
+use std::cell::{Cell, RefCell};
+use std::ops::DerefMut;
 use std::rc::Rc;
-use std::time::Duration;
 
 use crate::char_stream::CharStream;
 //use lexer_atn_simulator::ILexerATNSimulator;
 use crate::common_token_factory::TokenFactory;
 use crate::error_listener::{ConsoleErrorListener, ErrorListener};
 use crate::errors::ANTLRError;
-use crate::int_stream::EOF;
 use crate::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
 use crate::parser_rule_context::ParserRuleContext;
 use crate::recognizer::{Actions, Recognizer};
@@ -19,24 +16,25 @@ use crate::token_source::TokenSource;
 
 pub trait Lexer: TokenSource + Recognizer {
     /// Sets channel where current token will be pushed
-    /// By default two channels are available
+    ///
+    /// By default two channels are available:
     ///  - `LEXER_DEFAULT_TOKEN_CHANNEL`
     ///  - `LEXER_HIDDEN`
     fn set_channel(&mut self, v: isize);
 
     /// Pushes current mode to internal mode stack and sets `m` as current lexer mode
     /// `pop_mode should be used to recover previous mode
-    fn push_mode(&mut self, m: isize);
+    fn push_mode(&mut self, m: usize);
 
     /// Pops mode from internal mode stack
-    fn pop_mode(&mut self) -> Option<isize>;
+    fn pop_mode(&mut self) -> Option<usize>;
 
     /// Sets type of the current token
     /// Called from action to override token that will be emitted by lexer
     fn set_type(&mut self, t: isize);
 
     /// Sets lexer mode discarding current one
-    fn set_mode(&mut self, m: isize);
+    fn set_mode(&mut self, m: usize);
 
     /// Used to informs lexer that it should consider next token as a continution of the current one
     fn more(&mut self);
@@ -45,29 +43,39 @@ pub trait Lexer: TokenSource + Recognizer {
     fn skip(&mut self);
 
     fn reset(&mut self);
+
+    fn get_interpreter(&self) -> Option<&LexerATNSimulator>;
 }
 
-pub trait LexerRecog: Recognizer + Actions {}
+pub trait LexerRecog: Recognizer + Actions<Recog=BaseLexer<Self>> + Sized + 'static {
+    fn before_emit(lexer: &mut BaseLexer<Self>) {}
+}
 
 pub struct BaseLexer<T: LexerRecog<Recog=Self> + 'static> {
-    interpreter: Option<LexerATNSimulator>,
-    input: Option<Box<dyn CharStream>>,
+    pub interpreter: Option<LexerATNSimulator>,
+    pub input: Option<Box<dyn CharStream>>,
     recog: Box<T>,
 
     factory: &'static dyn TokenFactory,
 
     error_listeners: RefCell<Vec<Box<dyn ErrorListener>>>,
 
-    token_start_char_index: isize,
+    pub token_start_char_index: isize,
     pub token_start_line: isize,
     pub token_start_column: isize,
-    token_type: isize,
-    token: Option<Box<dyn Token>>,
+    current_pos: Rc<LexerPosition>,
+    pub token_type: isize,
+    pub token: Option<Box<dyn Token>>,
     hit_eof: bool,
-    channel: isize,
-    mode_stack: Vec<isize>,
-    mode: isize,
+    pub channel: isize,
+    mode_stack: Vec<usize>,
+    pub mode: usize,
     text: String,
+}
+
+pub struct LexerPosition {
+    pub(crate) line: Cell<isize>,
+    pub(crate) char_position_in_line: Cell<isize>,
 }
 
 impl<T: LexerRecog<Recog=Self> + 'static> Recognizer for BaseLexer<T> {
@@ -80,21 +88,7 @@ impl<T: LexerRecog<Recog=Self> + 'static> Recognizer for BaseLexer<T> {
     }
 }
 
-
-//pub struct CoreLexer<'b>{
-//    pub(crate) lexer:BaseLexer<'b>,
-//    pub(crate) input:Box<dyn CharStream>,
-//    pub(crate) recog:Box<dyn Recognizer>
-//}
-
-
-//pub(crate) struct LexerInternalContext<'a>{
-//    lexer:&'a mut dyn Lexer,
-//    input:&'a mut dyn CharStream,
-////    recog:&'a mut dyn Recognizer
-//}
-
-pub const LEXER_DEFAULT_MODE: isize = 0;
+pub const LEXER_DEFAULT_MODE: usize = 0;
 pub const LEXER_MORE: isize = -2;
 pub const LEXER_SKIP: isize = -3;
 
@@ -104,23 +98,16 @@ pub const LEXER_MIN_CHAR_VALUE: isize = 0x0000;
 pub const LEXER_MAX_CHAR_VALUE: isize = 0x10FFFF;
 
 impl<T: LexerRecog<Recog=Self> + 'static> BaseLexer<T> {
-    pub fn get_interpreter(&self) -> Option<&LexerATNSimulator> { self.interpreter.as_ref() }
-
     fn safe_match(&self) {
         unimplemented!()
     }
-
-//    fn set_input_stream(&mut self, input: Box<CharStream>) {
-//        self.input = Some(RefCell::new(input));
-//    }
 
     fn emit_token(&mut self, token: Box<dyn Token>) {
         self.token = Some(token);
     }
 
-    //    fn get_token_source_char_stream_pair(&self) -> * TokenSourceCharStreamPair { unimplemented!() }
-
     fn emit(&mut self) {
+        <T as LexerRecog>::before_emit(self);
         let stop = self.get_char_index() - 1;
         let token = self.factory.create(
             Some(self.input.as_mut().unwrap().as_mut()),
@@ -148,11 +135,11 @@ impl<T: LexerRecog<Recog=Self> + 'static> BaseLexer<T> {
         self.emit_token(token)
     }
 
-    fn get_type(&self) -> isize {
+    pub fn get_type(&self) -> isize {
         self.token_type
     }
 
-    fn get_char_index(&self) -> isize {
+    pub fn get_char_index(&self) -> isize {
         self.input.as_ref().unwrap().index()
     }
 
@@ -160,7 +147,7 @@ impl<T: LexerRecog<Recog=Self> + 'static> BaseLexer<T> {
         self.input.as_ref().unwrap().get_text(self.token_start_char_index, self.get_char_index() - 1)
     }
 
-    fn set_text(&self, _text: String) {
+    pub fn set_text(&self, _text: String) {
         unimplemented!()
     }
 
@@ -190,7 +177,7 @@ impl<T: LexerRecog<Recog=Self> + 'static> BaseLexer<T> {
         interpreter: LexerATNSimulator,
         recog: Box<T>,
     ) -> BaseLexer<T> {
-        BaseLexer {
+        let mut lexer = BaseLexer {
             interpreter: Some(interpreter),
             input: Some(input),
             recog,
@@ -199,6 +186,7 @@ impl<T: LexerRecog<Recog=Self> + 'static> BaseLexer<T> {
             token_start_char_index: 0,
             token_start_line: 0,
             token_start_column: 0,
+            current_pos: Rc::new(LexerPosition { line: Cell::new(1), char_position_in_line: Cell::new(0) }),
             token_type: super::token::TOKEN_INVALID_TYPE,
             text: "".into(),
             token: None,
@@ -207,7 +195,10 @@ impl<T: LexerRecog<Recog=Self> + 'static> BaseLexer<T> {
             //            token_factory_source_pair: None,
             mode_stack: Vec::new(),
             mode: self::LEXER_DEFAULT_MODE,
-        }
+        };
+        let pos = lexer.current_pos.clone();
+        lexer.interpreter.as_mut().unwrap().current_pos = pos;
+        lexer
     }
 }
 
@@ -281,11 +272,11 @@ impl<T: LexerRecog<Recog=Self> + 'static> TokenSource for BaseLexer<T> {
     }
 
     fn get_line(&self) -> isize {
-        self.interpreter.as_ref().unwrap().get_line()
+        self.current_pos.line.get()
     }
 
     fn get_char_position_in_line(&self) -> isize {
-        self.interpreter.as_ref().unwrap().get_char_position_in_line()
+        self.current_pos.char_position_in_line.get()
     }
 
     fn get_input_stream(&mut self) -> &mut dyn CharStream {
@@ -314,12 +305,12 @@ impl<T: LexerRecog<Recog=Self> + 'static> Lexer for BaseLexer<T> {
         self.channel = v;
     }
 
-    fn push_mode(&mut self, _m: isize) {
+    fn push_mode(&mut self, _m: usize) {
         self.mode_stack.push(self.mode);
         self.mode = _m;
     }
 
-    fn pop_mode(&mut self) -> Option<isize> {
+    fn pop_mode(&mut self) -> Option<usize> {
         self.mode_stack.pop().map(|mode| {
             self.mode = mode;
             mode
@@ -330,7 +321,7 @@ impl<T: LexerRecog<Recog=Self> + 'static> Lexer for BaseLexer<T> {
         self.token_type = t;
     }
 
-    fn set_mode(&mut self, m: isize) {
+    fn set_mode(&mut self, m: usize) {
         self.mode = m;
     }
 
@@ -345,4 +336,6 @@ impl<T: LexerRecog<Recog=Self> + 'static> Lexer for BaseLexer<T> {
     fn reset(&mut self) {
         unimplemented!()
     }
+
+    fn get_interpreter(&self) -> Option<&LexerATNSimulator> { self.interpreter.as_ref() }
 }

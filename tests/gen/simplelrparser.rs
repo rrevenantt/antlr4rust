@@ -2,7 +2,6 @@
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
-#![feature(try_blocks)]
 
 use std::any::Any;
 use std::borrow::{Borrow, BorrowMut};
@@ -51,16 +50,14 @@ lazy_static! {
 	}
 
 
-type BaseParserType = BaseParser<SimpleLRParserExt, dyn SimpleLRListener, SimpleLRListenerCaller>;
+type BaseParserType = BaseParser<SimpleLRParserExt, dyn SimpleLRListener>;
 
 pub struct SimpleLRParser {
-    base: BaseParser<SimpleLRParserExt, dyn SimpleLRListener, SimpleLRListenerCaller>,
+    base: BaseParserType,
     interpreter: Arc<ParserATNSimulator>,
     _shared_context_cache: Box<PredictionContextCache>,
     pub err_handler: Box<dyn ErrorStrategy>,
-
 }
-
 
 impl SimpleLRParser {
     pub fn get_serialized_atn() -> &'static str { unimplemented!() }
@@ -68,7 +65,6 @@ impl SimpleLRParser {
     pub fn set_error_strategy(&mut self, strategy: Box<dyn ErrorStrategy>) {
         self.err_handler = strategy
     }
-
 
     pub fn new(input: Box<dyn TokenStream>) -> Self {
         let interpreter = Arc::new(ParserATNSimulator::new(
@@ -90,7 +86,7 @@ impl SimpleLRParser {
 }
 
 impl Deref for SimpleLRParser {
-    type Target = BaseParser<SimpleLRParserExt, dyn SimpleLRListener, SimpleLRListenerCaller>;
+    type Target = BaseParserType;
 
     fn deref(&self) -> &Self::Target {
         &self.base
@@ -118,7 +114,7 @@ impl Recognizer for SimpleLRParserExt {
 }
 
 impl Actions for SimpleLRParserExt {
-    type Recog = BaseParser<SimpleLRParserExt, dyn SimpleLRListener, SimpleLRListenerCaller>;
+    type Recog = BaseParserType;
     fn sempred(_localctx: &dyn ParserRuleContext, rule_index: isize, pred_index: isize,
                recog: &mut <Self as Actions>::Recog,
     ) -> bool {
@@ -141,24 +137,10 @@ impl SimpleLRParserExt {
         }
     }
 }
+
 //------------------- s ----------------
-//pub struct SContext  {
-//  base:BaseParserRuleContext<SContextExt>,
-//}
-//
-//impl Deref for SContext{
-//    type Target = BaseParserRuleContext<SContextExt>;
-//
-//    fn deref(&self) -> &Self::Target {
-//        &self.base
-//    }
-//}
-//
-//impl DerefMut for SContext{
-//    fn deref_mut(&mut self) -> &mut Self::Target {
-//        &mut self.base
-//    }
-//}
+pub type SContextAll = SContext;
+
 
 pub type SContext = BaseParserRuleContext<SContextExt>;
 
@@ -180,7 +162,7 @@ impl CustomRuleContext for SContextExt {
 }
 
 impl SContextExt {
-    fn new(parent: Option<ParserRuleContextType>, invoking_state: isize) -> Rc<BaseParserRuleContext<SContextExt>> {
+    fn new(parent: Option<ParserRuleContextType>, invoking_state: isize) -> Rc<SContextAll> {
         Rc::new(
             BaseParserRuleContext::new_parser_ctx(parent, invoking_state, SContextExt {}),
         )
@@ -188,7 +170,7 @@ impl SContextExt {
 }
 
 pub trait SContextAttrs: ParserRuleContext + BorrowMut<SContextExt> {
-    fn a(&self) -> Rc<AContext> where Self: Sized {
+    fn a(&self) -> Rc<AContextAll> where Self: Sized {
         self.child_of_type(0)
     }
 }
@@ -200,12 +182,13 @@ impl SContextAttrs for SContext {}
 //}
 
 impl SimpleLRParser {
-    pub fn s(&mut self) -> Result<Rc<dyn SContextAttrs>, ANTLRError> {
+    pub fn s(&mut self)
+             -> Result<Rc<SContextAll>, ANTLRError> {
         let mut recog = self;
         let _parentctx = recog.ctx.take();
         let mut _localctx = SContextExt::new(_parentctx.clone(), recog.base.get_state());
         recog.base.enter_rule(_localctx.clone(), 0, RULE_s);
-        /**/
+        let mut _localctx: Rc<SContextAll> = _localctx;
         let result: Result<(), ANTLRError> = try {
 
             //recog.base.enter_outer_alt(_localctx.clone(), 1);
@@ -225,7 +208,7 @@ impl SimpleLRParser {
             Err(ref re) => {
                 //_localctx.exception = re;
                 recog.err_handler.report_error(&mut recog.base, re);
-                recog.err_handler.recover(&mut recog.base, re);
+                recog.err_handler.recover(&mut recog.base, re)?;
             }
         }
         recog.base.exit_rule();
@@ -233,24 +216,10 @@ impl SimpleLRParser {
         Ok(_localctx)
     }
 }
+
 //------------------- a ----------------
-//pub struct AContext  {
-//  base:BaseParserRuleContext<AContextExt>,
-//}
-//
-//impl Deref for AContext{
-//    type Target = BaseParserRuleContext<AContextExt>;
-//
-//    fn deref(&self) -> &Self::Target {
-//        &self.base
-//    }
-//}
-//
-//impl DerefMut for AContext{
-//    fn deref_mut(&mut self) -> &mut Self::Target {
-//        &mut self.base
-//    }
-//}
+pub type AContextAll = AContext;
+
 
 pub type AContext = BaseParserRuleContext<AContextExt>;
 
@@ -272,7 +241,7 @@ impl CustomRuleContext for AContextExt {
 }
 
 impl AContextExt {
-    fn new(parent: Option<ParserRuleContextType>, invoking_state: isize) -> Rc<BaseParserRuleContext<AContextExt>> {
+    fn new(parent: Option<ParserRuleContextType>, invoking_state: isize) -> Rc<AContextAll> {
         Rc::new(
             BaseParserRuleContext::new_parser_ctx(parent, invoking_state, AContextExt {}),
         )
@@ -283,7 +252,7 @@ pub trait AContextAttrs: ParserRuleContext + BorrowMut<AContextExt> {
     fn ID(&self) -> Rc<TerminalNode> where Self: Sized {
         self.get_token(ID, 0)
     }
-    fn a(&self) -> Rc<AContext> where Self: Sized {
+    fn a(&self) -> Rc<AContextAll> where Self: Sized {
         self.child_of_type(0)
     }
 }
@@ -295,17 +264,19 @@ impl AContextAttrs for AContext {}
 //}
 
 impl SimpleLRParser {
-    pub fn a(&mut self) -> Result<Rc<dyn AContextAttrs>, ANTLRError> {
+    pub fn a(&mut self)
+             -> Result<Rc<AContextAll>, ANTLRError> {
         self.a_rec(0)
     }
 
-    fn a_rec(&mut self, _p: isize) -> Result<Rc<dyn AContextAttrs>, ANTLRError> {
+    fn a_rec(&mut self, _p: isize)
+             -> Result<Rc<AContextAll>, ANTLRError> {
         let recog = self;
         let _parentctx = recog.ctx.take();
         let _parentState = recog.base.get_state();
         let mut _localctx = AContextExt::new(_parentctx.clone(), recog.base.get_state());
         recog.base.enter_recursion_rule(_localctx.clone(), 2, RULE_a, _p);
-        let mut _localctx: Rc<dyn AContextAttrs> = _localctx;
+        let mut _localctx: Rc<AContextAll> = _localctx;
         let mut _prevctx = _localctx.clone();
         let _startState = 2;
         let result: Result<(), ANTLRError> = try {
@@ -353,7 +324,7 @@ impl SimpleLRParser {
             Err(ref re) => {
                 //_localctx.exception = re;
                 recog.err_handler.report_error(&mut recog.base, re);
-                recog.err_handler.recover(&mut recog.base, re);
+                recog.err_handler.recover(&mut recog.base, re)?;
             }
         }
         recog.base.unroll_recursion_context(_parentctx);

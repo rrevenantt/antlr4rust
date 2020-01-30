@@ -1,5 +1,3 @@
-use std::borrow::Cow::{Borrowed, Owned};
-use std::borrow::Cow;
 use std::collections::HashMap;
 
 use bit_set::BitSet;
@@ -8,7 +6,6 @@ use crate::atn::INVALID_ALT;
 use crate::atn_config::ATNConfig;
 use crate::atn_config_set::ATNConfigSet;
 use crate::atn_state::ATNStateRef;
-use crate::dfa::ScopeExt;
 use crate::prediction_context::PredictionContext;
 use crate::semantic_context::SemanticContext;
 

@@ -5,14 +5,13 @@
 //lexer_atnsimulator_max_dfaedge = 127
 //lexer_atnsimulator_match_calls = 0
 
-use std::borrow::BorrowMut;
-use std::cell::{Cell, RefCell, RefMut};
+
+use std::cell::Cell;
 use std::convert::TryFrom;
-use std::io::{stdout, Write};
+use std::io::Write;
 use std::ops::{Add, Deref, DerefMut, Index};
-use std::ptr;
 use std::rc::Rc;
-use std::sync::{Arc, RwLockReadGuard};
+use std::sync::Arc;
 use std::usize;
 
 use crate::atn::ATN;
@@ -27,7 +26,7 @@ use crate::dfa_state::{DFAState, DFAStateRef};
 use crate::errors::ANTLRError;
 use crate::errors::ANTLRError::LexerNoAltError;
 use crate::int_stream::{EOF, IntStream};
-use crate::lexer::{BaseLexer, Lexer, LEXER_MAX_CHAR_VALUE, LEXER_MIN_CHAR_VALUE, LexerRecog};
+use crate::lexer::{BaseLexer, Lexer, LEXER_MAX_CHAR_VALUE, LEXER_MIN_CHAR_VALUE, LexerPosition, LexerRecog};
 use crate::lexer_action_executor::LexerActionExecutor;
 use crate::parser_rule_context::empty_ctx;
 use crate::prediction_context::{PREDICTION_CONTEXT_EMPTY_RETURN_STATE, PredictionContext,
@@ -41,15 +40,17 @@ use crate::transition::{ActionTransition, PredicateTransition, RuleTransition, T
 pub const ERROR_DFA_STATE_REF: DFAStateRef = usize::MAX;
 
 pub trait ILexerATNSimulator: IATNSimulator {
-    fn reset(&self);
+    fn reset(&mut self);
     fn match_token(
         &mut self,
-        mode: isize,
+        mode: usize,
 //        input:&mut dyn CharStream,
         lexer: &mut dyn Lexer,
     ) -> Result<isize, ANTLRError>;
     fn get_char_position_in_line(&self) -> isize;
+    fn set_char_position_in_line(&mut self, column: isize);
     fn get_line(&self) -> isize;
+    fn set_line(&mut self, line: isize);
     fn get_text(&self, input: &dyn CharStream) -> String;
     fn consume(&self, input: &mut dyn CharStream);
     fn recover(&mut self, _re: ANTLRError, input: &mut dyn CharStream) {
@@ -65,21 +66,20 @@ pub struct LexerATNSimulator {
     prediction_mode: isize,
     //    merge_cache: DoubleDict,
     start_index: isize,
-    line: Cell<isize>,
-    char_position_in_line: Cell<isize>,
-    mode: isize,
+    pub(crate) current_pos: Rc<LexerPosition>,
+    mode: usize,
     prev_accept: SimState,
     pub lexer_action_executor: Option<Box<LexerActionExecutor>>,
 }
 
 impl ILexerATNSimulator for LexerATNSimulator {
-    fn reset(&self) {
-        unimplemented!()
+    fn reset(&mut self) {
+        self.prev_accept.reset()
     }
 
     fn match_token(
         &mut self,
-        mode: isize,
+        mode: usize,
 //        input:&mut dyn CharStream,
         lexer: &mut dyn Lexer,
     ) -> Result<isize, ANTLRError> {
@@ -105,11 +105,19 @@ impl ILexerATNSimulator for LexerATNSimulator {
     }
 
     fn get_char_position_in_line(&self) -> isize {
-        self.char_position_in_line.get()
+        self.current_pos.char_position_in_line.get()
+    }
+
+    fn set_char_position_in_line(&mut self, column: isize) {
+        self.current_pos.char_position_in_line.set(column)
     }
 
     fn get_line(&self) -> isize {
-        self.line.get()
+        self.current_pos.line.get()
+    }
+
+    fn set_line(&mut self, line: isize) {
+        self.current_pos.char_position_in_line.set(line)
     }
 
     fn get_text(&self, _input: &dyn CharStream) -> String {
@@ -119,10 +127,10 @@ impl ILexerATNSimulator for LexerATNSimulator {
     fn consume(&self, _input: &mut dyn CharStream) {
         let ch = _input.la(1);
         if char::try_from(ch as u32) == Ok('\n') {
-            self.line.update(|x| x + 1);
-            self.char_position_in_line.set(0);
+            self.current_pos.line.update(|x| x + 1);
+            self.current_pos.char_position_in_line.set(0);
         } else {
-            self.char_position_in_line.update(|x| x + 1);
+            self.current_pos.char_position_in_line.update(|x| x + 1);
         }
         _input.consume();
     }
@@ -160,8 +168,7 @@ impl LexerATNSimulator {
 //            recog: Rc::new(RefCell::new(recog)),
             prediction_mode: 0,
             start_index: 0,
-            line: Cell::new(1),
-            char_position_in_line: Cell::new(0),
+            current_pos: Rc::new(LexerPosition { line: Cell::new(0), char_position_in_line: Cell::new(0) }),
             mode: 0,
             prev_accept: SimState::new(),
             lexer_action_executor: None,
@@ -237,7 +244,7 @@ impl LexerATNSimulator {
 
             s = target;
         }
-        let last = self.get_dfa().states.read().unwrap().get(s).unwrap();
+        let _last = self.get_dfa().states.read().unwrap().get(s).unwrap();
 
         self.fail_or_accept(symbol, lexer)
     }
@@ -299,7 +306,7 @@ impl LexerATNSimulator {
 
     fn get_reachable_config_set<V>(
         &self,
-        states: &V,
+        _states: &V,
 //        _input: &mut dyn CharStream,
         _closure: &ATNConfigSet,
         _reach: &mut ATNConfigSet,
@@ -382,8 +389,8 @@ impl LexerATNSimulator {
 
     fn accept(&mut self, input: &mut dyn CharStream) {
         input.seek(self.prev_accept.index);
-        self.line.set(self.prev_accept.line);
-        self.char_position_in_line.set(self.prev_accept.column);
+        self.current_pos.line.set(self.prev_accept.line);
+        self.current_pos.char_position_in_line.set(self.prev_accept.column);
     }
 
     fn compute_start_state(&self, _p: &dyn ATNState, lexer: &mut dyn Lexer) -> Box<ATNConfigSet> {
@@ -576,16 +583,16 @@ impl LexerATNSimulator {
             return lexer.sempred(&*empty_ctx(), rule_index, pred_index);
         }
 
-        let saved_column = self.char_position_in_line.get();
-        let saved_line = self.line.get();
+        let saved_column = self.current_pos.char_position_in_line.get();
+        let saved_line = self.current_pos.line.get();
         let index = lexer.get_input_stream().index();
         let marker = lexer.get_input_stream().mark();
         self.consume(lexer.get_input_stream());
 
         let result = lexer.sempred(&*empty_ctx(), rule_index, pred_index);
 
-        self.char_position_in_line.set(saved_column);
-        self.line.set(saved_line);
+        self.current_pos.char_position_in_line.set(saved_column);
+        self.current_pos.line.set(saved_line);
         lexer.get_input_stream().seek(index);
         lexer.get_input_stream().release(marker);
         return result;
@@ -600,8 +607,8 @@ impl LexerATNSimulator {
         {
             self.prev_accept = SimState {
                 index: input.index(),
-                line: self.line.get(),
-                column: self.char_position_in_line.get(),
+                line: self.current_pos.line.get(),
+                column: self.current_pos.char_position_in_line.get(),
                 dfa_state: Some(dfa_state),
             };
             return true;
@@ -666,7 +673,11 @@ impl LexerATNSimulator {
     }
 
     pub fn get_dfa(&self) -> &DFA {
-        self.decision_to_dfa().get(self.mode as usize).unwrap()
+        &self.decision_to_dfa()[self.mode]
+    }
+
+    pub fn get_dfa_for_mode(&self, mode: usize) -> &DFA {
+        &self.decision_to_dfa()[mode]
     }
 
     fn get_token_name(&self, _tt: isize) -> String {
@@ -695,7 +706,7 @@ impl SimState {
         }
     }
 
-    fn reset(&mut self) {
+    pub(crate) fn reset(&mut self) {
         self.index = -1;
         self.line = 0;
         self.column = -1;

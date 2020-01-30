@@ -2,7 +2,6 @@
 
 use std::any::Any;
 
-use antlr_rust::parser::ListenerCaller;
 use antlr_rust::parser_rule_context::{cast, ParserRuleContext};
 // Generated from SimpleLR.g4 by ANTLR 4.7.2
 use antlr_rust::tree::ParseTreeListener;
@@ -31,18 +30,4 @@ pub trait SimpleLRListener: ParseTreeListener {
      * @param ctx the parse tree
      */
     fn exit_a(&mut self, ctx: &AContext) {}
-}
-
-pub struct SimpleLRListenerCaller;
-
-impl ListenerCaller<dyn SimpleLRListener> for SimpleLRListenerCaller {
-    fn enter_rule(ctx: &dyn ParserRuleContext, listener: &mut Box<dyn SimpleLRListener>) {
-        listener.enter_every_rule(ctx);
-        ctx.enter_rule(listener as &mut dyn Any);
-    }
-
-    fn exit_rule(ctx: &dyn ParserRuleContext, listener: &mut Box<dyn SimpleLRListener>) {
-        listener.exit_every_rule(ctx);
-        ctx.exit_rule(listener as &mut dyn Any);
-    }
 }

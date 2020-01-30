@@ -3,12 +3,10 @@ use std::mem;
 
 use murmur3::murmur3_32::MurmurHasher;
 
-use crate::char_stream::CharStream;
 use crate::int_stream::IntStream;
 use crate::lexer::{BaseLexer, Lexer, LexerRecog};
 use crate::lexer_action::LexerAction;
 use crate::lexer_action::LexerAction::LexerIndexedCustomAction;
-use crate::recognizer::Recognizer;
 use crate::token_source::TokenSource;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -57,12 +55,12 @@ impl LexerActionExecutor {
         self
     }
 
-    pub fn execute(&self, lexer: &mut Lexer, start_index: isize) {
+    pub fn execute(&self, lexer: &mut dyn Lexer, start_index: isize) {
         let mut requires_seek = false;
         let stop_index = lexer.get_input_stream().index();
         for action in self.lexer_actions.iter() {
             //println!("executing action {:?}",action);
-            if let LexerAction::LexerIndexedCustomAction { offset, action } = action {
+            if let LexerAction::LexerIndexedCustomAction { offset, action: _ } = action {
                 lexer.get_input_stream().seek(start_index + offset);
                 requires_seek = start_index + offset != stop_index;
             } else if action.is_position_dependent() {

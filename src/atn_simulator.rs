@@ -1,9 +1,9 @@
+use std::sync::Arc;
+
 use crate::atn::ATN;
 use crate::dfa::DFA;
-use crate::prediction_context::PredictionContextCache;
 use crate::prediction_context::PredictionContext;
-use std::sync::{Arc, RwLock};
-use std::task::RawWaker;
+use crate::prediction_context::PredictionContextCache;
 
 pub trait IATNSimulator {
     fn shared_context_cache(&self) -> Arc<PredictionContextCache>;

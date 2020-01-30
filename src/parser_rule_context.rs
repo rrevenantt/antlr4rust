@@ -1,12 +1,9 @@
 use std::any::{Any, type_name, TypeId};
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::{Cell, Ref, RefCell, RefMut};
-use std::fmt::{Debug, Display, Error, Formatter};
-use std::marker::Unsize;
+use std::fmt::{Debug, Error, Formatter};
 use std::ops::{CoerceUnsized, Deref, DerefMut};
-use std::ptr;
-use std::rc::{Rc, Weak};
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::errors::ANTLRError;
 use crate::interval_set::Interval;
@@ -62,7 +59,7 @@ pub trait ParserRuleContext: RuleContext + CustomRuleContext + ParseTree + Any +
             .nth(pos).unwrap()
     }
 
-    fn get_tokens(&self, ttype: isize) -> Box<dyn Iterator<Item=&OwningToken>> {
+    fn get_tokens(&self, _ttype: isize) -> Box<dyn Iterator<Item=&OwningToken>> {
         unimplemented!()
     }
 
@@ -84,19 +81,19 @@ impl dyn ParserRuleContext {
                 let rule_name = rule_names.get(rule_index).map(|&it| it.to_owned())
                     .unwrap_or_else(|| rule_index.to_string());
                 result.extend(rule_name.chars());
-                if p.has_parent() {
-                    result.push(' ');
-                }
+                result.push(' ');
             } else {
                 if !p.is_empty() {
                     result.extend(p.get_invoking_state().to_string().chars());
-                    if p.has_parent() {
-                        result.push(' ');
-                    }
+                    result.push(' ');
                 }
             }
 
             next = p.get_parent().clone();
+        }
+        // not optimal but we don't care here
+        if result.chars().last() == Some(' ') {
+            result.pop();
         }
 
         result.push(']');
@@ -111,15 +108,17 @@ impl dyn ParserRuleContext {
 //        Box::new(BaseParserRuleContext::new_parser_ctx(None,-1,CustomRuleContextInternal));
 //}
 
-//todo do not calc this every time, maybe threadlocal?
 pub type LexerContext = BaseParserRuleContext<EmptyCustomRuleContext>;
 
+//todo do not calc this every time, maybe threadlocal? or it might be ok as it is because it is inlined
 #[inline]
 pub(crate) fn empty_ctx() -> Box<dyn ParserRuleContext> {
     Box::new(BaseParserRuleContext::new_parser_ctx(None, -1, EmptyCustomRuleContext))
 }
 
+#[inline]
 fn cast_rc<T: ParserRuleContext>(ctx: Rc<dyn ParserRuleContext>) -> Rc<T> {
+    // not sure how safe it is
     unsafe { Rc::from_raw(Rc::into_raw(ctx) as *const T) }
 }
 
@@ -147,20 +146,14 @@ pub struct BaseParserRuleContext<Ctx: CustomRuleContext> {
     stop: RefCell<Option<OwningToken>>,
     exception: Option<Box<ANTLRError>>,
     /// List of children of current node
-    /// Editing is done via Rc::try_unwrap or Rc::get_mut
-    /// because in well-formed tree strong ref count should be one
-    /// But Rc is still needed for Weak references to parent
     pub(crate) children: RefCell<Vec<ParserRuleContextType>>,
 }
 
 impl<Ctx: CustomRuleContext> Debug for BaseParserRuleContext<Ctx> {
     default fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         f.write_str(type_name::<Self>())
-//        f.debug_struct().finish()
     }
 }
-
-//impl<T,U> CoerceUnsized<BaseParserRuleContext<U>> for BaseParserRuleContext<T> where T: Unsize<U> + CustomRuleContext, U: ?Sized + CustomRuleContext{}
 
 impl<Ctx: CustomRuleContext> RuleContext for BaseParserRuleContext<Ctx> {
     fn get_invoking_state(&self) -> isize {
@@ -215,7 +208,7 @@ impl<Ctx: CustomRuleContext> BorrowMut<Ctx> for BaseParserRuleContext<Ctx> {
 }
 
 impl<Ctx: CustomRuleContext> ParserRuleContext for BaseParserRuleContext<Ctx> {
-    fn set_exception(&self, e: ANTLRError) {
+    fn set_exception(&self, _e: ANTLRError) {
         unimplemented!()
 //        self.exception = Some(Box::new(e));
     }
@@ -348,79 +341,85 @@ impl<Ctx: CustomRuleContext> BaseParserRuleContext<Ctx> {
 
 ///////////////////////////////////////////////
 // Needed to reduce boilerplate in the generated code,
-// because
+// because there is no simple way to implement trait for enum
 // will not be necessary if some kind of variant types RFC will be merged
 //////////////////////////////////////////////
+/// workaround trait to overcome conflicting implementations error
+pub trait DerefSeal: Deref {}
 
-//impl<T:Deref<Target=BaseRuleContext<Ctx>>+Display+'static,Ctx:CustomRuleContext> ParserRuleContext for T{
-//    fn set_exception(&self, e: ANTLRError) {self.deref().set_exception()}
-//
-//    fn set_start(&self, t: isize) {self.deref().set_start(t)}
-//
-//    fn get_start(&self) -> isize {self.deref().get_start()}
-//
-//    fn set_stop(&self, t: isize) {self.deref().set_stop(t)}
-//
-//    fn get_stop(&self) -> isize {self.deref().get_stop()}
-//
-//    fn add_token_node(&self, token: BaseParserRuleContext<TerminalNodeCtx>) -> Rc<dyn ParserRuleContext> {self.deref().add_token_node(token)}
-//
-//    fn add_error_node(&self, bad_token: BaseParserRuleContext<ErrorNodeCtx>) -> Rc<dyn ParserRuleContext> {self.deref().add_error_node(bad_token)}
-//
-//    fn add_child(&self, child: Rc<dyn ParserRuleContext>) {self.deref().add_child(child)}
-//
-//    fn remove_last_child(&self) {self.deref().remove_last_child()}
-//
-//    fn enter_rule(&self, listener: &mut dyn Any) { self.deref().enter_rule() }
-//
-//    fn exit_rule(&self, listener: &mut dyn Any) {self.deref().enter_rule()}
-//
-//    fn upcast_any(&self) -> &dyn Any { self.deref().upcast_any() }
-//
-//    fn upcast(&self) -> &dyn ParserRuleContext {self.deref().upcast()}
-//}
-//
-//impl<T:Deref<Target=BaseRuleContext<Ctx>>,Ctx:CustomRuleContext> RuleContext for T {
-//    fn get_invoking_state(&self) -> isize {self.deref().get_invoking_state()}
-//
-//    fn set_invoking_state(&self, t: isize) {self.deref().set_invoking_state(t)}
-//
-//    fn is_empty(&self) -> bool {self.deref().is_empty()}
-//
-//    fn get_parent_ctx(&self) -> Option<Rc<dyn ParserRuleContext>> {self.deref().get_parent_ctx()}
-//
-//    fn peek_parent(&self) -> Option<Rc<dyn ParserRuleContext>> {self.deref().peek_parent()}
-//
-//    fn set_parent(&self, parent: &Option<Rc<dyn ParserRuleContext>>) {self.deref().set_parent(parent)}
-//}
-//
-//impl<T:Deref<Target=BaseRuleContext<Ctx>>,Ctx:CustomRuleContext> ParseTree for T {
-//    fn get_source_interval(&self) -> Interval {self.deref().get_source_interval()}
-//
-//    fn get_text(&self) -> String {self.deref().get_text()}
-//
-//    fn to_string_tree(&self, r: &dyn Parser) -> String { self.deref().to_string_tree(r) }
-//}
-//
-//impl<T:Deref<Target=BaseRuleContext<Ctx>>,Ctx:CustomRuleContext> Tree for T {
-//    fn get_parent(&self) -> Option<Rc<dyn ParserRuleContext>> {self.deref().get_parent()}
-//
-//    fn has_parent(&self) -> bool { self.deref().has_parent() }
-//
-//    fn get_payload(&self) -> Box<dyn Any> {self.deref().get_payload()}
-//
-//    fn get_child(&self, i: usize) -> Option<Rc<dyn ParserRuleContext>> {}
-//
-//    fn get_child_count(&self) -> usize {self.get_child_count()}
-//
-//    fn get_children(&self) -> Ref<Vec<Rc<dyn ParserRuleContext>>> {self.get_children()}
-//
-//    fn get_children_full(&self) -> &RefCell<Vec<Rc<dyn ParserRuleContext>>> {self.get_children_full()}
-//}
-//
-//impl<T:Deref<Target=BaseRuleContext<Ctx>>,Ctx:CustomRuleContext> CustomRuleContext for T {
-//    fn get_rule_index(&self) -> usize { self.deref().get_rule_index() }
-//}
+impl<T: DerefSeal<Target=I> + Debug + 'static, I: ParserRuleContext + ?Sized> ParserRuleContext for T {
+    fn set_exception(&self, e: ANTLRError) { self.deref().set_exception(e) }
+
+    fn set_start(&self, t: Option<OwningToken>) { self.deref().set_start(t) }
+
+    fn get_start(&self) -> Option<OwningToken> { self.deref().get_start() }
+
+    fn set_stop(&self, t: Option<OwningToken>) { self.deref().set_stop(t) }
+
+    fn get_stop(&self) -> Option<OwningToken> { self.deref().get_stop() }
+
+    fn add_token_node(&self, token: BaseParserRuleContext<TerminalNodeCtx>) -> Rc<dyn ParserRuleContext> { self.deref().add_token_node(token) }
+
+    fn add_error_node(&self, bad_token: BaseParserRuleContext<ErrorNodeCtx>) -> Rc<dyn ParserRuleContext> { self.deref().add_error_node(bad_token) }
+
+    fn add_child(&self, child: Rc<dyn ParserRuleContext>) { self.deref().add_child(child) }
+
+    fn remove_last_child(&self) { self.deref().remove_last_child() }
+
+    fn enter_rule(&self, listener: &mut dyn Any) { self.deref().enter_rule(listener) }
+
+    fn exit_rule(&self, listener: &mut dyn Any) { self.deref().exit_rule(listener) }
+
+    fn upcast_any(&self) -> &dyn Any { self.deref().upcast_any() }
+
+    fn upcast(&self) -> &dyn ParserRuleContext { self.deref().upcast() }
+}
+
+impl<T: DerefSeal<Target=I> + Debug + 'static, I: ParserRuleContext + ?Sized> RuleContext for T {
+    fn get_invoking_state(&self) -> isize { self.deref().get_invoking_state() }
+
+    fn set_invoking_state(&self, t: isize) { self.deref().set_invoking_state(t) }
+
+    fn is_empty(&self) -> bool { self.deref().is_empty() }
+
+    fn get_parent_ctx(&self) -> Option<Rc<dyn ParserRuleContext>> { self.deref().get_parent_ctx() }
+
+    fn peek_parent(&self) -> Option<Rc<dyn ParserRuleContext>> { self.deref().peek_parent() }
+
+    fn set_parent(&self, parent: &Option<Rc<dyn ParserRuleContext>>) { self.deref().set_parent(parent) }
+}
+
+impl<T: DerefSeal<Target=I> + Debug + 'static, I: ParserRuleContext + ?Sized> ParseTree for T {
+    fn get_source_interval(&self) -> Interval { self.deref().get_source_interval() }
+
+    fn get_text(&self) -> String { self.deref().get_text() }
+
+    fn to_string_tree(&self, r: &dyn Parser) -> String { self.deref().to_string_tree(r) }
+}
+
+impl<T: DerefSeal<Target=I> + Debug + 'static, I: ParserRuleContext + ?Sized> Tree for T {
+    fn get_parent(&self) -> Option<Rc<dyn ParserRuleContext>> { self.deref().get_parent() }
+
+    fn has_parent(&self) -> bool { self.deref().has_parent() }
+
+    fn get_payload(&self) -> Box<dyn Any> { self.deref().get_payload() }
+
+    fn get_child(&self, i: usize) -> Option<Rc<dyn ParserRuleContext>> { self.deref().get_child(i) }
+
+    fn get_child_count(&self) -> usize { self.deref().get_child_count() }
+
+    fn get_children(&self) -> Ref<Vec<Rc<dyn ParserRuleContext>>> { self.deref().get_children() }
+
+    fn get_children_full(&self) -> &RefCell<Vec<Rc<dyn ParserRuleContext>>> { self.deref().get_children_full() }
+}
+
+impl<T: DerefSeal<Target=I> + Debug + 'static, I: ParserRuleContext + ?Sized> CustomRuleContext for T {
+    fn get_rule_index(&self) -> usize { self.deref().get_rule_index() }
+
+    fn get_alt_number(&self) -> isize { self.deref().get_alt_number() }
+
+    fn set_alt_number(&self, _alt_number: isize) { self.deref().set_alt_number(_alt_number) }
+}
 
 //
 //    fn get_text(&self) -> String { unimplemented!() }

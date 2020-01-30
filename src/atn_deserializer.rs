@@ -1,6 +1,3 @@
-use std::any::Any;
-use std::io::{stdout, Write};
-use std::mem;
 use std::str::Chars;
 use std::str::FromStr;
 
@@ -21,6 +18,7 @@ use crate::int_stream::EOF;
 use crate::interval_set::IntervalSet;
 use crate::lexer_action::*;
 use crate::lexer_action::LexerAction::*;
+use crate::rule_context::CustomRuleContext;
 use crate::transition::*;
 use crate::transition::Transition;
 
@@ -128,7 +126,7 @@ impl ATNDeserializer {
         }
     }
 
-    fn check_uuid(&self, data: &mut Iterator<Item=isize>) -> Uuid {
+    fn check_uuid(&self, data: &mut dyn Iterator<Item=isize>) -> Uuid {
         //rust uses UTF-8 encoding so we need explicitly convert unicode
         //codepoint numbers to bytes
         let mut bytes = Vec::new();
@@ -144,7 +142,7 @@ impl ATNDeserializer {
         uuid
     }
 
-    fn read_atn(&self, data: &mut Iterator<Item=isize>) -> ATN {
+    fn read_atn(&self, data: &mut dyn Iterator<Item=isize>) -> ATN {
         let atn = ATN::new_atn(
             match data.next() {
                 Some(0) => ATNType::LEXER,
@@ -173,15 +171,15 @@ impl ATNDeserializer {
             if rule_index == 0xFFFF {
                 rule_index = -1;
             }
-            let state = self.state_factory(state_type, rule_index, i);
+            let mut state = self.state_factory(state_type, rule_index, i);
 
-            match state.get_state_type() {
+            match state.get_state_type_mut() {
                 ATNStateType::DecisionState {
-                    state: ATNDecisionState::BlockStartState { mut end_state, .. },
+                    state: ATNDecisionState::BlockStartState { end_state, .. },
                     ..
-                } => end_state = data.next().unwrap() as ATNStateRef,
-                ATNStateType::LoopEndState(mut loop_back) => {
-                    loop_back = data.next().unwrap() as ATNStateRef
+                } => *end_state = data.next().unwrap() as ATNStateRef,
+                ATNStateType::LoopEndState(loop_back) => {
+                    *loop_back = data.next().unwrap() as ATNStateRef
                 }
                 _ => (),
             }
@@ -207,17 +205,17 @@ impl ATNDeserializer {
             for _ in 0..num_precedence_states {
                 let st = data.next().unwrap() as usize;
                 if let ATNStateType::RuleStartState {
-                    is_left_recursive: mut left_rec,
+                    is_left_recursive: left_rec,
                     ..
-                } = atn.states.get(st).unwrap().get_state_type()
+                } = atn.states[st].get_state_type_mut()
                 {
-                    left_rec = true
+                    *left_rec = true
                 }
             }
         }
     }
 
-    fn read_rules(&self, atn: &mut ATN, data: &mut Iterator<Item=isize>) {
+    fn read_rules(&self, atn: &mut ATN, data: &mut dyn Iterator<Item=isize>) {
         let nrules = data.next().unwrap() as usize;
 //        if atn.grammar_type == ATNType::LEXER {
 //            atn.rule_to_token_type.resize(nrules, 0)
@@ -271,7 +269,7 @@ impl ATNDeserializer {
     ) -> Vec<IntervalSet> {
         let nsets = data.next().unwrap();
         let mut sets = Vec::new();
-        for i in 0..nsets {
+        for _i in 0..nsets {
             let intervals = data.next().unwrap();
 
             let mut set = IntervalSet::new();
@@ -293,7 +291,7 @@ impl ATNDeserializer {
     fn read_edges(
         &self,
         atn: &mut ATN,
-        data: &mut Iterator<Item=isize>,
+        data: &mut dyn Iterator<Item=isize>,
         sets: &Vec<IntervalSet>,
     ) {
         let nedges = data.next().unwrap();
@@ -354,7 +352,7 @@ impl ATNDeserializer {
             let atn_state = atn.states.get(i).unwrap();
             match atn_state.get_state_type() {
                 ATNStateType::DecisionState {
-                    state: ATNDecisionState::BlockStartState { end_state, en },
+                    state: ATNDecisionState::BlockStartState { end_state: _, en: _ },
                     ..
                 } => {
 
@@ -373,16 +371,16 @@ impl ATNDeserializer {
                 //                        }
                 //                    }
                 //                }
-                x => { /*println!("{:?}",x);*/ }
+                _x => { /*println!("{:?}",x);*/ }
             }
         }
     }
 
-    fn read_decisions(&self, atn: &mut ATN, _data: &mut Iterator<Item=isize>) {
+    fn read_decisions(&self, atn: &mut ATN, _data: &mut dyn Iterator<Item=isize>) {
         let ndecisions = _data.next().unwrap();
         for i in 0..ndecisions {
             let s = _data.next().unwrap() as usize;
-            let dec_state: &mut Box<ATNState> = atn.states.get_mut(s).unwrap();
+            let dec_state: &mut Box<dyn ATNState> = atn.states.get_mut(s).unwrap();
             atn.decision_to_state.push(s);
             if let ATNStateType::DecisionState { decision, .. } = dec_state.get_state_type_mut() {
                 *decision = i
@@ -390,11 +388,11 @@ impl ATNDeserializer {
         }
     }
 
-    fn read_lexer_actions(&self, atn: &mut ATN, _data: &mut Iterator<Item=isize>) {
+    fn read_lexer_actions(&self, atn: &mut ATN, _data: &mut dyn Iterator<Item=isize>) {
         //lexer actions are always supported here
         let nactions = _data.next().unwrap() as usize;
 
-        for i in 0..nactions {
+        for _i in 0..nactions {
             let action_type = _data.next().unwrap();
 
             let mut data1 = _data.next().unwrap();
@@ -412,28 +410,58 @@ impl ATNDeserializer {
         }
     }
 
-    fn generate_rule_bypass_transitions(&self, _atn: &mut ATN, _data: &mut Iterator<Item=isize>) {
+    fn generate_rule_bypass_transitions(&self, _atn: &mut ATN, _data: &mut dyn Iterator<Item=isize>) {
         unimplemented!()
     }
 
     fn generate_rule_bypass_transition(
         &self,
         _atn: &mut ATN,
-        _data: &mut Iterator<Item=isize>,
+        _data: &mut dyn Iterator<Item=isize>,
         _idx: isize,
     ) {
         unimplemented!()
     }
 
-    fn state_is_end_state_for(&self, _state: &ATNState, _idx: isize) -> Box<ATNState> {
+    fn state_is_end_state_for(&self, _state: &dyn ATNState, _idx: isize) -> Box<dyn ATNState> {
         unimplemented!()
     }
 
-    fn mark_precedence_decisions(&self, atn: &mut ATN, data: &mut Iterator<Item=isize>) {
-        //TODO
+    fn mark_precedence_decisions(&self, _atn: &mut ATN, _data: &mut dyn Iterator<Item=isize>) {
+        let mut precedence_states = Vec::new();
+        for state in _atn.states.iter() {
+            if let ATNStateType::DecisionState {
+                state: ATNDecisionState::StarLoopEntry {
+                    loop_back_state,
+                    is_precedence
+                }, ..
+            } = state.get_state_type() {
+                if let ATNStateType::RuleStartState { is_left_recursive: true, .. } = _atn.states[_atn.rule_to_start_state[state.get_rule_index()]].get_state_type() {
+                    let maybe_loop_end = state.get_transitions().iter().last().unwrap().get_target();
+                    let maybe_loop_end = _atn.states[maybe_loop_end].as_ref();
+                    if let ATNStateType::LoopEndState(_) = maybe_loop_end.get_state_type() {
+                        if maybe_loop_end.has_epsilon_only_transitions() {
+                            if let ATNStateType::RuleStopState = _atn.states[maybe_loop_end.get_transitions()[0].get_target()].get_state_type() {
+                                precedence_states.push(state.get_state_number())
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        for st in precedence_states {
+            if let ATNStateType::DecisionState {
+                state: ATNDecisionState::StarLoopEntry {
+                    loop_back_state,
+                    is_precedence
+                }, ..
+            } = _atn.states[st].get_state_type_mut() {
+                *is_precedence = true
+            }
+        }
     }
 
-    fn verify_atn(&self, _atn: &mut ATN, _data: &mut Iterator<Item=isize>) {
+    fn verify_atn(&self, _atn: &mut ATN, _data: &mut dyn Iterator<Item=isize>) {
         //TODO
     }
 
@@ -467,7 +495,7 @@ impl ATNDeserializer {
         arg2: isize,
         arg3: isize,
         sets: &Vec<IntervalSet>,
-    ) -> Box<Transition> {
+    ) -> Box<dyn Transition> {
 //        //        let target = atn.states.get
 //        let mut base = BaseTransition {
 //            target: trg,
@@ -542,7 +570,7 @@ impl ATNDeserializer {
         type_index: isize,
         rule_index: isize,
         state_number: usize,
-    ) -> Box<ATNState> {
+    ) -> Box<dyn ATNState> {
         let mut state = BaseATNState::new_base_atnstate();
         state.state_number = state_number;
         state.rule_index = rule_index as usize;

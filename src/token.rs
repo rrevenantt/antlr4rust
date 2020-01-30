@@ -1,11 +1,9 @@
-use std::fmt::{Debug, Display, Error};
+use std::fmt::{Debug, Display};
 use std::fmt::Formatter;
-use std::fmt::Result;
 
 use crate::char_stream::CharStream;
 use crate::int_stream::EOF;
 use crate::token_source::TokenSource;
-use crate::utils::escape_whitespaces;
 
 pub const TOKEN_INVALID_TYPE: isize = 0;
 pub const TOKEN_EPSILON: isize = -2;

@@ -1,10 +1,7 @@
 use std::fmt::Debug;
-use std::process::exit;
-use std::sync::Arc;
 
 use once_cell::sync::OnceCell;
 
-use crate::atn::ATN;
 use crate::interval_set::IntervalSet;
 use crate::transition::Transition;
 
@@ -83,9 +80,9 @@ pub trait ATNState: Sync + Send + Debug {
     fn get_state_number(&self) -> usize;
     fn set_state_number(&self, stateNumber: isize);
 
-    fn get_transitions(&self) -> &Vec<Box<Transition>>;
-    fn set_transitions(&self, t: Vec<Box<Transition>>);
-    fn add_transition(&mut self, trans: Box<Transition>);
+    fn get_transitions(&self) -> &Vec<Box<dyn Transition>>;
+    fn set_transitions(&self, t: Vec<Box<dyn Transition>>);
+    fn add_transition(&mut self, trans: Box<dyn Transition>);
 }
 
 #[derive(Debug)]
@@ -103,7 +100,7 @@ pub struct BaseATNState {
 
     pub state_type: ATNStateType,
 
-    transitions: Vec<Box<Transition>>,
+    transitions: Vec<Box<dyn Transition>>,
 
 }
 
@@ -161,15 +158,15 @@ impl ATNState for BaseATNState {
         unimplemented!()
     }
 
-    fn get_transitions(&self) -> &Vec<Box<Transition>> {
+    fn get_transitions(&self) -> &Vec<Box<dyn Transition>> {
         &self.transitions
     }
 
-    fn set_transitions(&self, _t: Vec<Box<Transition>>) {
+    fn set_transitions(&self, _t: Vec<Box<dyn Transition>>) {
         unimplemented!()
     }
 
-    fn add_transition(&mut self, trans: Box<Transition>) {
+    fn add_transition(&mut self, trans: Box<dyn Transition>) {
         if self.transitions.is_empty() {
             self.epsilon_only_transitions = trans.is_epsilon()
         } else {

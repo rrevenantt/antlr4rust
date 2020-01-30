@@ -1,12 +1,9 @@
 use std::cmp::min;
 use std::intrinsics::copy_nonoverlapping;
-use std::marker::PhantomData;
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
 use crate::errors::ANTLRError;
 use crate::int_stream::{IntStream, IterWrapper};
-use crate::interval_set::Interval;
-use crate::rule_context::RuleContext;
 use crate::token::{OwningToken, Token, TOKEN_EOF, TOKEN_INVALID_TYPE};
 use crate::token_source::TokenSource;
 
@@ -156,7 +153,7 @@ impl<T: TokenSource> TokenStream for UnbufferedTokenStream<T> {
         return buf;
     }
 
-    fn get_text_from_tokens(&self, a: &Token, b: &Token) -> String {
+    fn get_text_from_tokens(&self, a: &dyn Token, b: &dyn Token) -> String {
         self.get_text_from_interval(a.get_token_index(), b.get_token_index())
     }
 }
@@ -205,6 +202,7 @@ impl<T: TokenSource> IntStream for UnbufferedTokenStream<T> {
         }
     }
 
+    #[inline(always)]
     fn index(&self) -> isize {
         self.current_token_index
     }
@@ -222,6 +220,7 @@ impl<T: TokenSource> IntStream for UnbufferedTokenStream<T> {
         self.current_token_index = index;
     }
 
+    #[inline(always)]
     fn size(&self) -> isize {
         self.tokens.len() as isize
     }

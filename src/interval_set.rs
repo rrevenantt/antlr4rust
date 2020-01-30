@@ -2,7 +2,6 @@ use std::borrow::Cow;
 use std::borrow::Cow::Borrowed;
 use std::cmp::{max, min, Ordering};
 
-use crate::prediction_mode::resolves_to_just_one_viable_alt;
 use crate::token::{TOKEN_EOF, TOKEN_EPSILON};
 use crate::vocabulary::Vocabulary;
 
@@ -22,9 +21,6 @@ impl Interval {
         unimplemented!()
     }
 
-    fn String(&self) -> String {
-        unimplemented!()
-    }
 
     fn length(&self) -> isize {
         self.b - self.a
@@ -92,14 +88,6 @@ pub struct IntervalSet {
     intervals: Vec<Interval>,
     pub read_only: bool,
 }
-
-//impl ToOwned for &IntervalSet{
-//    type Owned = IntervalSet;
-//
-//    fn to_owned(&self) -> Self::Owned {
-//        unimplemented!()
-//    }
-//}
 
 impl IntervalSet {
     pub fn new() -> IntervalSet {
@@ -172,7 +160,7 @@ impl IntervalSet {
     }
 
     fn substract(&mut self, right: &IntervalSet) {
-        let mut result = self;
+        let result = self;
         let mut result_i = 0usize;
         let mut right_i = 0usize;
 
@@ -270,29 +258,28 @@ impl IntervalSet {
                 self.add_range(el + 1, old_b);
             }
         }
-
     }
 
-    fn String(&self) -> String {
-        unimplemented!()
-    }
-
-    fn String_verbose(
-        &self,
-        _literalNames: Vec<String>,
-        _symbolicNames: Vec<String>,
-        _elemsAreChar: bool,
-    ) -> String {
-        unimplemented!()
-    }
-
-    fn to_char_String(&self) -> String {
-        unimplemented!()
-    }
-
-    fn to_index_String(&self) -> String {
-        unimplemented!()
-    }
+//    fn String(&self) -> String {
+//        unimplemented!()
+//    }
+//
+//    fn String_verbose(
+//        &self,
+//        _literalNames: Vec<String>,
+//        _symbolicNames: Vec<String>,
+//        _elemsAreChar: bool,
+//    ) -> String {
+//        unimplemented!()
+//    }
+//
+//    fn to_char_String(&self) -> String {
+//        unimplemented!()
+//    }
+//
+//    fn to_index_String(&self) -> String {
+//        unimplemented!()
+//    }
 
     pub fn to_token_string(&self, vocabulary: &dyn Vocabulary) -> String {
         if self.intervals.is_empty() {
@@ -338,8 +325,9 @@ impl IntervalSet {
     }
 }
 
+#[cfg(test)]
 mod test {
-    use crate::interval_set::{Interval, IntervalSet};
+    use super::*;
 
     #[test]
     fn test_add_1() {

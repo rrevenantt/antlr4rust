@@ -1,14 +1,12 @@
 //use tree::RuleNode;
 
-use std::any::{Any, TypeId};
-use std::borrow::{BorrowMut, Cow};
-use std::cell::{Cell, Ref, RefCell};
-use std::ops::Deref;
+use std::any::Any;
+use std::borrow::BorrowMut;
+use std::cell::{Cell, RefCell};
 use std::rc::{Rc, Weak};
 
 use crate::atn::INVALID_ALT;
-use crate::parser_rule_context::{BaseParserRuleContext, cast, ParserRuleContext, ParserRuleContextType};
-use crate::tree::ParseTreeListener;
+use crate::parser_rule_context::{BaseParserRuleContext, ParserRuleContext, ParserRuleContextType};
 
 //pub trait RuleContext:RuleNode {
 pub trait RuleContext {
@@ -18,7 +16,6 @@ pub trait RuleContext {
     fn is_empty(&self) -> bool {
         self.get_invoking_state() == -1
     }
-
 
     //todo rewrite into take and get
     fn get_parent_ctx(&self) -> Option<Rc<dyn ParserRuleContext>>;
@@ -37,9 +34,9 @@ impl CustomRuleContext for EmptyCustomRuleContext {
 pub trait CustomRuleContext: 'static {
     fn get_rule_index(&self) -> usize;
     fn get_alt_number(&self) -> isize { INVALID_ALT }
-    fn set_alt_number(&self, alt_number: isize) {}
-    fn enter(ctx: &BaseParserRuleContext<Self>, listener: &mut dyn Any) where Self: Sized {}
-    fn exit(ctx: &BaseParserRuleContext<Self>, listener: &mut dyn Any) where Self: Sized {}
+    fn set_alt_number(&self, _alt_number: isize) {}
+    fn enter(_ctx: &BaseParserRuleContext<Self>, _listener: &mut dyn Any) where Self: Sized {}
+    fn exit(_ctx: &BaseParserRuleContext<Self>, _listener: &mut dyn Any) where Self: Sized {}
 }
 
 pub struct BaseRuleContext<Ctx: CustomRuleContext> {
@@ -79,18 +76,3 @@ impl<Ctx: CustomRuleContext> RuleContext for BaseRuleContext<Ctx> {
         *self.parent_ctx.borrow_mut() = parent.as_ref().map(Rc::downgrade);
     }
 }
-
-//pub struct TreeOwner<T>{
-//    nodes:Vec<T>,
-//    first:usize
-//}
-//
-//struct NodeData<T>{
-//    data:T,
-//    parent:NodeRef,
-//    children:Vec<NodeRef>
-//}
-//
-//pub struct NodeRef{
-//    ptr: usize,
-//}

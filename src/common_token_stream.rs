@@ -29,7 +29,7 @@ impl<T: TokenSource> IntStream for CommonTokenStream<T> {
         0
     }
 
-    fn release(&mut self, marker: isize) {}
+    fn release(&mut self, _marker: isize) {}
 
     fn index(&self) -> isize {
         self.base.index()
@@ -39,6 +39,7 @@ impl<T: TokenSource> IntStream for CommonTokenStream<T> {
         self.base.seek(index);
     }
 
+    #[inline(always)]
     fn size(&self) -> isize {
         self.base.size()
     }
@@ -132,6 +133,7 @@ impl<T: TokenSource> CommonTokenStream<T> {
 //
 //    fn set_token_source(&self, tokenSource: TokenSource) { unimplemented!() }
 
+    //todo make this const generic over direction
     fn next_token_on_channel(&mut self, mut i: isize, channel: isize, direction: isize) -> isize {
         self.sync(i);
         if i >= self.size() {
@@ -185,6 +187,7 @@ impl<T: TokenSource> CommonTokenStream<T> {
             i = self.next_token_on_channel(i - 1, self.channel, -1);
             n += 1;
         }
+        if i < 0 { return None }
 
         return Some(self.get(i));
     }

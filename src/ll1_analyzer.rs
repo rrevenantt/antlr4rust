@@ -9,7 +9,6 @@ use crate::atn_state::{ATNState, ATNStateType};
 use crate::interval_set::IntervalSet;
 use crate::parser_rule_context::ParserRuleContext;
 use crate::prediction_context::PredictionContext;
-use crate::semantic_context::SemanticContext::Precedence;
 use crate::token::{TOKEN_EOF, TOKEN_EPSILON, TOKEN_INVALID_TYPE, TOKEN_MIN_USER_TOKEN_TYPE};
 use crate::transition::{RuleTransition, TransitionType};
 use crate::transition::TransitionType::TRANSITION_NOTSET;
@@ -21,7 +20,7 @@ pub struct LL1Analyzer<'a> {
 impl LL1Analyzer<'_> {
     pub fn new(atn: &ATN) -> LL1Analyzer<'_> { LL1Analyzer { atn } }
 
-    fn get_decision_lookahead(&self, s: &dyn ATNState) -> &Vec<IntervalSet> { unimplemented!() }
+    fn get_decision_lookahead(&self, _s: &dyn ATNState) -> &Vec<IntervalSet> { unimplemented!() }
 
     pub fn look(&self,
 //                atn: &ATN,
@@ -53,7 +52,7 @@ impl LL1Analyzer<'_> {
 //                 atn:&ATN,
                  s: &dyn ATNState,
                  stop_state: Option<&dyn ATNState>,
-                 mut ctx: Option<PredictionContext>,
+                 ctx: Option<PredictionContext>,
                  look: &mut IntervalSet,
                  look_busy: &mut HashSet<ATNConfig>,
                  called_rule_stack: &mut BitSet,

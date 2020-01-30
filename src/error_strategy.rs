@@ -6,7 +6,6 @@ use std::rc::Rc;
 
 use crate::atn_simulator::IATNSimulator;
 use crate::atn_state::*;
-use crate::atn_state::ATNStateType;
 use crate::dfa::ScopeExt;
 use crate::errors::{ANTLRError, FailedPredicateError, InputMisMatchError, NoViableAltError, RecognitionError};
 use crate::interval_set::IntervalSet;
@@ -14,7 +13,6 @@ use crate::parser::Parser;
 use crate::parser_rule_context::ParserRuleContext;
 use crate::token::{OwningToken, Token, TOKEN_DEFAULT_CHANNEL, TOKEN_EOF, TOKEN_EPSILON, TOKEN_INVALID_TYPE};
 use crate::transition::RuleTransition;
-use crate::transition::TransitionType::TRANSITION_RULE;
 use crate::utils::escape_whitespaces;
 
 /// The interface for defining strategies to deal with syntax errors encountered
@@ -60,11 +58,11 @@ impl DefaultErrorStrategy {
         }
     }
 
-    fn begin_error_condition(&mut self, recognizer: &dyn Parser) {
+    fn begin_error_condition(&mut self, _recognizer: &dyn Parser) {
         self.error_recovery_mode = true;
     }
 
-    fn end_error_condition(&mut self, recognizer: &dyn Parser) {
+    fn end_error_condition(&mut self, _recognizer: &dyn Parser) {
         self.error_recovery_mode = false;
         self.last_error_index = -1;
         self.last_error_states = None;
@@ -116,7 +114,7 @@ impl DefaultErrorStrategy {
         let expecting = self.get_expected_tokens(recognizer);
         let expecting = expecting.to_token_string(recognizer.get_vocabulary());
         let t = recognizer.get_current_token();
-        let token_name = self.get_token_error_display(t);
+        let _token_name = self.get_token_error_display(t);
         let msg = format!("missing {} at {}",
                           expecting,
                           self.get_token_error_display(t)
@@ -224,7 +222,7 @@ impl DefaultErrorStrategy {
 }
 
 impl ErrorStrategy for DefaultErrorStrategy {
-    fn reset(&mut self, recognizer: &mut dyn Parser) {
+    fn reset(&mut self, _recognizer: &mut dyn Parser) {
         unimplemented!()
     }
 
@@ -247,7 +245,7 @@ impl ErrorStrategy for DefaultErrorStrategy {
 //        Err(ANTLRError::IllegalStateError("aaa".to_string()))
     }
 
-    fn recover(&mut self, recognizer: &mut dyn Parser, e: &ANTLRError) -> Result<(), ANTLRError> {
+    fn recover(&mut self, recognizer: &mut dyn Parser, _e: &ANTLRError) -> Result<(), ANTLRError> {
         if self.last_error_index == recognizer.get_input_stream_mut().index()
             && self.last_error_states.is_some()
             && self.last_error_states.as_ref().unwrap().contains(recognizer.get_state()) {
@@ -307,7 +305,7 @@ impl ErrorStrategy for DefaultErrorStrategy {
         Ok(())
     }
 
-    fn in_error_recovery_mode(&mut self, recognizer: &mut dyn Parser) -> bool {
+    fn in_error_recovery_mode(&mut self, _recognizer: &mut dyn Parser) -> bool {
         self.error_recovery_mode
     }
 
@@ -408,7 +406,7 @@ impl ErrorStrategy for BailErrorStrategy {
         Err(self.process_error(recognizer, &e))
     }
 
-    fn sync(&mut self, recognizer: &mut dyn Parser) -> Result<(), ANTLRError> { /* empty */ Ok(()) }
+    fn sync(&mut self, _recognizer: &mut dyn Parser) -> Result<(), ANTLRError> { /* empty */ Ok(()) }
 
     fn in_error_recovery_mode(&mut self, recognizer: &mut dyn Parser) -> bool { self.0.in_error_recovery_mode(recognizer) }
 

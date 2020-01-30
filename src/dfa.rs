@@ -1,16 +1,13 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::ops::Deref;
-use std::pin::Pin;
 use std::sync::{Arc, RwLock};
-use std::task::RawWaker;
 
 use crate::atn::ATN;
 use crate::atn_config_set::ATNConfigSet;
 use crate::atn_state::{ATNDecisionState, ATNState, ATNStateRef, ATNStateType};
 use crate::dfa_serializer::DFASerializer;
 use crate::dfa_state::{DFAState, DFAStateRef};
-use crate::prediction_context::MurmurHasherBuilder;
 use crate::vocabulary::Vocabulary;
 
 ///Helper trait for scope management and temporary values not living long enough
@@ -125,7 +122,7 @@ impl DFA {
             self.states
                 .write().unwrap()[*x]
                 .edges
-                .apply(|mut edges| {
+                .apply(|edges| {
                     if edges.len() <= precedence {
                         edges.resize(precedence + 1, 0);
                     }
@@ -171,6 +168,7 @@ impl DFA {
     }
 
     pub fn to_lexer_string(&self) -> String {
+        if self.s0.read().unwrap().is_none() { return String::new(); }
         format!(
             "{}",
             DFASerializer::new(self, &|x| format!(

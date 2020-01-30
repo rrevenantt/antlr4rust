@@ -1,16 +1,14 @@
-use crate::int_stream::IntStream;
-use crate::char_stream::CharStream;
-use crate::token::Token;
-use crate::interval_set::Interval;
-use std::io::*;
-use std::io::BufReader;
-use crate::errors::ANTLRError;
-use std::result;
-use std::str::Chars;
-use std::fmt::Write;
-use std::convert::TryFrom;
-use std::iter::FromIterator;
 use std::cmp::min;
+use std::convert::TryFrom;
+use std::io::*;
+use std::iter::FromIterator;
+use std::result;
+
+use crate::char_stream::CharStream;
+use crate::errors::ANTLRError;
+use crate::int_stream::IntStream;
+use crate::interval_set::Interval;
+use crate::token::Token;
 
 pub struct InputStream {
     name: String,
@@ -52,7 +50,7 @@ impl CharStream for InputStream {
         String::from_iter(self.data[_start as usize..stop].iter().map(|x| char::try_from(*x as u32).unwrap()))
     }
 
-    fn get_text_from_tokens(&self, _start: &Token, _stop: &Token) -> &str {
+    fn get_text_from_tokens(&self, _start: &dyn Token, _stop: &dyn Token) -> &str {
         unimplemented!()
     }
 

@@ -75,6 +75,7 @@ lazy_static! {
 		static ref VOCABULARY: Box<dyn Vocabulary> = Box::new(VocabularyImpl::new(_LITERAL_NAMES.iter(), _SYMBOLIC_NAMES.iter(), None));
 	}
 
+
 pub struct XMLLexer {
     base: BaseLexer<XMLLexerActions>,
 //	static { RuntimeMetaData.checkVersion("4.7.2", RuntimeMetaData.VERSION); }

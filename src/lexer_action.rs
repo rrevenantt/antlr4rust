@@ -1,6 +1,5 @@
 use std::hash::Hash;
 
-use crate::char_stream::CharStream;
 use crate::lexer::{BaseLexer, Lexer, LexerRecog};
 use crate::parser_rule_context::empty_ctx;
 use crate::recognizer::Recognizer;
@@ -89,10 +88,10 @@ impl LexerAction {
             &LexerAction::LexerCustomAction { rule_index, action_index } => {
                 lexer.action(&*empty_ctx(), rule_index, action_index);
             },
-            &LexerAction::LexerModeAction(mode) => lexer.set_mode(mode),
+            &LexerAction::LexerModeAction(mode) => lexer.set_mode(mode as usize),
             &LexerAction::LexerMoreAction => lexer.more(),
             &LexerAction::LexerPopModeAction => { lexer.pop_mode(); },
-            &LexerAction::LexerPushModeAction(mode) => lexer.push_mode(mode),
+            &LexerAction::LexerPushModeAction(mode) => lexer.push_mode(mode as usize),
             &LexerAction::LexerSkipAction => lexer.skip(),
             &LexerAction::LexerTypeAction(ty) => lexer.set_type(ty),
             &LexerAction::LexerIndexedCustomAction { ref action, .. } => action.execute(lexer),

@@ -1,12 +1,10 @@
 use std::fmt::{Display, Error, Formatter};
 use std::hash::{Hash, Hasher};
-use std::sync::atomic::AtomicI64;
 
 use murmur3::murmur3_32::MurmurHasher;
 
 use crate::atn_config_set::ATNConfigSet;
 use crate::lexer_action_executor::LexerActionExecutor;
-use crate::lexer_atn_simulator::{MAX_DFA_EDGE, MIN_DFA_EDGE};
 use crate::semantic_context::SemanticContext;
 
 #[derive(Eq, PartialEq, Debug)]
@@ -16,7 +14,7 @@ pub struct PredPrediction {
 }
 
 impl Display for PredPrediction {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+    fn fmt(&self, _f: &mut Formatter<'_>) -> Result<(), Error> {
         unimplemented!()
 //        f.write_fmt(format_args!("({},{})",self.pred,self.alt))
     }

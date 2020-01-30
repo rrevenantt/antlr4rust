@@ -5,8 +5,6 @@ use murmur3::murmur3_32::MurmurHasher;
 
 use crate::atn_config::ATNConfigType::LexerATNConfig;
 use crate::atn_state::{ATNState, ATNStateRef, ATNStateType};
-use crate::atn_state::ATNBlockStart::BasicBlockStart;
-use crate::atn_state::ATNStateType::DecisionState;
 use crate::dfa::ScopeExt;
 use crate::lexer_action_executor::LexerActionExecutor;
 use crate::prediction_context::PredictionContext;
@@ -226,7 +224,7 @@ impl ATNConfig {
     pub fn cloned_with_new_exec(&self, target: &dyn ATNState, exec: Option<LexerActionExecutor>) -> ATNConfig {
         let mut new = self.cloned(target);
         if let ATNConfigType::LexerATNConfig {
-            lexer_action_executor, passed_through_non_greedy_decision
+            lexer_action_executor, passed_through_non_greedy_decision: _
         } = &mut new.config_type {
             *lexer_action_executor = exec.map(Box::new);
 //            *passed_through_non_greedy_decision = check_non_greedy_decision(self, target);

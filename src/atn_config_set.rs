@@ -1,6 +1,5 @@
-use std::cell::Cell;
 use std::cmp::max;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::{Debug, Error, Formatter};
 use std::hash::{Hash, Hasher};
 
@@ -8,11 +7,9 @@ use bit_set::BitSet;
 use murmur3::murmur3_32::MurmurHasher;
 
 use crate::atn_config::ATNConfig;
-use crate::atn_simulator::{BaseATNSimulator, IATNSimulator};
-use crate::dfa::ScopeExt;
+use crate::atn_simulator::IATNSimulator;
 use crate::parser_atn_simulator::MergeCache;
-use crate::parser_rule_context::empty_ctx;
-use crate::prediction_context::{MurmurHasherBuilder, PredictionContext};
+use crate::prediction_context::PredictionContext;
 use crate::semantic_context::SemanticContext;
 
 //pub trait ATNConfigSet:Sync+Send{
@@ -79,7 +76,7 @@ pub struct ATNConfigSet {
 }
 
 impl Debug for ATNConfigSet {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+    fn fmt(&self, _f: &mut Formatter<'_>) -> Result<(), Error> {
         unimplemented!()
     }
 }
@@ -170,7 +167,7 @@ impl ATNConfigSet {
     pub fn add_cached(
         &mut self,
         mut config: Box<ATNConfig>,
-        merge_cache: Option<&mut MergeCache>,
+        _merge_cache: Option<&mut MergeCache>,
     ) -> bool {
         assert!(!self.read_only);
 
@@ -232,7 +229,7 @@ impl ATNConfigSet {
         self.configs.iter().map(|c| c.as_ref())
     }
 
-    pub fn optimize_configs(&self, interpreter: &dyn IATNSimulator) {
+    pub fn optimize_configs(&self, _interpreter: &dyn IATNSimulator) {
         //todo
     }
 
