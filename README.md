@@ -18,9 +18,12 @@ Remaining core things:
 - [ ] Performance
   - [ ] Some redundant cloning is happening inside which can result in performance degradation in some corner cases for left recursive rules
 - [ ] Documentation
-  - [ ] Quite some things are already documented but  
+  - [ ] Quite some things are already documented but still far from perfect
+  - [ ] Currently the only examples are tests
 - [ ] API stabilization
   - [ ] Rust api guidelines compliance   
+  
+See tracking [issue](https://github.com/antlr/antlr4/issues/1839) for more info
   
 ### Usage
 
@@ -31,6 +34,24 @@ lazy_static = "1.4"
 antlr-rust = "0.1"
 ```
 and `#![feature(try_blocks)]` in your project root module
+ 
+### Parse Tree structure
+
+It is possible to generate idiomatic Rust syntax trees. For this you would need to use labels feature of ANTLR.
+You can see [Labels](grammars/Labels.g4) grammar for example.
+Consider following rule :
+```text
+e   : a=e op='*' b=e   # mult
+    | left=e '+' b=e   # add
+		 
+```
+For such rule ANTLR will generate enum `EContextAll` containing `mult` and `add` alternatives, 
+so you will be able to match on them in your code. 
+Also corresponding struct for each alternative will contain fields you labeled. 
+I.e. for `MultContext` struct will contain `a` and `b` fields containing child subtrees and 
+`op` field with `TerminalNode` type which corresponds to individual `Token`.
+It also is possible to disable generic parse tree creation to keep only selected children via
+`parser.build_parse_trees = false`.
   
 ### Differences with Java
 Although Rust runtime API is made as close as possible to Java, 
@@ -40,12 +61,11 @@ there are quite some differences because Rust is not an OOP language and is much
  - If you are using labeled alternatives, 
  struct generated for rule is a enum with variant for each alternative
  - Parser needs to have ownership for listeners, but it is possible te get listener back via `ListenerId`
- or `ParseTreeWalker` should be used 
+ otherwise `ParseTreeWalker` should be used 
  
 ### Unsafe
 Currently unsafe is used only to cast from trait object back to original type 
 and to update data inside Rc via `get_mut_unchecked`(returned mutable reference is used immediately and not stored anywhere)
-
   
 ### Future improvements:
  - make parsing zero copy(i.e. use &str(or Cow) instead String in token and &Token in tree nodes)

@@ -186,7 +186,7 @@ if (x < x && a > 0) then duh
         parser.add_parse_listener(Box::new(Listener3));
         println!("\nstart parsing lr_test");
         let result = parser.s().expect("expected to parse successfully");
-        println!("{}", result.to_string_tree(&*parser));
+        assert_eq!(result.to_string_tree(&*parser), "(s (a (a (a x) y) z))");
 //        assert!(result.is_ok())
     }
 
