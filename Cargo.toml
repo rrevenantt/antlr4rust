@@ -3,7 +3,6 @@ name = "antlr-rust"
 version = "0.1.0"
 authors = ["Konstantin Anisimov <rrevenantt@gmail.com>"]
 homepage = "https://github.com/rrevenantt/antlr4rust"
-documentation = "https://github.com/rrevenantt/antlr4rust"
 repository = "https://github.com/rrevenantt/antlr4rust"
 description = "ANTLR4 runtime for Rust"
 edition = "2018"
@@ -23,6 +22,6 @@ typed-arena = "2.0.*"
 
 [lib]
 
-[[test]]
-name = "my_test"
-path="tests/my_test.rs"
+#[[test]]
+#name = "my_test"
+#path="tests/my_test.rs"

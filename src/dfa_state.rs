@@ -20,7 +20,7 @@ impl Display for PredPrediction {
     }
 }
 
-//todo rewrite as wrapper with helper methods
+//index in DFA.states
 pub type DFAStateRef = usize;
 
 #[derive(Eq)]

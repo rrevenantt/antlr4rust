@@ -370,7 +370,6 @@ impl PredictionContext {
 
 
         PredictionContext::combine_common_parents(&mut merged);
-        //todo combine common parents?????
 
         return Array(merged);
     }
@@ -392,7 +391,7 @@ impl PredictionContext {
     }
 
     fn combine_common_parents(array: &mut ArrayPredictionContext) {
-        //todo, useless for now
+        //todo, when PredictionContext will be in arena
     }
 }
 

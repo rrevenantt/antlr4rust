@@ -19,9 +19,10 @@ Remaining core things:
   - [ ] Some redundant cloning is happening inside which can result in performance degradation in some corner cases for left recursive rules
 - [ ] Documentation
   - [ ] Quite some things are already documented but still far from perfect
-  - [ ] Currently the only examples are tests
+  - [ ] More doctests. Currently the only examples are tests
 - [ ] API stabilization
-  - [ ] Rust api guidelines compliance   
+  - [ ] Rust api guidelines compliance  
+  - [ ] more tests for API because it is quite different from Java
   
 See tracking [issue](https://github.com/antlr/antlr4/issues/1839) for more info
   
@@ -70,9 +71,10 @@ and to update data inside Rc via `get_mut_unchecked`(returned mutable reference 
 ### Future improvements:
  - make parsing zero copy(i.e. use &str(or Cow) instead String in token and &Token in tree nodes)
  - use & instead of Rc for nodes in parser
- - support no_std(although alloc would still be required)
  - support stable rust
  - visitor
+ - run rustfmt on generated parser
+ - support no_std(although alloc would still be required)
 
 ## Licence
 
