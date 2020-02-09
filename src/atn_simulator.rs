@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use std::sync::Arc;
 
 use crate::atn::ATN;
@@ -6,7 +7,7 @@ use crate::prediction_context::PredictionContext;
 use crate::prediction_context::PredictionContextCache;
 
 pub trait IATNSimulator {
-    fn shared_context_cache(&self) -> Arc<PredictionContextCache>;
+    fn shared_context_cache(&self) -> &PredictionContextCache;
     fn atn(&self) -> &ATN;
     fn decision_to_dfa(&self) -> &Vec<DFA>;
 }
@@ -36,8 +37,8 @@ impl BaseATNSimulator {
 }
 
 impl IATNSimulator for BaseATNSimulator {
-    fn shared_context_cache(&self) -> Arc<PredictionContextCache> {
-        self.shared_context_cache.clone()
+    fn shared_context_cache(&self) -> &PredictionContextCache {
+        self.shared_context_cache.deref()
     }
 
     fn atn(&self) -> &ATN {

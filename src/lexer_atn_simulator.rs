@@ -141,7 +141,7 @@ impl ILexerATNSimulator for LexerATNSimulator {
 }
 
 impl IATNSimulator for LexerATNSimulator {
-    fn shared_context_cache(&self) -> Arc<PredictionContextCache> {
+    fn shared_context_cache(&self) -> &PredictionContextCache {
         self.base.shared_context_cache()
     }
 
@@ -270,7 +270,7 @@ impl LexerATNSimulator {
     fn compute_target_state(&self, _s: DFAStateRef, _t: isize, lexer: &mut dyn Lexer) -> DFAStateRef {
         let states = self.get_dfa().states.read().unwrap();
 
-        let mut reach = ATNConfigSet::new_ordered_atnconfig_set();
+        let mut reach = ATNConfigSet::new_ordered();
         self.get_reachable_config_set(
             &states,
 //            _input,
@@ -395,7 +395,7 @@ impl LexerATNSimulator {
 
     fn compute_start_state(&self, _p: &dyn ATNState, lexer: &mut dyn Lexer) -> Box<ATNConfigSet> {
         //        let initial_context = &EMPTY_PREDICTION_CONTEXT;
-        let mut config_set = ATNConfigSet::new_ordered_atnconfig_set();
+        let mut config_set = ATNConfigSet::new_ordered();
 
         for (i, tr) in _p.get_transitions().iter().enumerate() {
             let target = tr.get_target();
@@ -451,7 +451,7 @@ impl LexerATNSimulator {
                 let mut ctx = config.take_context();
                 for i in 0..ctx.length() {
                     if ctx.get_return_state(i) != PREDICTION_CONTEXT_EMPTY_RETURN_STATE {
-                        let new_ctx = ctx.take_parent(i);
+                        let new_ctx = ctx.get_parent(i).cloned();
                         let return_state = self.atn().states[ctx.get_return_state(i) as usize].as_ref();
                         let next_config = config.cloned_with_new_ctx(return_state, new_ctx);
                         _current_alt_reached_accept_state = self.closure(
@@ -526,10 +526,10 @@ impl LexerATNSimulator {
                 let rt = _trans.cast::<RuleTransition>();
                 //println!("rule transition follow state{}", rt.follow_state);
                 let pred_ctx = PredictionContext::new_singleton(
-                    Some(Box::new(_config.take_context())),
+                    Some(_config.get_context().unwrap().clone()),
                     rt.follow_state as isize,
                 );
-                result = Some(_config.cloned_with_new_ctx(target, Some(pred_ctx)));
+                result = Some(_config.cloned_with_new_ctx(target, Some(pred_ctx.into())));
             }
             TransitionType::TRANSITION_PREDICATE => {
                 let tr = _trans.cast::<PredicateTransition>();

@@ -1,63 +1,132 @@
-use std::collections::{HashMap, LinkedList};
+use std::borrow::Cow;
+use std::collections::{HashMap, HashSet, LinkedList};
+use std::fmt::{Display, Error, Formatter, Write};
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::ops::Deref;
 use std::ptr;
+use std::sync::{Arc, RwLock};
 
 use murmur3::murmur3_32::MurmurHasher;
 
 use crate::atn::ATN;
+use crate::dfa::ScopeExt;
+use crate::parser_atn_simulator::MergeCache;
 use crate::parser_rule_context::{empty_ctx, ParserRuleContext};
 use crate::prediction_context::PredictionContext::{Array, Singleton};
 use crate::transition::{RuleTransition, TransitionType};
 
 pub const PREDICTION_CONTEXT_EMPTY_RETURN_STATE: isize = 0x7FFFFFFF;
 
-//pub trait PredictionContext: Sync + Send {
-//    fn get_parent(&self, index: isize) -> Option<&BasePredictionContext>;
-//    fn get_return_state(&self, index: isize) -> isize;
-//    fn length(&self) -> isize;
-//    fn is_empty(&self) -> bool;
-//    fn has_empty_path(&self) -> bool;
-//    fn hash_code(&self)->i32;
-//}
+#[cfg(test)]
+mod test;
 
 //todo make return states ATNStateRef
 #[derive(Eq, Clone, Debug)]
 pub enum PredictionContext {
     Singleton(SingletonPredictionContext),
     Array(ArrayPredictionContext),
-//    Empty {
-//        cached_hash: i32,
-//    },
 }
 
-#[derive(Eq, PartialEq, Clone, Debug)]
+impl PartialEq for PredictionContext {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Array(s), Array(o)) => *s == *o,
+            (Singleton(s), Singleton(o)) => *s == *o,
+            _ => false
+        }
+    }
+}
+
+#[derive(Eq, Clone, Debug)]
 pub struct ArrayPredictionContext {
     cached_hash: i32,
-    //todo maybe Rc here too?
-    parents: Vec<Option<Box<PredictionContext>>>,
     return_states: Vec<isize>,
+    parents: Vec<Option<Arc<PredictionContext>>>,
 }
 
-#[derive(Eq, PartialEq, Clone, Debug)]
+impl PartialEq for ArrayPredictionContext {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.cached_hash == other.cached_hash &&
+            self.return_states == other.return_states &&
+            self.parents.iter().zip(other.parents.iter())
+                .all(opt_eq)
+    }
+}
+
+#[inline(always)]
+fn opt_eq(arg: (&Option<Arc<PredictionContext>>, &Option<Arc<PredictionContext>>)) -> bool {
+    match arg {
+        (Some(s), Some(o)) => Arc::ptr_eq(s, o) || *s == *o,
+        (None, None) => true,
+        _ => false
+    }
+}
+
+#[derive(Eq, Clone, Debug)]
 pub struct SingletonPredictionContext {
     cached_hash: i32,
-    parent_ctx: Option<Box<PredictionContext>>,
     return_state: isize,
+    parent_ctx: Option<Arc<PredictionContext>>,
+}
+
+impl PartialEq for SingletonPredictionContext {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.cached_hash == other.cached_hash &&
+            self.return_state == other.return_state &&
+            opt_eq((&self.parent_ctx, &other.parent_ctx))
+    }
 }
 
 impl SingletonPredictionContext {
+    #[inline]
     fn is_empty(&self) -> bool {
         self.return_state == PREDICTION_CONTEXT_EMPTY_RETURN_STATE
             && self.parent_ctx == None
     }
 }
 
-impl PartialEq for PredictionContext {
-    fn eq(&self, other: &Self) -> bool {
-        self.hash_code() == other.hash_code()
+impl Display for PredictionContext {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        match self {
+            Singleton(s) => {
+                if s.return_state == PREDICTION_CONTEXT_EMPTY_RETURN_STATE {
+                    f.write_str("$")
+                } else {
+                    if let Some(parent) = &s.parent_ctx {
+                        f.write_fmt(format_args!("{} {}", s.return_state, parent))
+                    } else {
+                        f.write_fmt(format_args!("{}", s.return_state))
+                    }
+                }
+            },
+            Array(arr) => {
+                f.write_str("[");
+                for i in 0..arr.return_states.len() {
+                    if i > 0 { f.write_str(", ")?; }
+                    if arr.return_states[i] == PREDICTION_CONTEXT_EMPTY_RETURN_STATE {
+                        f.write_str("$")?;
+                    }
+                    f.write_str(&arr.return_states[i].to_string())?;
+                    if let Some(parent) = &arr.parents[i] {
+                        f.write_fmt(format_args!(" {}", parent))?;
+                    } else {
+                        f.write_str(" null")?;
+                    }
+                }
+
+                f.write_str("]")
+            }
+        }
     }
 }
+
+//impl PartialEq for PredictionContext {
+//    fn eq(&self, other: &Self) -> bool {
+//        self.hash_code() == other.hash_code()
+//    }
+//}
 
 impl Hash for PredictionContext {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -66,28 +135,18 @@ impl Hash for PredictionContext {
 }
 
 lazy_static! {
-    pub static ref EMPTY_PREDICTION_CONTEXT: PredictionContext =
-        PredictionContext::new_empty();
+    pub static ref EMPTY_PREDICTION_CONTEXT: Arc<PredictionContext> =
+        Arc::new(PredictionContext::new_empty());
 }
 
 impl PredictionContext {
-//    pub fn size(ctx:Option<&PredictionContext>) -> usize{
-//        if ctx.is_none() {return 0;}
-//
-//        match ctx.unwrap() {
-//            PredictionContext::Singleton(x) => return 1+Self::size(x.parent_ctx.as_deref()),
-//            PredictionContext::Array(x) =>
-//                return x.parents.len() + x.parents.iter()
-//                    .map(|x|Self::size(x.as_deref())).sum::<usize>(),
-//        }
-//    }
 
     pub fn new(cached_hash: isize) -> PredictionContext {
         unimplemented!()
     }
 
     pub fn new_array(
-        parents: Vec<Option<Box<PredictionContext>>>,
+        parents: Vec<Option<Arc<PredictionContext>>>,
         return_states: Vec<isize>,
     ) -> PredictionContext {
         let mut ctx = PredictionContext::Array(ArrayPredictionContext {
@@ -95,12 +154,13 @@ impl PredictionContext {
             parents,
             return_states,
         });
-        ctx.calc_hash();
+//        ctx.calc_hash();
         ctx
     }
 
+    #[inline]
     pub fn new_singleton(
-        parent_ctx: Option<Box<PredictionContext>>,
+        parent_ctx: Option<Arc<PredictionContext>>,
         return_state: isize,
     ) -> PredictionContext {
         let mut ctx = PredictionContext::Singleton(SingletonPredictionContext {
@@ -108,7 +168,7 @@ impl PredictionContext {
             parent_ctx,
             return_state,
         });
-        ctx.calc_hash();
+//        ctx.calc_hash();
         ctx
     }
 
@@ -161,43 +221,37 @@ impl PredictionContext {
             => *cached_hash = hash,
         };
     }
-    //}
-    //
-    //impl PredictionContext for BasePredictionContext{
-    pub fn take_parent(&mut self, index: usize) -> Option<PredictionContext> {
+
+    #[inline]
+    pub fn get_parent(&self, index: usize) -> Option<&Arc<PredictionContext>> {
         match self {
             PredictionContext::Singleton(singleton) => {
-                assert_eq!(index, 0);
-                singleton.parent_ctx.take()
+//                assert_eq!(index, 0);
+                singleton.parent_ctx.as_ref()
             }
             PredictionContext::Array(array) => {
-                array.parents[index].take()
+                array.parents[index].as_ref()
             }
-        }.map(|x| *x)
-    }
-
-    pub fn get_return_state(&self, index: usize) -> isize {
-        match self {
-            PredictionContext::Singleton(SingletonPredictionContext { return_state, .. }) => {
-                assert_eq!(index, 0);
-                *return_state
-            }
-            PredictionContext::Array(ArrayPredictionContext { return_states, .. }) => return_states[index],
-//            PredictionContext::Empty { .. } => {
-//                assert_eq!(index, 0);
-//                base_prediction_context_empty_return_state
-//            }
         }
     }
 
+    #[inline]
+    pub fn get_return_state(&self, index: usize) -> isize {
+        match self {
+            PredictionContext::Singleton(SingletonPredictionContext { return_state, .. }) => *return_state,
+            PredictionContext::Array(ArrayPredictionContext { return_states, .. }) => return_states[index],
+        }
+    }
+
+    #[inline]
     pub fn length(&self) -> usize {
         match self {
             PredictionContext::Singleton { .. } => 1,
             PredictionContext::Array(ArrayPredictionContext { return_states, .. }) => return_states.len(),
-//            PredictionContext::Empty { .. } =.> 1,
         }
     }
 
+    #[inline]
     pub fn is_empty(&self) -> bool {
         if let PredictionContext::Singleton(
             singleton
@@ -207,73 +261,110 @@ impl PredictionContext {
         self.get_return_state(0) == PREDICTION_CONTEXT_EMPTY_RETURN_STATE
     }
 
+    #[inline]
     pub fn has_empty_path(&self) -> bool {
         self.get_return_state(self.length() - 1) == PREDICTION_CONTEXT_EMPTY_RETURN_STATE
     }
 
+    #[inline]
     pub fn hash_code(&self) -> i32 {
         match self {
             PredictionContext::Singleton(SingletonPredictionContext { cached_hash, .. })
             | PredictionContext::Array(ArrayPredictionContext { cached_hash, .. })
-//            | PredictionContext::Empty { cached_hash, .. }
             => *cached_hash,
         }
     }
 
-//    pub fn is_consistent(&self) -> bool {
-//        match self {
-//            Singleton(x) => {x.parent_ctx.is_some() || x.return_state == PREDICTION_CONTEXT_EMPTY_RETURN_STATE},
-//            Array(ArrayPredictionContext{ cached_hash, parents, return_states }) => {
-//                parents.iter().zip(return_states.iter())
-//                    .all(|(a,&b)|
-//                        (a.is_some() && a.as_deref().unwrap().is_consistent()) || b == PREDICTION_CONTEXT_EMPTY_RETURN_STATE)
-//            },
-//        }
-//    }
-
-    fn into_array(self) -> ArrayPredictionContext {
+    #[inline]
+    fn to_array(&self) -> Cow<ArrayPredictionContext> {
         match self {
             PredictionContext::Singleton(s) => {
-                ArrayPredictionContext {
+                Cow::Owned(ArrayPredictionContext {
                     cached_hash: 0,
-                    parents: vec![s.parent_ctx],
+                    parents: vec![s.parent_ctx.clone()],
                     return_states: vec![s.return_state],
-                }
+                })
             }
-            PredictionContext::Array(arr) => { arr }
+            PredictionContext::Array(arr) => { Cow::Borrowed(arr) }
         }
     }
 
-    pub fn merge(a: PredictionContext, b: PredictionContext, root_is_wildcard: bool) -> PredictionContext {
-        if a == b { return a; }
+    #[inline]
+    pub fn alloc(mut self) -> Arc<PredictionContext> {
+        self.calc_hash();
+        Arc::new(self)
+    }
 
-        let r = match (a, b) {
-            (PredictionContext::Singleton(a), PredictionContext::Singleton(b)) => {
-                Self::merge_singletons(a, b, root_is_wildcard)
+    pub fn merge(a: &Arc<PredictionContext>, b: &Arc<PredictionContext>, root_is_wildcard: bool,
+                 merge_cache: &mut Option<&mut MergeCache>,
+//                 eq_hash:&mut HashSet<(*const PredictionContext,*const PredictionContext)>
+    ) -> Arc<PredictionContext> {
+        if Arc::ptr_eq(a, b) || **a == **b { return a.clone(); }
+
+        if let Some(cache) = merge_cache {
+            if let Some(old) = cache.get(&(a.clone(), b.clone()))
+                .or_else(|| cache.get(&(b.clone(), a.clone()))) {
+//            if let Some(old) = cache.get(a)
+//                .and_then(|it|it.get(b))
+//                .or_else(||cache.get(b).and_then(|it|it.get(a))){
+                return old.clone()
             }
-            (a, b) => {
+        }
+//        println!("merging {} {}",a,b);
+
+        let r = match (a.deref(), b.deref()) {
+            (PredictionContext::Singleton(sa), PredictionContext::Singleton(sb)) => {
+                let result = Self::merge_singletons(sa, sb, root_is_wildcard, merge_cache);
+//                println!("single result = {}",result);
+                result
+            }
+            (sa, sb) => {
                 if root_is_wildcard {
-                    if a.is_empty() { return Self::new_empty(); }
-                    if b.is_empty() { return Self::new_empty(); }
+                    if sa.is_empty() { return EMPTY_PREDICTION_CONTEXT.clone(); }
+                    if sb.is_empty() { return EMPTY_PREDICTION_CONTEXT.clone(); }
                 }
 
-                Self::merge_arrays(a.into_array(), b.into_array(), root_is_wildcard)
+                let result = Self::merge_arrays(sa.to_array(), sb.to_array(), root_is_wildcard, merge_cache).alloc();
+
+                let result = if &*result == sa {
+                    a.clone()
+                } else if &*result == sb {
+                    b.clone()
+                } else {
+                    result//.alloc()
+                };
+//                println!("array result = {}",result);
+
+                result
             }
         };
+        assert_ne!(r.hash_code(), 0);
+        if let Some(cache) = merge_cache {
+//            cache.entry(a.clone()).or_insert_with(||HashMap::new())
+//                .insert(b.clone(),r.clone());
+            cache.insert((a.clone(), b.clone()), r.clone());
+        }
         return r;
     }
 
-    fn merge_singletons(mut a: SingletonPredictionContext, mut b: SingletonPredictionContext, root_is_wildcard: bool/*, mergeCache: * DoubleDict*/) -> PredictionContext {
-        Self::merge_root(&mut a, &mut b, root_is_wildcard).unwrap_or_else(||
+    fn merge_singletons(mut a: &SingletonPredictionContext,
+                        mut b: &SingletonPredictionContext,
+                        root_is_wildcard: bool,
+                        merge_cache: &mut Option<&mut MergeCache>,
+    ) -> Arc<PredictionContext> {
+        Self::merge_root(a, b, root_is_wildcard).unwrap_or_else(||
             if a.return_state == b.return_state {
-                let parent = Self::merge(*a.parent_ctx.clone().unwrap(), *b.parent_ctx.clone().unwrap(), root_is_wildcard);
-                if Some(&parent) == a.parent_ctx.as_deref() { return Singleton(a); }
-                if Some(&parent) == b.parent_ctx.as_deref() { return Singleton(b); }
-                Self::new_singleton(Some(Box::new(parent)), a.return_state)
+                let parent = Self::merge(a.parent_ctx.as_ref().unwrap(), b.parent_ctx.as_ref().unwrap(), root_is_wildcard, merge_cache);
+                if Arc::ptr_eq(&parent, a.parent_ctx.as_ref().unwrap()) { Singleton(a.clone()) } else if Arc::ptr_eq(&parent, b.parent_ctx.as_ref().unwrap()) { Singleton(b.clone()) } else { Self::new_singleton(Some(parent), a.return_state) }
             } else {
+                let parents = if a.parent_ctx == b.parent_ctx {
+                    vec![a.parent_ctx.clone(), a.parent_ctx.clone()]
+                } else {
+                    vec![a.parent_ctx.clone(), b.parent_ctx.clone()]
+                };
                 let mut result = ArrayPredictionContext {
                     cached_hash: -1,
-                    parents: vec![a.parent_ctx, b.parent_ctx],
+                    parents,
                     return_states: vec![a.return_state, b.return_state],
                 };
                 if !result.return_states.is_sorted() {
@@ -281,33 +372,39 @@ impl PredictionContext {
                     result.return_states.swap(0, 1);
                 }
                 Array(result)
-            }
+            }.alloc()
         )
     }
 
-    fn merge_root(a: &mut SingletonPredictionContext, b: &mut SingletonPredictionContext, root_is_wildcard: bool) -> Option<PredictionContext> {
+    fn merge_root(a: &SingletonPredictionContext, b: &SingletonPredictionContext, root_is_wildcard: bool) -> Option<Arc<PredictionContext>> {
         if root_is_wildcard {
-            if a.is_empty() || b.is_empty() { return Some(Self::new_empty()); }
+            if a.is_empty() || b.is_empty() { return Some(EMPTY_PREDICTION_CONTEXT.clone()); }
         } else {
-            if a.is_empty() && b.is_empty() { return Some(Self::new_empty()); }
+            if a.is_empty() && b.is_empty() { return Some(EMPTY_PREDICTION_CONTEXT.clone()); }
             if a.is_empty() {
                 return Some(Self::new_array(
-                    vec![b.parent_ctx.take(), None],
+                    vec![b.parent_ctx.clone(), None],
                     vec![b.return_state, PREDICTION_CONTEXT_EMPTY_RETURN_STATE],
-                ));
+                ).alloc());
             }
             if b.is_empty() {
                 return Some(Self::new_array(
-                    vec![a.parent_ctx.take(), None],
+                    vec![a.parent_ctx.clone(), None],
                     vec![a.return_state, PREDICTION_CONTEXT_EMPTY_RETURN_STATE],
-                ));
+                ).alloc());
             }
         }
 
         None
     }
 
-    fn merge_arrays(mut a: ArrayPredictionContext, mut b: ArrayPredictionContext, root_is_wildcard: bool/*, mergeCache: * DoubleDict*/) -> PredictionContext {
+    fn merge_arrays(mut a: Cow<ArrayPredictionContext>,
+                    mut b: Cow<ArrayPredictionContext>,
+                    root_is_wildcard: bool,
+                    merge_cache: &mut Option<&mut MergeCache>,
+    ) -> PredictionContext {
+//        let a = a.deref();
+//        let b = b.deref();
         let mut merged = ArrayPredictionContext {
             cached_hash: -1,
             parents: Vec::with_capacity(a.return_states.len() + b.return_states.len()),
@@ -317,8 +414,8 @@ impl PredictionContext {
         let mut j = 0;
 
         while i < a.parents.len() && j < b.parents.len() {
-            let a_parent = &mut a.parents[i];
-            let b_parent = &mut b.parents[j];
+            let a_parent = a.parents[i].as_ref();
+            let b_parent = b.parents[j].as_ref();
             if a.return_states[i] == b.return_states[j] {
                 let payload = a.return_states[i];
                 let both = payload == PREDICTION_CONTEXT_EMPTY_RETURN_STATE
@@ -328,41 +425,41 @@ impl PredictionContext {
 
                 if both || ax_ax {
                     merged.return_states.push(payload);
-                    merged.parents.push(a_parent.take());
+                    merged.parents.push(a_parent.cloned());
                 } else {
-                    let merged_parent = Self::merge(*a_parent.take().unwrap(), *b_parent.take().unwrap(), root_is_wildcard);
+                    let merged_parent = Self::merge(a_parent.unwrap(), b_parent.unwrap(), root_is_wildcard, merge_cache);
                     merged.return_states.push(payload);
-                    merged.parents.push(Some(Box::new(merged_parent)));
+                    merged.parents.push(Some(merged_parent));
                 }
                 i += 1;
                 j += 1;
             } else if a.return_states[i] < b.return_states[j] {
                 merged.return_states.push(a.return_states[i]);
-                merged.parents.push(a_parent.take());
+                merged.parents.push(a_parent.cloned());
                 i += 1;
             } else {
                 merged.return_states.push(b.return_states[j]);
-                merged.parents.push(b_parent.take());
+                merged.parents.push(b_parent.cloned());
                 j += 1;
             }
         }
 
         if i < a.return_states.len() {
             for p in i..a.return_states.len() {
-                merged.parents.push(a.parents[p].take());
+                merged.parents.push(a.parents[p].clone());
                 merged.return_states.push(a.return_states[p]);
             }
         }
         if j < b.return_states.len() {
             for p in j..b.return_states.len() {
-                merged.parents.push(b.parents[p].take());
+                merged.parents.push(b.parents[p].clone());
                 merged.return_states.push(b.return_states[p]);
             }
         }
 
         if merged.parents.len() < a.return_states.len() + b.return_states.len() {
             if merged.parents.len() == 1 {
-                return Self::new_singleton(merged.parents[0].take(), merged.return_states[0]);
+                Self::new_singleton(merged.parents[0].clone(), merged.return_states[0]);
             }
             merged.return_states.shrink_to_fit();
             merged.parents.shrink_to_fit();
@@ -371,12 +468,17 @@ impl PredictionContext {
 
         PredictionContext::combine_common_parents(&mut merged);
 
-        return Array(merged);
+        let m = Array(merged);
+
+//        if &m == a.deref(){ return ; }
+//        if &m == b.deref(){ return ; }
+
+        return m;
     }
 
-    pub fn from_rule_context(atn: &ATN, outer_context: &dyn ParserRuleContext) -> PredictionContext {
+    pub fn from_rule_context(atn: &ATN, outer_context: &dyn ParserRuleContext) -> Arc<PredictionContext> {
         if outer_context.peek_parent().is_none() || ptr::eq(outer_context, empty_ctx().as_ref()) {
-            return PredictionContext::new_empty()
+            return EMPTY_PREDICTION_CONTEXT.clone()
         }
 
         let parent = PredictionContext::from_rule_context(atn, outer_context.peek_parent().unwrap().deref());
@@ -387,11 +489,21 @@ impl PredictionContext {
             .deref()
             .cast::<RuleTransition>();
 
-        PredictionContext::new_singleton(Some(Box::new(parent)), transition.follow_state as isize)
+        PredictionContext::new_singleton(Some(parent), transition.follow_state as isize).alloc()
     }
 
     fn combine_common_parents(array: &mut ArrayPredictionContext) {
-        //todo, when PredictionContext will be in arena
+        let mut uniq_parents = HashMap::<Option<Arc<PredictionContext>>, Option<Arc<PredictionContext>>>::new();
+        for p in 0..array.parents.len() {
+            let parent = array.parents[p].as_ref().cloned();
+            if !uniq_parents.contains_key(&parent) {
+                uniq_parents.insert(parent.clone(), parent.clone());
+            }
+        }
+
+        array.parents.iter_mut().for_each(|parent| {
+            *parent = (*uniq_parents.get(parent).unwrap()).clone();
+        });
     }
 }
 
@@ -400,7 +512,7 @@ impl PredictionContext {
 //    fn get_cached_base_prediction_context(context PredictionContext, contextCache: * PredictionContextCache, visited: map[PredictionContext]PredictionContext) -> PredictionContext { unimplemented!() }
 
 pub struct PredictionContextCache {
-    cache: HashMap<PredictionContext, PredictionContext, MurmurHasherBuilder>,
+    cache: RwLock<HashMap<Arc<PredictionContext>, Arc<PredictionContext>, MurmurHasherBuilder>>,
 }
 
 //
@@ -417,7 +529,7 @@ impl BuildHasher for MurmurHasherBuilder {
 impl PredictionContextCache {
     pub fn new() -> PredictionContextCache {
         PredictionContextCache {
-            cache: HashMap::with_hasher(MurmurHasherBuilder {}),
+            cache: RwLock::new(HashMap::with_hasher(MurmurHasherBuilder {})),
         }
     }
 
@@ -429,7 +541,55 @@ impl PredictionContextCache {
         unimplemented!()
     }
 
-    fn length(&self) -> isize {
-        unimplemented!()
+    pub fn get_shared_context(&self, context: &Arc<PredictionContext>, visited: &mut HashMap<*const PredictionContext, Arc<PredictionContext>>) -> Arc<PredictionContext> {
+        if context.is_empty() { return context.clone() }
+
+        if let Some(old) = visited.get(&(context.deref() as *const PredictionContext)) {
+            return old.clone()
+        }
+
+        if let Some(old) = self.cache.read().unwrap().get(context) {
+            return old.clone()
+        }
+        let mut parents = Vec::with_capacity(context.length());
+        let mut changed = false;
+        for i in 0..parents.len() {
+            let parent = self.get_shared_context(context.get_parent(i).unwrap(), visited);
+            if changed || &parent != context.get_parent(i).unwrap() {
+                if !changed {
+                    for j in 0..i {
+                        parents.push(context.get_parent(j).cloned())
+                    }
+                    changed = true;
+                }
+                parents.push(Some(parent.clone()))
+            }
+        }
+        if !changed {
+            self.cache.write().unwrap().insert(context.clone(), context.clone());
+            visited.insert(context.deref(), context.clone());
+            return context.clone()
+        }
+
+        let updated = if parents.len() == 0 {
+            return EMPTY_PREDICTION_CONTEXT.clone()
+        } else if parents.len() == 1 {
+            PredictionContext::new_singleton(parents[0].clone(), context.get_return_state(0))
+        } else {
+            if let Array(array) = context.deref() {
+                PredictionContext::new_array(parents, array.return_states.clone())
+            } else { unreachable!() }
+        };
+
+        let updated = Arc::new(updated);
+        self.cache.write().unwrap().insert(updated.clone(), updated.clone());
+        visited.insert(context.deref(), updated.clone());
+        visited.insert(updated.deref(), updated.clone());
+
+        return updated
+    }
+
+    fn length(&self) -> usize {
+        self.cache.read().unwrap().len()
     }
 }

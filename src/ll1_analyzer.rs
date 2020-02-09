@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use std::ops::Deref;
+use std::sync::Arc;
 
 use bit_set::BitSet;
 
@@ -8,6 +9,7 @@ use crate::atn_config::ATNConfig;
 use crate::atn_state::{ATNState, ATNStateType};
 use crate::interval_set::IntervalSet;
 use crate::parser_rule_context::ParserRuleContext;
+use crate::prediction_context::EMPTY_PREDICTION_CONTEXT;
 use crate::prediction_context::PredictionContext;
 use crate::token::{TOKEN_EOF, TOKEN_EPSILON, TOKEN_INVALID_TYPE, TOKEN_MIN_USER_TOKEN_TYPE};
 use crate::transition::{RuleTransition, TransitionType};
@@ -52,7 +54,7 @@ impl LL1Analyzer<'_> {
 //                 atn:&ATN,
                  s: &dyn ATNState,
                  stop_state: Option<&dyn ATNState>,
-                 ctx: Option<PredictionContext>,
+                 ctx: Option<Arc<PredictionContext>>,
                  look: &mut IntervalSet,
                  look_busy: &mut HashSet<ATNConfig>,
                  called_rule_stack: &mut BitSet,
@@ -86,14 +88,14 @@ impl LL1Analyzer<'_> {
                     look.add_one(TOKEN_EOF);
                     return;
                 }
-                Some(mut ctx) if ctx != PredictionContext::new_empty() => {
+                Some(ctx) if &ctx != &*EMPTY_PREDICTION_CONTEXT => {
                     let removed = called_rule_stack.contains(s.get_rule_index());
                     called_rule_stack.remove(s.get_rule_index());
                     for i in 0..ctx.length() {
                         self.look_work(
                             self.atn.states[ctx.get_return_state(i) as usize].as_ref(),
                             stop_state,
-                            ctx.take_parent(i),
+                            ctx.get_parent(i).cloned(),
                             look,
                             look_busy,
                             called_rule_stack,
@@ -118,7 +120,7 @@ impl LL1Analyzer<'_> {
                     let rule_tr = tr.as_ref().cast::<RuleTransition>();
                     if called_rule_stack.contains(target.get_rule_index()) { continue; }
 
-                    let new_ctx = PredictionContext::new_singleton(ctx.clone().map(Box::new), rule_tr.follow_state as isize);
+                    let new_ctx = Arc::new(PredictionContext::new_singleton(ctx.clone(), rule_tr.follow_state as isize));
 
                     called_rule_stack.insert(target.get_rule_index());
                     self.look_work(target, stop_state, Some(new_ctx), look, look_busy,

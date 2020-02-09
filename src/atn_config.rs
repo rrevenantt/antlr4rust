@@ -1,5 +1,7 @@
+use std::fmt::{Debug, Error, Formatter, Write};
 use std::hash::{Hash, Hasher};
 use std::ops::DerefMut;
+use std::sync::Arc;
 
 use murmur3::murmur3_32::MurmurHasher;
 
@@ -10,34 +12,17 @@ use crate::lexer_action_executor::LexerActionExecutor;
 use crate::prediction_context::PredictionContext;
 use crate::semantic_context::SemanticContext;
 
-//pub trait ATNConfig: Sync + Send {
-//    fn get_state(&self) -> ATNStateRef;
-//    fn get_alt(&self) -> isize;
-//    fn get_type(&self) -> &ATNConfigType;
-//    //    fn get_semantic_context(&self) -> &SemanticContext;
-//
-//    fn get_context(&self) -> Option<&PredictionContext>;
-//    fn take_context(&mut self) -> PredictionContext;
-//    fn set_context(&mut self, v: Box<PredictionContext>);
-//
-//    fn get_reaches_into_outer_context(&self) -> isize;
-//    fn set_reaches_into_outer_context(&mut self, v: isize);
-//
-//    fn get_precedence_filter_suppressed(&self) -> bool;
-//    fn set_precedence_filter_suppressed(&mut self, v: bool);
-//}
-
 impl Eq for ATNConfig {}
 
 impl PartialEq for ATNConfig {
     fn eq(&self, other: &Self) -> bool {
         self.get_state() == other.get_state()
             && self.get_alt() == other.get_alt()
-            && self.get_context() == other.get_context()
+            && (Arc::ptr_eq(self.get_context().unwrap(), other.get_context().unwrap())
+            || self.get_context() == other.get_context())
             && self.get_type() == other.get_type()
             && self.semantic_context == other.semantic_context
             && self.precedence_filter_suppressed == other.precedence_filter_suppressed
-        // && semantic context
     }
 }
 
@@ -60,23 +45,31 @@ impl Hash for ATNConfig {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct ATNConfig<T: DerefMut<Target=PredictionContext> = Box<PredictionContext>> {
+#[derive(Clone)]
+pub struct ATNConfig {
     precedence_filter_suppressed: bool,
     //todo since ATNState is immutable when we started working with ATNConfigs
     // looks like it is possible to have usual reference here
     state: ATNStateRef,
     alt: isize,
     //todo maybe option is unnecessary and PredictionContext::EMPTY would be enough
-    //another todo check if Arc is actually faster,
-    // but looks like cloning is enough, PredictionContext size is most of the time very small
-    // or maybe transform it into local variant with Rc because prediction for particular symbol is done in one thread
-    // or PredictionContext might be behind Box<dyn DerefMut<Target=PredictionContext>> to choose Rc/Arc at runtime
-    context: Option<T>,
+    //another todo check check arena alloc
+    context: Option<Arc<PredictionContext>>,
     //todo looks like here option is also unnesesary
     pub semantic_context: Option<Box<SemanticContext>>,
     pub reaches_into_outer_context: isize,
     pub config_type: ATNConfigType,
+}
+
+impl Debug for ATNConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        f.write_fmt(format_args!("({},{},[{}]", self.state, self.alt, self.context.as_deref().unwrap()))?;
+        if self.reaches_into_outer_context > 0 {
+            f.write_fmt(format_args!(",up={}", self.reaches_into_outer_context))?;
+        }
+
+        f.write_str(")")
+    }
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -103,21 +96,16 @@ impl ATNConfig {
         })
     }
 
-//    fn new_base_atnconfig7(_old: &ATNConfig) -> ATNConfig {
-//        unimplemented!()
-//    }
-
     pub fn new(
         state: ATNStateRef,
         alt: isize,
-        context: Option<PredictionContext>,
+        context: Option<Arc<PredictionContext>>,
     ) -> ATNConfig {
         ATNConfig {
             precedence_filter_suppressed: false,
             state,
             alt,
-            context: context.map(Box::new),
-//            semantic_context: SemanticContext::empty(),
+            context,
             semantic_context: Some(Box::new(SemanticContext::NONE)),
             reaches_into_outer_context: 0,
             config_type: ATNConfigType::BaseATNConfig,
@@ -127,51 +115,19 @@ impl ATNConfig {
     pub fn new_with_semantic(
         state: ATNStateRef,
         alt: isize,
-        context: Option<PredictionContext>,
+        context: Option<Arc<PredictionContext>>,
         semantic_context: Option<Box<SemanticContext>>,
     ) -> ATNConfig {
+        assert!(semantic_context.is_some());
         let mut new = Self::new(state, alt, context);
         new.semantic_context = semantic_context;
         new
     }
 
-    fn new_base_atnconfig4(_c: &ATNConfig, _state: &dyn ATNState) -> ATNConfig {
-        unimplemented!()
-    }
-
-    fn new_base_atnconfig3(
-        _c: &ATNConfig,
-        _state: &dyn ATNState,
-        _semantic_context: &SemanticContext,
-    ) -> ATNConfig {
-        unimplemented!()
-    }
-
-//    fn new_base_atnconfig2(_c: &ATNConfig, _semanticContext: &SemanticContext) -> ATNConfig {
-//        unimplemented!()
-//    }
-//
-//    fn new_base_atnconfig1(
-//        _c: &ATNConfig,
-//        _state: &ATNState,
-//        _context: &PredictionContext,
-//    ) -> ATNConfig {
-//        unimplemented!()
-//    }
-//
-//    fn new_base_atnconfig(
-//        _c: &ATNConfig,
-//        _state: &ATNState,
-//        _context: &PredictionContext,
-//        _semanticContext: &SemanticContext,
-//    ) -> ATNConfig {
-//        unimplemented!()
-//    }
-
     pub fn new_lexer_atnconfig6(
         _state: ATNStateRef,
         _alt: isize,
-        _context: PredictionContext,
+        _context: Arc<PredictionContext>,
     ) -> ATNConfig {
         let mut atnconfig = ATNConfig::new(_state, _alt, Some(_context));
         atnconfig.config_type = ATNConfigType::LexerATNConfig {
@@ -180,20 +136,6 @@ impl ATNConfig {
         };
         atnconfig
     }
-
-    //fn new_lexer_atnconfig5(state: &ATNState, alt: isize, context: PredictionContext, lexerActionExecutor: LexerActionExecutor) ->  LexerATNConfig { unimplemented!() }
-
-    fn new_lexer_atnconfig4(_c: &ATNConfig, _state: &dyn ATNState) -> ATNConfig {
-        unimplemented!()
-    }
-
-//    pub(crate) fn new_lexer_atnconfig3(
-//        c: &ATNConfig,
-//        state: &ATNState, /*, lexerActionExecutor:  LexerActionExecutor*/
-//    ) -> ATNConfig {
-////        let prediction_context = c.get_context().map(|x| x.clone());
-////        Self::new_lexer_atnconfig2(c, state, prediction_context)
-//    }
 
     pub fn cloned_with_new_semantic(&self, target: &dyn ATNState, ctx: Option<Box<SemanticContext>>) -> ATNConfig {
         let mut new = self.cloned(target);
@@ -211,12 +153,9 @@ impl ATNConfig {
         new
     }
 
-    pub fn cloned_with_new_ctx(&self, target: &dyn ATNState, ctx: Option<PredictionContext>) -> ATNConfig {
+    pub fn cloned_with_new_ctx(&self, target: &dyn ATNState, ctx: Option<Arc<PredictionContext>>) -> ATNConfig {
         let mut new = self.cloned(target);
-        new.context = ctx.map(Box::new);
-//        if let ATNConfigType::LexerATNConfig { passed_through_non_greedy_decision,.. } = &mut new.config_type{
-//            *passed_through_non_greedy_decision = check_non_greedy_decision(self,target);
-//        }
+        new.context = ctx;
 
         new
     }
@@ -232,26 +171,6 @@ impl ATNConfig {
         new
     }
 
-//    pub(crate) fn new_lexer_atnconfig2(
-//        c: &ATNConfig,
-//        state: &ATNState,
-//        _context: Option<PredictionContext>,
-//    ) -> ATNConfig {
-//        c.cloned_with_new_ctx(state,_context)
-//    }
-
-    fn new_lexer_atnconfig1(
-        _state: &dyn ATNState,
-        _alt: isize,
-        _context: &PredictionContext,
-    ) -> ATNConfig {
-        unimplemented!()
-    }
-
-    //fn check_non_greedy_decision(source LexerATNConfig, target: &ATNState) -> bool { unimplemented!() }
-//}
-//
-//impl ATNConfig for BaseATNConfig {
     pub fn get_state(&self) -> ATNStateRef {
         self.state
     }
@@ -268,18 +187,16 @@ impl ATNConfig {
         self.semantic_context.as_deref()
     }
 
-    pub fn get_context(&self) -> Option<&PredictionContext> {
-        self.context.as_deref()
+    pub fn get_context(&self) -> Option<&Arc<PredictionContext>> {
+        self.context.as_ref()
     }
 
-    pub fn take_context(&mut self) -> PredictionContext {
-        *self.context.take().unwrap()
-//        Box::try_unwrap(self.context.take().unwrap())
-//            .unwrap_or_else(|it| it.deref().clone() )
+    pub fn take_context(&mut self) -> Arc<PredictionContext> {
+        self.context.take().unwrap()
     }
 
-    pub fn set_context(&mut self, _v: PredictionContext) {
-        self.context = Some(Box::new(_v));
+    pub fn set_context(&mut self, _v: Arc<PredictionContext>) {
+        self.context = Some(_v);
     }
 
     pub fn get_reaches_into_outer_context(&self) -> isize {
@@ -298,7 +215,6 @@ impl ATNConfig {
         self.precedence_filter_suppressed = _v;
     }
 }
-
 
 fn check_non_greedy_decision(source: &ATNConfig, target: &dyn ATNState) -> bool {
     if let LexerATNConfig {

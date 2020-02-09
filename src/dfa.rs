@@ -74,7 +74,7 @@ impl DFA {
             Box::new(ATNConfigSet::new_base_atnconfig_set(true)),
         ));
         if let ATNStateType::DecisionState {
-            state: ATNDecisionState::PlusLoopBack,
+            state: ATNDecisionState::StarLoopEntry { is_precedence: true, .. },
             ..
         } = atn.states[atn_start_state].get_state_type()
         {
@@ -99,12 +99,17 @@ impl DFA {
         }
 
         self.s0.read().unwrap()
-            .and_then(|s0|
+            .and_then(|s0| {
                 self.states
                     .read().unwrap()[s0]
                     .edges
                     .get(_precedence as usize)
                     .copied()
+                    .and_then(|it| match it {
+                        0 => None,
+                        x => Some(x)
+                    })
+            }
             )
     }
 

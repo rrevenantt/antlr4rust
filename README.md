@@ -15,8 +15,6 @@ Currently requires nightly version of rust.
 This very likely will be the case until `specialization`,`try_blocks` and `unsize` features are stabilized. 
 
 Remaining core things:
-- [ ] Performance
-  - [ ] Some redundant cloning is happening inside which can result in performance degradation in some corner cases for left recursive rules
 - [ ] Documentation
   - [ ] Quite some things are already documented but still far from perfect
   - [ ] More doctests. Currently the only examples are tests

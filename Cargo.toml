@@ -25,3 +25,7 @@ typed-arena = "2.0.*"
 #[[test]]
 #name = "my_test"
 #path="tests/my_test.rs"
+
+[profile.release]
+opt-level = 3
+#debug = true

@@ -1,13 +1,10 @@
 #![feature(try_blocks)]
 #![feature(inner_deref)]
+//! Integration tests
 
-//extern crate antlr_rust;
 #[macro_use]
 extern crate lazy_static;
 
-//fn main() {
-//    println!("Hello, world!");
-//}
 mod gen {
     use std::fmt::Write;
     use std::io::Read;
