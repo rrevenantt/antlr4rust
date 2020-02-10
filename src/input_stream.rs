@@ -14,7 +14,6 @@ pub struct InputStream {
     name: String,
     index: isize,
     data: Vec<isize>,
-//    size: isize,
 }
 
 impl InputStream {
@@ -24,7 +23,6 @@ impl InputStream {
             name: "<empty>".to_string(),
             index: 0,
             data,
-//            size: len,
         }
     }
 
@@ -80,11 +78,8 @@ impl IntStream for InputStream {
         }
 
         if (self.index + offset - 1) >= self.size() {
-            //System.out.println("char LA("+i+")=EOF; p="+p);
             return crate::int_stream::EOF;
         }
-        //System.out.println("char LA("+i+")="+(char)data[p+i-1]+"; p="+p);
-        //System.out.println("LA("+i+"); p="+p+" n="+n+" data.length="+data.length);
         return self.data[(self.index + offset - 1) as usize] as isize;
     }
 

@@ -206,7 +206,7 @@ impl DefaultErrorStrategy {
             let tr = tr.cast::<RuleTransition>();
             let follow = atn.next_tokens(atn.states[tr.follow_state].as_ref());
             recover_set.add_set(follow);
-            ctx = c.peek_parent();
+            ctx = c.get_parent_ctx();
         }
         recover_set.remove_one(TOKEN_EPSILON);
         return recover_set;

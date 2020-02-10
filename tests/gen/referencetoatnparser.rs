@@ -218,7 +218,7 @@ impl ReferenceToATNParser {
 
                 println!("{}", {
                     let temp = recog.base.input.lt(-1).map(|it| it.get_token_index()).unwrap_or(-1);
-                    recog.input.get_text_from_interval(recog.get_parser_rule_context().get_start().unwrap().get_token_index(), temp)
+                    recog.input.get_text_from_interval(recog.get_parser_rule_context().get_start().get_token_index(), temp)
                 });
             }
         };

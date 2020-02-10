@@ -17,9 +17,8 @@ pub trait RuleContext {
         self.get_invoking_state() == -1
     }
 
-    //todo rewrite into take and get
     fn get_parent_ctx(&self) -> Option<Rc<dyn ParserRuleContext>>;
-    fn peek_parent(&self) -> Option<ParserRuleContextType>;
+
     fn set_parent(&self, parent: &Option<Rc<dyn ParserRuleContext>>);
 }
 
@@ -68,9 +67,9 @@ impl<Ctx: CustomRuleContext> RuleContext for BaseRuleContext<Ctx> {
         self.parent_ctx.borrow().as_ref().map(Weak::upgrade).flatten()
     }
 
-    fn peek_parent(&self) -> Option<ParserRuleContextType> {
-        self.parent_ctx.borrow().as_ref().map(Weak::upgrade).map(Option::unwrap)
-    }
+//    fn get_parent_ctx(&self) -> Option<ParserRuleContextType> {
+//        self.parent_ctx.borrow().as_ref().map(Weak::upgrade).map(Option::unwrap)
+//    }
 
     fn set_parent(&self, parent: &Option<Rc<dyn ParserRuleContext>>) {
         *self.parent_ctx.borrow_mut() = parent.as_ref().map(Rc::downgrade);

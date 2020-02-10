@@ -416,7 +416,7 @@ impl<T, Ext> BaseParser<Ext, T>
         prev.set_stop(self.input.lt(-1).map(Token::to_owned));
 
 //        println!("{}",prev.get_start().unwrap());
-        localctx.set_start(prev.get_start());
+        localctx.set_start(Some(prev.get_start().clone()));
         self.ctx = Some(localctx);
 
         if self.build_parse_trees {

@@ -114,7 +114,7 @@ impl ATN {
             following = self.next_tokens(self.states[tr.follow_state].as_ref());
             expected.add_set(following);
             expected.remove_one(TOKEN_EPSILON);
-            ctx = c.peek_parent();
+            ctx = c.get_parent_ctx();
         }
 
         if following.contains(TOKEN_EPSILON) {

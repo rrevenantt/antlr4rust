@@ -5,6 +5,7 @@ use std::fmt::{Debug, Error, Formatter};
 use std::ops::{CoerceUnsized, Deref, DerefMut};
 use std::rc::Rc;
 
+use crate::common_token_factory::INVALID_TOKEN;
 use crate::errors::ANTLRError;
 use crate::interval_set::Interval;
 use crate::parser::{ListenerCaller, Parser, ParserRecog};
@@ -18,10 +19,20 @@ pub trait ParserRuleContext: RuleContext + CustomRuleContext + ParseTree + Any +
     fn set_exception(&self, e: ANTLRError);
 
     fn set_start(&self, t: Option<OwningToken>);
-    fn get_start(&self) -> Option<OwningToken>;
+    ///
+    /// Get the initial token in this context.
+    /// Note that the range from start to stop is inclusive, so for rules that do not consume anything
+    /// (for example, zero length or error productions) this token may exceed stop.
+    ///
+    fn get_start(&self) -> Ref<OwningToken>;
 
     fn set_stop(&self, t: Option<OwningToken>);
-    fn get_stop(&self) -> Option<OwningToken>;
+    ///
+    /// Get the final token in this context.
+    /// Note that the range from start to stop is inclusive, so for rules that do not consume anything
+    /// (for example, zero length or error productions) this token may precede start.
+    ///
+    fn get_stop(&self) -> Ref<OwningToken>;
 
 
     fn add_token_node(&self, token: TerminalNode) -> Rc<dyn ParserRuleContext>;
@@ -50,17 +61,22 @@ pub trait ParserRuleContext: RuleContext + CustomRuleContext + ParseTree + Any +
             .collect()
     }
 
-    fn get_token(&self, ttype: isize, pos: usize) -> Rc<TerminalNode> {
+    fn get_token(&self, ttype: isize, pos: usize) -> Option<Rc<TerminalNode>> {
         self.get_children()
             .iter()
             .filter(|&it| it.deref().type_id() == TypeId::of::<TerminalNode>())
             .map(|it| cast_rc::<TerminalNode>(it.clone()))
             .filter(|it| it.symbol.get_token_type() == ttype)
-            .nth(pos).unwrap()
+            .nth(pos)
     }
 
-    fn get_tokens(&self, _ttype: isize) -> Box<dyn Iterator<Item=&OwningToken>> {
-        unimplemented!()
+    fn get_tokens(&self, ttype: isize) -> Vec<Rc<TerminalNode>> {
+        self.get_children()
+            .iter()
+            .filter(|&it| it.deref().type_id() == TypeId::of::<TerminalNode>())
+            .map(|it| cast_rc::<TerminalNode>(it.clone()))
+            .filter(|it| it.symbol.get_token_type() == ttype)
+            .collect()
     }
 
     fn upcast_any(&self) -> &dyn Any;
@@ -142,8 +158,8 @@ pub type ParserRuleContextType = Rc<dyn ParserRuleContext>;
 pub struct BaseParserRuleContext<Ctx: CustomRuleContext> {
     base: BaseRuleContext<Ctx>,
 
-    start: RefCell<Option<OwningToken>>,
-    stop: RefCell<Option<OwningToken>>,
+    start: RefCell<OwningToken>,
+    stop: RefCell<OwningToken>,
     exception: Option<Box<ANTLRError>>,
     /// List of children of current node
     pub(crate) children: RefCell<Vec<ParserRuleContextType>>,
@@ -166,10 +182,6 @@ impl<Ctx: CustomRuleContext> RuleContext for BaseParserRuleContext<Ctx> {
 
     fn get_parent_ctx(&self) -> Option<Rc<dyn ParserRuleContext>> {
         self.base.get_parent_ctx()
-    }
-
-    fn peek_parent(&self) -> Option<ParserRuleContextType> {
-        self.base.peek_parent()
     }
 
     fn set_parent(&self, parent: &Option<Rc<dyn ParserRuleContext>>) {
@@ -214,19 +226,19 @@ impl<Ctx: CustomRuleContext> ParserRuleContext for BaseParserRuleContext<Ctx> {
     }
 
     fn set_start(&self, t: Option<OwningToken>) {
-        *self.start.borrow_mut() = t;
+        *self.start.borrow_mut() = t.unwrap_or((**INVALID_TOKEN).clone());
     }
 
-    fn get_start(&self) -> Option<OwningToken> {
-        self.start.borrow().clone()
+    fn get_start(&self) -> Ref<OwningToken> {
+        self.start.borrow()
     }
 
     fn set_stop(&self, t: Option<OwningToken>) {
-        *self.stop.borrow_mut() = t;
+        *self.stop.borrow_mut() = t.unwrap_or((**INVALID_TOKEN).clone());
     }
 
-    fn get_stop(&self) -> Option<OwningToken> {
-        self.stop.borrow().clone()
+    fn get_stop(&self) -> Ref<OwningToken> {
+        self.stop.borrow()
     }
 
     fn add_token_node(&self, token: TerminalNode) -> Rc<dyn ParserRuleContext> {
@@ -317,8 +329,8 @@ impl<Ctx: CustomRuleContext> BaseParserRuleContext<Ctx> {
     pub fn new_parser_ctx(parent_ctx: Option<ParserRuleContextType>, invoking_state: isize, ext: Ctx) -> Self {
         BaseParserRuleContext {
             base: BaseRuleContext::new_ctx(parent_ctx, invoking_state, ext),
-            start: RefCell::new(None),
-            stop: RefCell::new(None),
+            start: RefCell::new((**INVALID_TOKEN).clone()),
+            stop: RefCell::new((**INVALID_TOKEN).clone()),
             exception: None,
             children: RefCell::new(vec![]),
         }
@@ -352,11 +364,11 @@ impl<T: DerefSeal<Target=I> + Debug + 'static, I: ParserRuleContext + ?Sized> Pa
 
     fn set_start(&self, t: Option<OwningToken>) { self.deref().set_start(t) }
 
-    fn get_start(&self) -> Option<OwningToken> { self.deref().get_start() }
+    fn get_start(&self) -> Ref<OwningToken> { self.deref().get_start() }
 
     fn set_stop(&self, t: Option<OwningToken>) { self.deref().set_stop(t) }
 
-    fn get_stop(&self) -> Option<OwningToken> { self.deref().get_stop() }
+    fn get_stop(&self) -> Ref<OwningToken> { self.deref().get_stop() }
 
     fn add_token_node(&self, token: BaseParserRuleContext<TerminalNodeCtx>) -> Rc<dyn ParserRuleContext> { self.deref().add_token_node(token) }
 
@@ -383,8 +395,6 @@ impl<T: DerefSeal<Target=I> + Debug + 'static, I: ParserRuleContext + ?Sized> Ru
     fn is_empty(&self) -> bool { self.deref().is_empty() }
 
     fn get_parent_ctx(&self) -> Option<Rc<dyn ParserRuleContext>> { self.deref().get_parent_ctx() }
-
-    fn peek_parent(&self) -> Option<Rc<dyn ParserRuleContext>> { self.deref().peek_parent() }
 
     fn set_parent(&self, parent: &Option<Rc<dyn ParserRuleContext>>) { self.deref().set_parent(parent) }
 }

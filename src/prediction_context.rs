@@ -477,11 +477,11 @@ impl PredictionContext {
     }
 
     pub fn from_rule_context(atn: &ATN, outer_context: &dyn ParserRuleContext) -> Arc<PredictionContext> {
-        if outer_context.peek_parent().is_none() || ptr::eq(outer_context, empty_ctx().as_ref()) {
+        if outer_context.get_parent_ctx().is_none() || ptr::eq(outer_context, empty_ctx().as_ref()) {
             return EMPTY_PREDICTION_CONTEXT.clone()
         }
 
-        let parent = PredictionContext::from_rule_context(atn, outer_context.peek_parent().unwrap().deref());
+        let parent = PredictionContext::from_rule_context(atn, outer_context.get_parent_ctx().unwrap().deref());
 
         let transition = atn.states[outer_context.get_invoking_state() as usize]
             .get_transitions()
