@@ -179,7 +179,6 @@ impl XMLLexerActions {
         }
     }
 
-
     fn COMMENT_sempred(_localctx: &LexerContext, pred_index: isize,
                        recog: &mut <Self as Actions>::Recog,
     ) -> bool {

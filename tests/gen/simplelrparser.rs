@@ -249,7 +249,7 @@ impl AContextExt {
 }
 
 pub trait AContextAttrs: ParserRuleContext + BorrowMut<AContextExt> {
-    fn ID(&self) -> Rc<TerminalNode> where Self: Sized {
+    fn ID(&self) -> Option<Rc<TerminalNode>> where Self: Sized {
         self.get_token(ID, 0)
     }
     fn a(&self) -> Rc<AContextAll> where Self: Sized {
