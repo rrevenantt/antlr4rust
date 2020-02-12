@@ -32,15 +32,6 @@ impl<'a, T: TokenStream> Iterator for TokenIter<'a, T> {
     }
 }
 
-//impl<T:TokenStream> IntoIterator for T{
-//    type Item = OwningToken;
-//    type IntoIter = TokenIter<'_,T>;
-//
-//    fn into_iter(self) -> Self::IntoIter {
-//        unimplemented!()
-//    }
-//}
-
 pub struct UnbufferedTokenStream<T: TokenSource> {
     token_source: T,
     pub(crate) tokens: Vec<Box<dyn Token>>,
@@ -52,11 +43,11 @@ pub struct UnbufferedTokenStream<T: TokenSource> {
 }
 
 impl<T: TokenSource> UnbufferedTokenStream<T> {
-    pub fn iter(&mut self) -> IterWrapper<Self> {
+    pub fn iter(&mut self) -> IterWrapper<'_, Self> {
         IterWrapper(self)
     }
 
-    pub fn token_iter(&mut self) -> TokenIter<Self> {
+    pub fn token_iter(&mut self) -> TokenIter<'_, Self> {
         TokenIter(self, false)
     }
 

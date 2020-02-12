@@ -1,6 +1,6 @@
 use std::borrow::Cow;
-use std::collections::{HashMap, HashSet, LinkedList};
-use std::fmt::{Display, Error, Formatter, Write};
+use std::collections::HashMap;
+use std::fmt::{Display, Error, Formatter};
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::ops::Deref;
 use std::ptr;
@@ -9,11 +9,10 @@ use std::sync::{Arc, RwLock};
 use murmur3::murmur3_32::MurmurHasher;
 
 use crate::atn::ATN;
-use crate::dfa::ScopeExt;
 use crate::parser_atn_simulator::MergeCache;
 use crate::parser_rule_context::{empty_ctx, ParserRuleContext};
 use crate::prediction_context::PredictionContext::{Array, Singleton};
-use crate::transition::{RuleTransition, TransitionType};
+use crate::transition::RuleTransition;
 
 pub const PREDICTION_CONTEXT_EMPTY_RETURN_STATE: isize = 0x7FFFFFFF;
 
@@ -80,7 +79,7 @@ impl PartialEq for SingletonPredictionContext {
 }
 
 impl SingletonPredictionContext {
-    #[inline]
+    #[inline(always)]
     fn is_empty(&self) -> bool {
         self.return_state == PREDICTION_CONTEXT_EMPTY_RETURN_STATE
             && self.parent_ctx == None
@@ -141,35 +140,26 @@ lazy_static! {
 
 impl PredictionContext {
 
-    pub fn new(cached_hash: isize) -> PredictionContext {
-        unimplemented!()
-    }
-
     pub fn new_array(
         parents: Vec<Option<Arc<PredictionContext>>>,
         return_states: Vec<isize>,
     ) -> PredictionContext {
-        let mut ctx = PredictionContext::Array(ArrayPredictionContext {
+        PredictionContext::Array(ArrayPredictionContext {
             cached_hash: 0,
             parents,
             return_states,
-        });
-//        ctx.calc_hash();
-        ctx
+        })
     }
 
-    #[inline]
     pub fn new_singleton(
         parent_ctx: Option<Arc<PredictionContext>>,
         return_state: isize,
     ) -> PredictionContext {
-        let mut ctx = PredictionContext::Singleton(SingletonPredictionContext {
+        PredictionContext::Singleton(SingletonPredictionContext {
             cached_hash: 0,
             parent_ctx,
             return_state,
-        });
-//        ctx.calc_hash();
-        ctx
+        })
     }
 
     pub fn new_empty() -> PredictionContext {
@@ -222,7 +212,6 @@ impl PredictionContext {
         };
     }
 
-    #[inline]
     pub fn get_parent(&self, index: usize) -> Option<&Arc<PredictionContext>> {
         match self {
             PredictionContext::Singleton(singleton) => {
@@ -235,7 +224,6 @@ impl PredictionContext {
         }
     }
 
-    #[inline]
     pub fn get_return_state(&self, index: usize) -> isize {
         match self {
             PredictionContext::Singleton(SingletonPredictionContext { return_state, .. }) => *return_state,
@@ -243,7 +231,6 @@ impl PredictionContext {
         }
     }
 
-    #[inline]
     pub fn length(&self) -> usize {
         match self {
             PredictionContext::Singleton { .. } => 1,
@@ -251,7 +238,7 @@ impl PredictionContext {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn is_empty(&self) -> bool {
         if let PredictionContext::Singleton(
             singleton
@@ -261,12 +248,12 @@ impl PredictionContext {
         self.get_return_state(0) == PREDICTION_CONTEXT_EMPTY_RETURN_STATE
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn has_empty_path(&self) -> bool {
         self.get_return_state(self.length() - 1) == PREDICTION_CONTEXT_EMPTY_RETURN_STATE
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn hash_code(&self) -> i32 {
         match self {
             PredictionContext::Singleton(SingletonPredictionContext { cached_hash, .. })
@@ -275,8 +262,7 @@ impl PredictionContext {
         }
     }
 
-    #[inline]
-    fn to_array(&self) -> Cow<ArrayPredictionContext> {
+    fn to_array(&self) -> Cow<'_, ArrayPredictionContext> {
         match self {
             PredictionContext::Singleton(s) => {
                 Cow::Owned(ArrayPredictionContext {
@@ -289,7 +275,7 @@ impl PredictionContext {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn alloc(mut self) -> Arc<PredictionContext> {
         self.calc_hash();
         Arc::new(self)
@@ -347,8 +333,8 @@ impl PredictionContext {
         return r;
     }
 
-    fn merge_singletons(mut a: &SingletonPredictionContext,
-                        mut b: &SingletonPredictionContext,
+    fn merge_singletons(a: &SingletonPredictionContext,
+                        b: &SingletonPredictionContext,
                         root_is_wildcard: bool,
                         merge_cache: &mut Option<&mut MergeCache>,
     ) -> Arc<PredictionContext> {
@@ -398,8 +384,8 @@ impl PredictionContext {
         None
     }
 
-    fn merge_arrays(mut a: Cow<ArrayPredictionContext>,
-                    mut b: Cow<ArrayPredictionContext>,
+    fn merge_arrays(a: Cow<'_, ArrayPredictionContext>,
+                    b: Cow<'_, ArrayPredictionContext>,
                     root_is_wildcard: bool,
                     merge_cache: &mut Option<&mut MergeCache>,
     ) -> PredictionContext {
@@ -531,14 +517,6 @@ impl PredictionContextCache {
         PredictionContextCache {
             cache: RwLock::new(HashMap::with_hasher(MurmurHasherBuilder {})),
         }
-    }
-
-    fn add(&self, _ctx: Box<PredictionContext>) -> &PredictionContext {
-        unimplemented!()
-    }
-
-    fn get(&self, _ctx: Box<PredictionContext>) -> &PredictionContext {
-        unimplemented!()
     }
 
     pub fn get_shared_context(&self, context: &Arc<PredictionContext>, visited: &mut HashMap<*const PredictionContext, Arc<PredictionContext>>) -> Arc<PredictionContext> {

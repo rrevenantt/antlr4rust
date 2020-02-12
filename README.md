@@ -8,8 +8,8 @@ and [tests/my_tests.rs](tests/my_test.rs) for actual usage examples
 
 ### Implementation status
 
-Everything is implemented, but you should still expect bugs/panics, so it is not ready for production yet.
-Also API very likely will have some changes.
+Everything is implemented, business logic is quite stable and well tested, but user facing 
+API is not very robust yet an very likely will have some changes.
 
 Currently requires nightly version of rust. 
 This very likely will be the case until `specialization`,`try_blocks` and `unsize` features are stabilized. 
@@ -21,6 +21,9 @@ Remaining core things:
 - [ ] API stabilization
   - [ ] Rust api guidelines compliance  
   - [ ] more tests for API because it is quite different from Java
+- [ ] Code quality
+  - [ ] Rustfmt fails to run currently
+  - [ ] Clippy sanitation 
   
 See tracking [issue](https://github.com/antlr/antlr4/issues/1839) for more info
   
@@ -60,7 +63,8 @@ there are quite some differences because Rust is not an OOP language and is much
  - If you are using labeled alternatives, 
  struct generated for rule is a enum with variant for each alternative
  - Parser needs to have ownership for listeners, but it is possible te get listener back via `ListenerId`
- otherwise `ParseTreeWalker` should be used 
+ otherwise `ParseTreeWalker` should be used.
+ 
  
 ### Unsafe
 Currently unsafe is used only to cast from trait object back to original type 

@@ -13,6 +13,8 @@ pub trait RuleContext {
     fn get_invoking_state(&self) -> isize;
     fn set_invoking_state(&self, t: isize);
 
+    /// A context is empty if there is no invoking state; meaning nobody called
+    /// current context. Which is usually true for the root of the syntax tree
     fn is_empty(&self) -> bool {
         self.get_invoking_state() == -1
     }

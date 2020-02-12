@@ -20,7 +20,7 @@ pub struct ATN {
 
     pub grammar_type: ATNType,
 
-    pub lexer_actions: Vec<LexerAction>,
+    pub(crate) lexer_actions: Vec<LexerAction>,
 
     pub max_token_type: isize,
 
@@ -53,31 +53,29 @@ impl ATN {
         }
     }
 
-//    fn next_tokens_in_context(&self,s: ATNStateRef, _ctx: &RuleContext) -> IntervalSet {
-//        unimplemented!()
-//    }
-//
-//    fn next_tokens_no_context(&self,s: ATNStateRef) -> IntervalSet {
-//        unimplemented!()
-//    }
-
+    ///Compute the set of valid tokens that can occur starting in `s` and
+    ///staying in same rule. `Token::EPSILON` is in set if we reach end of
+    ///rule.
     pub fn next_tokens<'a>(&self, s: &'a dyn ATNState) -> &'a IntervalSet {
         s.get_next_tokens_within_rule().get_or_init(|| {
             self.next_tokens_in_ctx(s, None)
                 .modify_with(|r| {
-//                    println!("expecting {:?}", r);
                     r.read_only = true
                 }
                 )
         })
     }
 
+    /// Compute the set of valid tokens that can occur starting in state `s`.
+    /// If `ctx` is null, the set of tokens will not include what can follow
+    /// the rule surrounding `s`. In other words, the set will be
+    /// restricted to tokens reachable staying within `s`'s rule.
     pub fn next_tokens_in_ctx(&self, s: &dyn ATNState, _ctx: Option<&dyn ParserRuleContext>) -> IntervalSet {
         let analyzer = LL1Analyzer::new(self);
         analyzer.look(s, None, _ctx)
     }
 
-    pub fn add_state(&mut self, state: Box<dyn ATNState>) {
+    pub(crate) fn add_state(&mut self, state: Box<dyn ATNState>) {
         assert_eq!(state.get_state_number(), self.states.len());
         self.states.push(state)
     }
@@ -94,6 +92,38 @@ impl ATN {
         self.decision_to_state[decision]
     }
 
+    /// Computes the set of input symbols which could follow ATN state number
+    /// {@code stateNumber} in the specified full {@code context}. This method
+    /// considers the complete parser context, but does not evaluate semantic
+    /// predicates (i.e. all predicates encountered during the calculation are
+    /// assumed true). If a path in the ATN exists from the starting state to the
+    /// {@link RuleStopState} of the outermost context without matching any
+    /// symbols, {@link Token#EOF} is added to the returned set.
+    ///
+    /// <p>If {@code context} is {@code null}, it is treated as {@link ParserRuleContext#EMPTY}.</p>
+    ///
+    /// Note that this does NOT give you the set of all tokens that could
+    /// appear at a given token position in the input phrase.  In other words,
+    /// it does not answer:
+    ///
+    ///   "Given a specific partial input phrase, return the set of all tokens
+    ///    that can follow the last token in the input phrase."
+    ///
+    /// The big difference is that with just the input, the parser could
+    /// land right in the middle of a lookahead decision. Getting
+    /// all *possible* tokens given a partial input stream is a separate
+    /// computation. See https://github.com/antlr/antlr4/issues/1428
+    ///
+    /// For this function, we are specifying an ATN state and call stack to compute
+    /// what token(s) can come next and specifically: outside of a lookahead decision.
+    /// That is what you want for error reporting and recovery upon parse error.
+    ///
+    /// @param stateNumber the ATN state number
+    /// @param context the full parse context
+    /// @return The set of potentially valid input symbols which could follow the
+    /// specified state in the specified context.
+    /// @throws IllegalArgumentException if the ATN does not contain a state with
+    /// number {@code stateNumber}
     pub fn get_expected_tokens(&self, state_number: isize, _ctx: &Rc<dyn ParserRuleContext>) -> IntervalSet {
         let s = self.states[state_number as usize].as_ref();
         let mut following = self.next_tokens(s);

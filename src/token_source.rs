@@ -7,11 +7,7 @@ pub trait TokenSource {
     fn get_line(&self) -> isize;
     fn get_char_position_in_line(&self) -> isize;
     fn get_input_stream(&mut self) -> &mut dyn CharStream;
-    fn get_source_name(&self) -> String {
-//        let input = self.get_input_stream();
-//        input.get_source_name()
-        unimplemented!()
-    }
+    fn get_source_name(&self) -> String;
     //    fn set_token_factory<'c: 'b>(&mut self, f: &'c TokenFactory);
     fn get_token_factory(&self) -> &dyn TokenFactory;
 }
@@ -32,6 +28,10 @@ impl<T> TokenSource for &mut T where T: TokenSource {
 
     fn get_input_stream(&mut self) -> &mut dyn CharStream {
         (**self).get_input_stream()
+    }
+
+    fn get_source_name(&self) -> String {
+        (**self).get_source_name()
     }
 
     fn get_token_factory(&self) -> &dyn TokenFactory {

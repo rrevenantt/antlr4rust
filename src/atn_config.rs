@@ -1,6 +1,5 @@
-use std::fmt::{Debug, Error, Formatter, Write};
+use std::fmt::{Debug, Error, Formatter};
 use std::hash::{Hash, Hasher};
-use std::ops::DerefMut;
 use std::sync::Arc;
 
 use murmur3::murmur3_32::MurmurHasher;
@@ -11,6 +10,22 @@ use crate::dfa::ScopeExt;
 use crate::lexer_action_executor::LexerActionExecutor;
 use crate::prediction_context::PredictionContext;
 use crate::semantic_context::SemanticContext;
+
+#[derive(Clone)]
+pub struct ATNConfig {
+    precedence_filter_suppressed: bool,
+    //todo since ATNState is immutable when we started working with ATNConfigs
+    // looks like it is possible to have usual reference here
+    state: ATNStateRef,
+    alt: isize,
+    //todo maybe option is unnecessary and PredictionContext::EMPTY would be enough
+    //another todo check arena alloc
+    context: Option<Arc<PredictionContext>>,
+    //todo looks like here option is also unnesesary
+    pub semantic_context: Box<SemanticContext>,
+    pub reaches_into_outer_context: isize,
+    pub(crate) config_type: ATNConfigType,
+}
 
 impl Eq for ATNConfig {}
 
@@ -45,22 +60,6 @@ impl Hash for ATNConfig {
     }
 }
 
-#[derive(Clone)]
-pub struct ATNConfig {
-    precedence_filter_suppressed: bool,
-    //todo since ATNState is immutable when we started working with ATNConfigs
-    // looks like it is possible to have usual reference here
-    state: ATNStateRef,
-    alt: isize,
-    //todo maybe option is unnecessary and PredictionContext::EMPTY would be enough
-    //another todo check check arena alloc
-    context: Option<Arc<PredictionContext>>,
-    //todo looks like here option is also unnesesary
-    pub semantic_context: Option<Box<SemanticContext>>,
-    pub reaches_into_outer_context: isize,
-    pub config_type: ATNConfigType,
-}
-
 impl Debug for ATNConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         f.write_fmt(format_args!("({},{},[{}]", self.state, self.alt, self.context.as_deref().unwrap()))?;
@@ -73,7 +72,7 @@ impl Debug for ATNConfig {
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
-pub enum ATNConfigType {
+pub(crate) enum ATNConfigType {
     BaseATNConfig,
     LexerATNConfig {
         lexer_action_executor: Option<Box<LexerActionExecutor>>,
@@ -82,7 +81,7 @@ pub enum ATNConfigType {
 }
 
 impl ATNConfig {
-    pub fn get_lexer_executor(&self) -> Option<&LexerActionExecutor> {
+    pub(crate) fn get_lexer_executor(&self) -> Option<&LexerActionExecutor> {
         match &self.config_type {
             ATNConfigType::BaseATNConfig => None,
             ATNConfigType::LexerATNConfig { lexer_action_executor, .. } => lexer_action_executor.as_deref(),
@@ -106,7 +105,7 @@ impl ATNConfig {
             state,
             alt,
             context,
-            semantic_context: Some(Box::new(SemanticContext::NONE)),
+            semantic_context: Box::new(SemanticContext::NONE),
             reaches_into_outer_context: 0,
             config_type: ATNConfigType::BaseATNConfig,
         }
@@ -116,9 +115,8 @@ impl ATNConfig {
         state: ATNStateRef,
         alt: isize,
         context: Option<Arc<PredictionContext>>,
-        semantic_context: Option<Box<SemanticContext>>,
+        semantic_context: Box<SemanticContext>,
     ) -> ATNConfig {
-        assert!(semantic_context.is_some());
         let mut new = Self::new(state, alt, context);
         new.semantic_context = semantic_context;
         new
@@ -137,7 +135,7 @@ impl ATNConfig {
         atnconfig
     }
 
-    pub fn cloned_with_new_semantic(&self, target: &dyn ATNState, ctx: Option<Box<SemanticContext>>) -> ATNConfig {
+    pub fn cloned_with_new_semantic(&self, target: &dyn ATNState, ctx: Box<SemanticContext>) -> ATNConfig {
         let mut new = self.cloned(target);
         new.semantic_context = ctx;
         new
@@ -160,7 +158,7 @@ impl ATNConfig {
         new
     }
 
-    pub fn cloned_with_new_exec(&self, target: &dyn ATNState, exec: Option<LexerActionExecutor>) -> ATNConfig {
+    pub(crate) fn cloned_with_new_exec(&self, target: &dyn ATNState, exec: Option<LexerActionExecutor>) -> ATNConfig {
         let mut new = self.cloned(target);
         if let ATNConfigType::LexerATNConfig {
             lexer_action_executor, passed_through_non_greedy_decision: _
@@ -179,12 +177,8 @@ impl ATNConfig {
         self.alt
     }
 
-    pub fn get_type(&self) -> &ATNConfigType {
+    pub(crate) fn get_type(&self) -> &ATNConfigType {
         &self.config_type
-    }
-
-    pub fn get_semantic_context(&self) -> Option<&SemanticContext> {
-        self.semantic_context.as_deref()
     }
 
     pub fn get_context(&self) -> Option<&Arc<PredictionContext>> {

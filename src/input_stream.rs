@@ -1,6 +1,5 @@
 use std::cmp::min;
 use std::convert::TryFrom;
-use std::io::*;
 use std::iter::FromIterator;
 use std::result;
 

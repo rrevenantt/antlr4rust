@@ -1,18 +1,18 @@
 #![crate_type = "lib"]
-#![feature(underscore_lifetimes)]
 #![feature(try_blocks)]
 //#![feature(nll)]
 #![feature(raw)]
 #![feature(inner_deref)]
 #![feature(is_sorted)]
-#![feature(bind_by_move_pattern_guards)]
-#![feature(never_type)]
 #![feature(cell_update)]
 #![feature(get_mut_unchecked)]
 #![feature(specialization)]
 #![feature(coerce_unsized)]
 #![feature(unsize)]
-//#![deny(rust_2018_idioms)]
+#![warn(rust_2018_idioms)]
+#![warn(missing_docs)] // warn if there is missing docs
+#![warn(missing_debug_implementations)]
+#![warn(trivial_numeric_casts)]
 //! # Antlr4 runtime
 //!
 //! !! not production ready, but pretty close
@@ -28,10 +28,11 @@
 //!
 //! [ANTLR4]: https://github.com/antlr/antlr4
 
-extern crate byteorder;
 #[macro_use]
 extern crate lazy_static;
 //extern crate uuid;
+
+pub use prediction_context::PredictionContextCache;
 
 mod ll1_analyzer;
 pub mod common_token_factory;
@@ -45,7 +46,7 @@ pub mod semantic_context;
 pub mod dfa_state;
 pub mod atn_state;
 pub mod parser_rule_context;
-pub mod prediction_context;
+mod prediction_context;
 pub mod interval_set;
 pub mod token_source;
 pub mod atn_deserialization_options;
@@ -58,10 +59,9 @@ pub mod dfa;
 //pub mod file_stream;
 pub mod atn_deserializer;
 pub mod token;
-pub mod utils;
+mod utils;
 pub mod trees;
 pub mod atn_config_set;
-//pub mod diagnostic_error_listener;
 pub mod error_listener;
 pub mod prediction_mode;
 pub mod input_stream;
@@ -81,4 +81,4 @@ pub mod rule_context;
 pub mod vocabulary;
 
 //#[cfg(test)]
-// tests are either integration tests in tests or unit tests in some modules
+// tests are either integration tests in "tests" foulder or unit tests in some modules

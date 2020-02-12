@@ -3,16 +3,14 @@ use std::mem;
 
 use murmur3::murmur3_32::MurmurHasher;
 
-use crate::int_stream::IntStream;
-use crate::lexer::{BaseLexer, Lexer, LexerRecog};
+use crate::lexer::Lexer;
 use crate::lexer_action::LexerAction;
 use crate::lexer_action::LexerAction::LexerIndexedCustomAction;
-use crate::token_source::TokenSource;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct LexerActionExecutor {
-    lexer_actions: Vec<LexerAction>,
+pub(crate) struct LexerActionExecutor {
     cached_hash: u64,
+    lexer_actions: Vec<LexerAction>,
 }
 
 impl Hash for LexerActionExecutor {
@@ -37,8 +35,8 @@ impl LexerActionExecutor {
         }
     }
 
-    pub fn new_copy_append(old: Option<&Self>, lexer_action: LexerAction) -> LexerActionExecutor {
-        let mut new = old.cloned().unwrap_or(LexerActionExecutor::new(Vec::new()));
+    pub(crate) fn new_copy_append(old: Option<&Self>, lexer_action: LexerAction) -> LexerActionExecutor {
+        let mut new = old.cloned().unwrap_or_else(|| LexerActionExecutor::new(Vec::new()));
         new.lexer_actions.push(lexer_action);
         new
     }
@@ -60,7 +58,7 @@ impl LexerActionExecutor {
         let stop_index = lexer.get_input_stream().index();
         for action in self.lexer_actions.iter() {
             //println!("executing action {:?}",action);
-            if let LexerAction::LexerIndexedCustomAction { offset, action: _ } = action {
+            if let LexerAction::LexerIndexedCustomAction { offset, .. } = action {
                 lexer.get_input_stream().seek(start_index + offset);
                 requires_seek = start_index + offset != stop_index;
             } else if action.is_position_dependent() {

@@ -26,6 +26,8 @@ mod gen {
     use referencetoatnparser::ReferenceToATNParser;
     use xmllexer::XMLLexer;
 
+    use crate::gen::labelslexer::LabelsLexer;
+    use crate::gen::labelsparser::{AddContext, EContextAll, LabelsParser};
     use crate::gen::simplelrlexer::SimpleLRLexer;
     use crate::gen::simplelrlistener::SimpleLRListener;
     use crate::gen::simplelrparser::SimpleLRParser;
@@ -193,5 +195,25 @@ if (x < x && a > 0) then duh
 
         let listener = parser.remove_parse_listener(id);
         assert_eq!(&listener.data, "terminal node x\nterminal node y\nterminal node z\n");
+    }
+
+
+    mod labelslexer;
+    mod labelsparser;
+    mod labelslistener;
+
+    #[test]
+    fn test_complex_convert() {
+        let mut lexer = LabelsLexer::new(Box::new(InputStream::new("(a+4)*2".into())));
+        let token_source = CommonTokenStream::new(lexer);
+        let mut parser = LabelsParser::new(Box::new(token_source));
+        let result = parser.s().expect("parser error");
+        let string = result.q.as_ref().unwrap().get_v();
+        assert_eq!("* + a 4 2", string);
+        let x = result.q.as_deref().unwrap();
+        match x {
+            EContextAll::MultContext(x) => { assert_eq!("(a+4)", x.a.as_ref().unwrap().get_text()) },
+            _ => panic!("oops")
+        }
     }
 }

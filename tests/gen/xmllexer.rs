@@ -1,7 +1,8 @@
-// Generated from XMLLexer.g4 by ANTLR 4.7.2
+// Generated from XMLLexer.g4 by ANTLR 4.8
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
+#![allow(unused_imports)]
 
 use std::cell::RefCell;
 use std::ops::{Deref, DerefMut};
@@ -17,7 +18,7 @@ use antlr_rust::error_listener::ErrorListener;
 use antlr_rust::lexer::{BaseLexer, Lexer, LexerRecog};
 use antlr_rust::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
 use antlr_rust::parser_rule_context::{cast, LexerContext, ParserRuleContext};
-use antlr_rust::prediction_context::PredictionContextCache;
+use antlr_rust::PredictionContextCache;
 use antlr_rust::recognizer::{Actions, Recognizer};
 use antlr_rust::rule_context::BaseRuleContext;
 use antlr_rust::token::*;
@@ -78,7 +79,7 @@ lazy_static! {
 
 pub struct XMLLexer {
     base: BaseLexer<XMLLexerActions>,
-//	static { RuntimeMetaData.checkVersion("4.7.2", RuntimeMetaData.VERSION); }
+//	static { RuntimeMetaData.checkVersion("4.8", RuntimeMetaData.VERSION); }
 }
 
 impl Deref for XMLLexer {
@@ -108,7 +109,7 @@ impl XMLLexer {
         &_SYMBOLIC_NAMES
     }
 
-    fn add_error_listener(&mut self, _listener: Box<ErrorListener>) {
+    fn add_error_listener(&mut self, _listener: Box<dyn ErrorListener>) {
         self.base.add_error_listener(_listener);
     }
 
@@ -121,6 +122,7 @@ impl XMLLexer {
     }
 
     pub fn new(input: Box<dyn CharStream>) -> Self {
+        antlr_rust::recognizer::check_version("0", "1");
         Self {
             base: BaseLexer::new_base_lexer(
                 input,
@@ -206,6 +208,10 @@ impl TokenSource for XMLLexer {
 
     fn get_input_stream(&mut self) -> &mut dyn CharStream {
         self.base.get_input_stream()
+    }
+
+    fn get_source_name(&self) -> String {
+        self.base.get_source_name()
     }
 
     fn get_token_factory(&self) -> &dyn TokenFactory {

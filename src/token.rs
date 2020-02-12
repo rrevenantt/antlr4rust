@@ -151,5 +151,3 @@ impl CommonToken {
         unimplemented!()
     }
 }
-
-//    fn String(&self) -> String { unimplemented!() }

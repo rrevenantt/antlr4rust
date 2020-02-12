@@ -9,14 +9,11 @@ use crate::atn_state::ATNStateRef;
 use crate::prediction_context::PredictionContext;
 use crate::semantic_context::SemanticContext;
 
-const PREDICTION_MODE_SLL: isize = 0;
-const PREDICTION_MODE_LL: isize = 1;
-const PREDICTION_MODE_LLEXACT_AMBIG_DETECTION: isize = 2;
-
 /// This enum defines the prediction modes available in ANTLR 4 along with
 /// utility methods for analyzing configuration sets for conflicts and/or
 /// ambiguities.
 ///
+#[allow(non_camel_case_types)]
 #[derive(Eq, PartialEq, Copy, Clone)]
 pub enum PredictionMode {
     /// The SLL(*) prediction mode. This prediction mode ignores the current
@@ -98,7 +95,7 @@ pub(crate) fn has_sll_conflict_terminating_prediction(mode: PredictionMode, conf
                     it.get_state(),
                     it.get_alt(),
                     it.get_context().cloned(),
-                    Some(Box::new(SemanticContext::NONE)),
+                    Box::new(SemanticContext::NONE),
                 );
                 dup.add(Box::new(c));
             });

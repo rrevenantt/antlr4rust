@@ -1,11 +1,10 @@
 use std::cmp::max;
-use std::collections::{HashMap, HashSet};
-use std::fmt::{Debug, Error, Formatter, Write};
+use std::collections::HashMap;
+use std::fmt::{Debug, Error, Formatter};
 use std::hash::{Hash, Hasher};
+use std::ops::Deref;
 
-use backtrace::Backtrace;
 use bit_set::BitSet;
-use murmur3::murmur3_32::MurmurHasher;
 
 use crate::atn_config::ATNConfig;
 use crate::atn_simulator::IATNSimulator;
@@ -45,7 +44,7 @@ pub struct ATNConfigSet {
 #[derive(Hash, Eq, PartialEq)]
 enum Key {
     Full(ATNConfig),
-    Partial(ATNStateRef, isize, Option<SemanticContext>),
+    Partial(ATNStateRef, isize, SemanticContext),
 }
 
 impl Debug for ATNConfigSet {
@@ -94,7 +93,7 @@ impl ATNConfigSet {
             has_semantic_context: false,
             read_only: false,
             unique_alt: 0,
-            hasher: Self::atn_config_local_hash,
+            hasher: Self::local_hash_key,
         }
     }
 
@@ -102,26 +101,26 @@ impl ATNConfigSet {
     pub fn new_ordered() -> ATNConfigSet {
         let mut a = ATNConfigSet::new_base_atnconfig_set(true);
 
-        a.hasher = Self::atn_config_full_hash;
+        a.hasher = Self::full_hash_key;
         a
     }
 
-    fn atn_config_full_hash(config: &ATNConfig) -> Key {
+    fn full_hash_key(config: &ATNConfig) -> Key {
         Key::Full(config.clone())
     }
 
-    fn atn_config_local_hash(config: &ATNConfig) -> Key {
-        Key::Partial(config.get_state(), config.get_alt(), config.get_semantic_context().cloned())
+    fn local_hash_key(config: &ATNConfig) -> Key {
+        Key::Partial(config.get_state(), config.get_alt(), config.semantic_context.deref().clone())
     }
 
     pub fn add_cached(
         &mut self,
-        mut config: Box<ATNConfig>,
+        config: Box<ATNConfig>,
         mut merge_cache: Option<&mut MergeCache>,
     ) -> bool {
         assert!(!self.read_only);
 
-        if config.get_semantic_context().is_some() && *config.get_semantic_context().unwrap() != SemanticContext::NONE {
+        if *config.semantic_context != SemanticContext::NONE {
             self.has_semantic_context = true
         }
 
@@ -136,7 +135,7 @@ impl ATNConfigSet {
             let existing = self.configs.get_mut(*existing).unwrap().as_mut();
             let root_is_wildcard = !self.full_ctx;
 
-            let mut merged = PredictionContext::merge(
+            let merged = PredictionContext::merge(
                 existing.get_context().unwrap(),
                 config.get_context().unwrap(),
                 root_is_wildcard,

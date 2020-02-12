@@ -14,9 +14,8 @@ pub struct PredPrediction {
 }
 
 impl Display for PredPrediction {
-    fn fmt(&self, _f: &mut Formatter<'_>) -> Result<(), Error> {
-        unimplemented!()
-//        f.write_fmt(format_args!("({},{})",self.pred,self.alt))
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        f.write_fmt(format_args!("({},{:?})", self.alt, self.pred))
     }
 }
 
@@ -25,6 +24,7 @@ pub type DFAStateRef = usize;
 
 #[derive(Eq)]
 pub struct DFAState {
+    /// Number of this state in corresponding DFA
     pub state_number: usize,
     pub configs: Box<ATNConfigSet>,
     /// - 0 => no edge
@@ -34,7 +34,7 @@ pub struct DFAState {
     pub is_accept_state: bool,
 
     pub prediction: isize,
-    pub lexer_action_executor: Option<Box<LexerActionExecutor>>,
+    pub(crate) lexer_action_executor: Option<Box<LexerActionExecutor>>,
     pub requires_full_context: bool,
     pub predicates: Vec<PredPrediction>,
 }

@@ -244,11 +244,11 @@ impl ATNDeserializer {
                     .get_mut(atn.rule_to_start_state[rule_index])
                     .unwrap();
                 if let ATNStateType::RuleStartState {
-                    stop_state: mut stop,
+                    stop_state: stop,
                     ..
-                } = start_state.get_state_type()
+                } = start_state.get_state_type_mut()
                 {
-                    stop = i
+                    *stop = i
                 }
             }
         }

@@ -1,19 +1,16 @@
 use std::any::{Any, type_name, TypeId};
 use std::borrow::{Borrow, BorrowMut};
-use std::cell::{Cell, Ref, RefCell, RefMut};
+use std::cell::{Ref, RefCell};
 use std::fmt::{Debug, Error, Formatter};
-use std::ops::{CoerceUnsized, Deref, DerefMut};
+use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 
 use crate::common_token_factory::INVALID_TOKEN;
 use crate::errors::ANTLRError;
 use crate::interval_set::Interval;
-use crate::parser::{ListenerCaller, Parser, ParserRecog};
-use crate::recognizer::Recognizer;
 use crate::rule_context::{BaseRuleContext, CustomRuleContext, EmptyCustomRuleContext, RuleContext};
 use crate::token::{OwningToken, Token};
-use crate::tree::{ErrorNode, ErrorNodeCtx, ParseTree, ParseTreeListener, TerminalNode, TerminalNodeCtx, Tree};
-use crate::trees;
+use crate::tree::{ErrorNode, ErrorNodeCtx, ParseTree, TerminalNode, TerminalNodeCtx, Tree};
 
 pub trait ParserRuleContext: RuleContext + CustomRuleContext + ParseTree + Any + Debug {
     fn set_exception(&self, e: ANTLRError);
@@ -24,7 +21,7 @@ pub trait ParserRuleContext: RuleContext + CustomRuleContext + ParseTree + Any +
     /// Note that the range from start to stop is inclusive, so for rules that do not consume anything
     /// (for example, zero length or error productions) this token may exceed stop.
     ///
-    fn get_start(&self) -> Ref<OwningToken>;
+    fn get_start(&self) -> Ref<'_, OwningToken>;
 
     fn set_stop(&self, t: Option<OwningToken>);
     ///
@@ -32,7 +29,7 @@ pub trait ParserRuleContext: RuleContext + CustomRuleContext + ParseTree + Any +
     /// Note that the range from start to stop is inclusive, so for rules that do not consume anything
     /// (for example, zero length or error productions) this token may precede start.
     ///
-    fn get_stop(&self) -> Ref<OwningToken>;
+    fn get_stop(&self) -> Ref<'_, OwningToken>;
 
 
     fn add_token_node(&self, token: TerminalNode) -> Rc<dyn ParserRuleContext>;
@@ -229,7 +226,7 @@ impl<Ctx: CustomRuleContext> ParserRuleContext for BaseParserRuleContext<Ctx> {
         *self.start.borrow_mut() = t.unwrap_or((**INVALID_TOKEN).clone());
     }
 
-    fn get_start(&self) -> Ref<OwningToken> {
+    fn get_start(&self) -> Ref<'_, OwningToken> {
         self.start.borrow()
     }
 
@@ -237,7 +234,7 @@ impl<Ctx: CustomRuleContext> ParserRuleContext for BaseParserRuleContext<Ctx> {
         *self.stop.borrow_mut() = t.unwrap_or((**INVALID_TOKEN).clone());
     }
 
-    fn get_stop(&self) -> Ref<OwningToken> {
+    fn get_stop(&self) -> Ref<'_, OwningToken> {
         self.stop.borrow()
     }
 
@@ -313,16 +310,27 @@ impl<Ctx: CustomRuleContext> Tree for BaseParserRuleContext<Ctx> {
 
 impl<Ctx: CustomRuleContext> ParseTree for BaseParserRuleContext<Ctx> {
     fn get_source_interval(&self) -> Interval {
-        unimplemented!()
+        Interval { a: self.start.borrow().get_token_index(), b: self.stop.borrow().get_token_index() }
     }
 
-    fn get_text(&self) -> String {
-        unimplemented!()
+    default fn get_text(&self) -> String {
+        let children = self.get_children();
+        if children.len() == 0 {
+            return String::new();
+        }
+
+        let mut result = String::new();
+
+        for child in children.iter() {
+            result += &child.get_text()
+        }
+
+        result
     }
 
-    fn to_string_tree(&self, r: &dyn Parser) -> String {
-        trees::string_tree(self, r.get_rule_names())
-    }
+//    fn to_string_tree(&self, r: &dyn Parser) -> String {
+//
+//    }
 }
 
 impl<Ctx: CustomRuleContext> BaseParserRuleContext<Ctx> {
@@ -364,11 +372,11 @@ impl<T: DerefSeal<Target=I> + Debug + 'static, I: ParserRuleContext + ?Sized> Pa
 
     fn set_start(&self, t: Option<OwningToken>) { self.deref().set_start(t) }
 
-    fn get_start(&self) -> Ref<OwningToken> { self.deref().get_start() }
+    fn get_start(&self) -> Ref<'_, OwningToken> { self.deref().get_start() }
 
     fn set_stop(&self, t: Option<OwningToken>) { self.deref().set_stop(t) }
 
-    fn get_stop(&self) -> Ref<OwningToken> { self.deref().get_stop() }
+    fn get_stop(&self) -> Ref<'_, OwningToken> { self.deref().get_stop() }
 
     fn add_token_node(&self, token: BaseParserRuleContext<TerminalNodeCtx>) -> Rc<dyn ParserRuleContext> { self.deref().add_token_node(token) }
 
@@ -403,8 +411,6 @@ impl<T: DerefSeal<Target=I> + Debug + 'static, I: ParserRuleContext + ?Sized> Pa
     fn get_source_interval(&self) -> Interval { self.deref().get_source_interval() }
 
     fn get_text(&self) -> String { self.deref().get_text() }
-
-    fn to_string_tree(&self, r: &dyn Parser) -> String { self.deref().to_string_tree(r) }
 }
 
 impl<T: DerefSeal<Target=I> + Debug + 'static, I: ParserRuleContext + ?Sized> Tree for T {
@@ -418,7 +424,7 @@ impl<T: DerefSeal<Target=I> + Debug + 'static, I: ParserRuleContext + ?Sized> Tr
 
     fn get_child_count(&self) -> usize { self.deref().get_child_count() }
 
-    fn get_children(&self) -> Ref<Vec<Rc<dyn ParserRuleContext>>> { self.deref().get_children() }
+    fn get_children(&self) -> Ref<'_, Vec<Rc<dyn ParserRuleContext>>> { self.deref().get_children() }
 
     fn get_children_full(&self) -> &RefCell<Vec<Rc<dyn ParserRuleContext>>> { self.deref().get_children_full() }
 }

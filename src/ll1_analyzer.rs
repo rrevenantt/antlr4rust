@@ -22,10 +22,9 @@ pub struct LL1Analyzer<'a> {
 impl LL1Analyzer<'_> {
     pub fn new(atn: &ATN) -> LL1Analyzer<'_> { LL1Analyzer { atn } }
 
-    fn get_decision_lookahead(&self, _s: &dyn ATNState) -> &Vec<IntervalSet> { unimplemented!() }
+//    fn get_decision_lookahead(&self, _s: &dyn ATNState) -> &Vec<IntervalSet> { unimplemented!() }
 
     pub fn look(&self,
-//                atn: &ATN,
                 s: &dyn ATNState,
                 stop_state: Option<&dyn ATNState>,
                 ctx: Option<&dyn ParserRuleContext>,

@@ -5,7 +5,6 @@ use std::fmt::Formatter;
 use std::ops::Deref;
 use std::rc::Rc;
 
-use crate::atn::ATN;
 use crate::atn_simulator::IATNSimulator;
 use crate::interval_set::IntervalSet;
 use crate::parser::Parser;
@@ -17,13 +16,37 @@ use crate::transition::TransitionType::TRANSITION_PREDICATE;
 /// Main ANTLR4 Rust runtime error
 #[derive(Debug)]
 pub enum ANTLRError {
+    /// Returned from Lexer when it fails to find matching token type for current input
+    ///
+    /// Usually Lexers contain rule that captures all invalid tokens like:
+    /// ```text
+    /// ERROR_TOKEN: . ;
+    /// ```
+    /// to prevent lexer from throwing errors and have all error handling in parser.
     LexerNoAltError { start_index: isize },
+
+    /// Indicates that the parser could not decide which of two or more paths
+    /// to take based upon the remaining input. It tracks the starting token
+    /// of the offending input and also knows where the parser was
+    /// in the various paths when the error. Reported by reportNoViableAlternative()
     NoAltError(NoViableAltError),
+
+    /// This signifies any kind of mismatched input exceptions such as
+    /// when the current input does not match the expected token.
     InputMismatchError(InputMisMatchError),
+
+    /// A semantic predicate failed during validation. Validation of predicates
+    /// occurs when normally parsing the alternative just like matching a token.
+    /// Disambiguating predicate evaluation occurs when we test a predicate during
+    /// prediction.
     PredicateError(FailedPredicateError),
+
+    /// Internal error.
     IllegalStateError(String),
+
     /// Indicates that error should not be processed and parser should immediately return to caller
     FallThrough(Box<dyn Error>),
+
     /// Used to allow user to emit his own errors from parser actions or from custom error strategy
     OtherError(Box<dyn Error>),
 }
@@ -48,7 +71,15 @@ impl Display for ANTLRError {
     }
 }
 
-impl Error for ANTLRError {}
+impl Error for ANTLRError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            ANTLRError::FallThrough(x) => Some(x.as_ref()),
+            ANTLRError::OtherError(x) => Some(x.as_ref()),
+            _ => None
+        }
+    }
+}
 
 impl RecognitionError for ANTLRError {
     fn get_offending_token(&self) -> Option<&dyn Token> {
@@ -61,12 +92,12 @@ impl RecognitionError for ANTLRError {
     }
 }
 
-impl ANTLRError {
-    fn get_expected_tokens(&self, _atn: &ATN) -> IntervalSet {
-//        atn.get_expected_tokens(se)
-        unimplemented!()
-    }
-}
+//impl ANTLRError {
+//    fn get_expected_tokens(&self, _atn: &ATN) -> IntervalSet {
+////        atn.get_expected_tokens(se)
+//        unimplemented!()
+//    }
+//}
 
 pub trait RecognitionError: Error {
     fn get_offending_token(&self) -> Option<&dyn Token>;
@@ -100,36 +131,12 @@ impl BaseRecognitionError {
     }
 }
 
-//impl RecognitionError for BaseRecognitionError {
-//    fn get_offending_token(&self) -> &Token {
-//        unimplemented!()
-//    }
-//
-//    fn get_message(&self) -> String {
-//        unimplemented!()
-//    }
-//
-//    fn get_input_stream(&self) -> &IntStream {
-//        unimplemented!()
-//    }
-//}
-
-
 #[derive(Debug, Clone)]
 pub struct LexerNoViableAltError {
     base: BaseRecognitionError,
     start_index: isize,
     //    dead_end_configs: BaseATNConfigSet,
 }
-//
-//fn new_lexer_no_viable_alt_exception(
-//    _lexer: &dyn Lexer,
-//    _input: &dyn CharStream,
-//    _startIndex: isize,
-////    _deadEndConfigs: &ATNConfigSet
-//) -> LexerNoViableAltError {
-//
-//}
 
 #[derive(Debug, Clone)]
 pub struct NoViableAltError {
@@ -166,7 +173,6 @@ impl NoViableAltError {
     }
 }
 
-//fn new_no_viable_alt_exception(recognizer: Parser, input: TokenStream, startToken: &Token, offendingToken: &Token, deadEndConfigs: ATNConfigSet, ctx: ParserRuleContext) -> NoViableAltError { unimplemented!() }
 
 #[derive(Debug, Clone)]
 pub struct InputMisMatchError {
@@ -175,7 +181,6 @@ pub struct InputMisMatchError {
 
 impl InputMisMatchError {
     pub fn new(recognizer: &mut dyn Parser) -> InputMisMatchError {
-//        println!("{:?}",Backtrace::new());
         InputMisMatchError {
             base: BaseRecognitionError::new(recognizer),
         }
@@ -201,8 +206,6 @@ pub struct FailedPredicateError {
 
 impl FailedPredicateError {
     pub fn new(recog: &mut dyn Parser, predicate: Option<String>, msg: Option<String>) -> ANTLRError {
-//        let predicate = predicate.map(|x|x.into());
-//        let msg = msg.map(|x|x.into());
 
         let tr = recog.get_interpreter().atn()
             .states[recog.get_state() as usize]
@@ -227,4 +230,3 @@ impl FailedPredicateError {
         })
     }
 }
-//fn new_failed_predicate_exception(recognizer: Parser, predicate: String, message: String) -> FailedPredicateError { unimplemented!() }

@@ -1,7 +1,13 @@
-// Generated from Labels.g4 by ANTLR 4.7.2
+// Generated from Labels.g4 by ANTLR 4.8
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
+#![allow(unused_imports)]
+
+use std::cell::RefCell;
+use std::ops::{Deref, DerefMut};
+use std::rc::Rc;
+use std::sync::Arc;
 
 use antlr_rust::atn::ATN;
 use antlr_rust::atn_deserializer::ATNDeserializer;
@@ -12,16 +18,12 @@ use antlr_rust::error_listener::ErrorListener;
 use antlr_rust::lexer::{BaseLexer, Lexer, LexerRecog};
 use antlr_rust::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
 use antlr_rust::parser_rule_context::{cast, LexerContext, ParserRuleContext};
-use antlr_rust::prediction_context::PredictionContextCache;
+use antlr_rust::PredictionContextCache;
 use antlr_rust::recognizer::{Actions, Recognizer};
 use antlr_rust::rule_context::BaseRuleContext;
 use antlr_rust::token::*;
 use antlr_rust::token_source::TokenSource;
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
-use std::cell::RefCell;
-use std::ops::{Deref, DerefMut};
-use std::rc::Rc;
-use std::sync::Arc;
 
 pub const T__0: isize = 1;
 pub const T__1: isize = 2;
@@ -60,7 +62,7 @@ lazy_static! {
 
 pub struct LabelsLexer {
     base: BaseLexer<LabelsLexerActions>,
-//	static { RuntimeMetaData.checkVersion("4.7.2", RuntimeMetaData.VERSION); }
+//	static { RuntimeMetaData.checkVersion("4.8", RuntimeMetaData.VERSION); }
 }
 
 impl Deref for LabelsLexer {
@@ -90,7 +92,7 @@ impl LabelsLexer {
         &_SYMBOLIC_NAMES
     }
 
-    fn add_error_listener(&mut self, _listener: Box<ErrorListener>) {
+    fn add_error_listener(&mut self, _listener: Box<dyn ErrorListener>) {
         self.base.add_error_listener(_listener);
     }
 
@@ -103,6 +105,7 @@ impl LabelsLexer {
     }
 
     pub fn new(input: Box<dyn CharStream>) -> Self {
+        antlr_rust::recognizer::check_version("0", "1");
         Self {
             base: BaseLexer::new_base_lexer(
                 input,
@@ -146,6 +149,10 @@ impl TokenSource for LabelsLexer {
 
     fn get_input_stream(&mut self) -> &mut dyn CharStream {
         self.base.get_input_stream()
+    }
+
+    fn get_source_name(&self) -> String {
+        self.base.get_source_name()
     }
 
     fn get_token_factory(&self) -> &dyn TokenFactory {

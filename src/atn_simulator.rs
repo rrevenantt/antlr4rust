@@ -1,3 +1,4 @@
+use std::fmt::{Debug, Error, Formatter};
 use std::ops::Deref;
 use std::sync::Arc;
 
@@ -12,10 +13,17 @@ pub trait IATNSimulator {
     fn decision_to_dfa(&self) -> &Vec<DFA>;
 }
 
+
 pub struct BaseATNSimulator {
     pub atn: Arc<ATN>,
     pub shared_context_cache: Arc<PredictionContextCache>,
     pub decision_to_dfa: Arc<Vec<DFA>>,
+}
+
+impl Debug for BaseATNSimulator {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        f.write_str("BaseATNSimulator { .. }")
+    }
 }
 
 impl BaseATNSimulator {

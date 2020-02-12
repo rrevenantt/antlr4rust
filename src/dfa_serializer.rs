@@ -20,7 +20,7 @@ impl Display for DFASerializer<'_, '_> {
                                              self.get_state_string(source),
                                              (self.get_edge_label)(i),
                                              self.get_state_string(target)
-                    ));
+                    ))?;
                 }
             }
         }

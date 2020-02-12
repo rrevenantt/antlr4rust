@@ -1,7 +1,9 @@
-// Generated from SimpleLR.g4 by ANTLR 4.7.2
+// Generated from SimpleLR.g4 by ANTLR 4.8
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
+#![allow(unused_imports)]
+#![allow(unused_mut)]
 
 use std::any::Any;
 use std::borrow::{Borrow, BorrowMut};
@@ -20,7 +22,7 @@ use antlr_rust::int_stream::EOF;
 use antlr_rust::parser::{BaseParser, Parser, ParserRecog};
 use antlr_rust::parser_atn_simulator::ParserATNSimulator;
 use antlr_rust::parser_rule_context::{BaseParserRuleContext, cast, cast_mut, ParserRuleContext, ParserRuleContextType};
-use antlr_rust::prediction_context::PredictionContextCache;
+use antlr_rust::PredictionContextCache;
 use antlr_rust::recognizer::{Actions, Recognizer};
 use antlr_rust::rule_context::{BaseRuleContext, CustomRuleContext, RuleContext};
 use antlr_rust::token::{OwningToken, Token, TOKEN_EOF};
@@ -67,6 +69,7 @@ impl SimpleLRParser {
     }
 
     pub fn new(input: Box<dyn TokenStream>) -> Self {
+        antlr_rust::recognizer::check_version("0", "1");
         let interpreter = Arc::new(ParserATNSimulator::new(
             _ATN.clone(),
             _decision_to_DFA.clone(),
@@ -249,6 +252,8 @@ impl AContextExt {
 }
 
 pub trait AContextAttrs: ParserRuleContext + BorrowMut<AContextExt> {
+    /// Retrieves first TerminalNode corresponding to token ID
+    /// Returns `None` if there is no child corresponding to token ID
     fn ID(&self) -> Option<Rc<TerminalNode>> where Self: Sized {
         self.get_token(ID, 0)
     }

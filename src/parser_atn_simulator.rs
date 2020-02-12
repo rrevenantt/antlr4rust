@@ -32,13 +32,52 @@ use crate::token::{TOKEN_EOF, TOKEN_EPSILON};
 use crate::token_stream::TokenStream;
 use crate::transition::{ActionTransition, EpsilonTransition, PrecedencePredicateTransition, PredicateTransition, RuleTransition, Transition, TransitionType};
 
+/// ### The embodiment of the adaptive LL(*), ALL(*), parsing strategy.
+///
+/// <p>
+/// The basic complexity of the adaptive strategy makes it harder to understand.
+/// We begin with ATN simulation to build paths in a DFA. Subsequent prediction
+/// requests go through the DFA first. If they reach a state without an edge for
+/// the current symbol, the algorithm fails over to the ATN simulation to
+/// complete the DFA path for the current input (until it finds a conflict state
+/// or uniquely predicting state).</p>
+///
+/// <p>
+/// All of that is done without using the outer context because we want to create
+/// a DFA that is not dependent upon the rule invocation stack when we do a
+/// prediction. One DFA works in all contexts. We avoid using context not
+/// necessarily because it's slower, although it can be, but because of the DFA
+/// caching problem. The closure routine only considers the rule invocation stack
+/// created during prediction beginning in the decision rule. For example, if
+/// prediction occurs without invoking another rule's ATN, there are no context
+/// stacks in the configurations. When lack of context leads to a conflict, we
+/// don't know if it's an ambiguity or a weakness in the strong LL(*) parsing
+/// strategy (versus full LL(*)).</p>
+///
+/// <p>
+/// When SLL yields a configuration set with conflict, we rewind the input and
+/// retry the ATN simulation, this time using full outer context without adding
+/// to the DFA. Configuration context stacks will be the full invocation stacks
+/// from the start rule. If we get a conflict using full context, then we can
+/// definitively say we have a true ambiguity for that input sequence. If we
+/// don't get a conflict, it implies that the decision is sensitive to the outer
+/// context. (It is not context-sensitive in the sense of context-sensitive
+/// grammars.)</p>
+///
+/// <p>
+/// The next time we reach this DFA state with an SLL conflict, through DFA
+/// simulation, we will again retry the ATN simulation using full context mode.
+/// This is slow because we can't save the results and have to "interpret" the
+/// ATN each time we get that input.</p>
+///
+/// **For more info see Java version**
 pub struct ParserATNSimulator {
     base: BaseATNSimulator,
     prediction_mode: Cell<PredictionMode>,
     start_index: Cell<isize>,
 }
 
-/// Just a helper structure to spoil function parameters as little as possible
+/// Just a local helper structure to spoil function parameters as little as possible
 struct Local<'a, 'arena> {
     outer_context: Rc<dyn ParserRuleContext>,
     dfa: &'a DFA,
@@ -341,14 +380,13 @@ impl ParserATNSimulator {
                 if predicted_alt != INVALID_ALT {
                     break;
                 }
-            } else {
-                if all_subsets_conflict(&alt_sub_sets)
-                    && all_subsets_equal(&alt_sub_sets) {
-                    found_exact_ambig = true;
-                    predicted_alt = get_single_viable_alt(&alt_sub_sets);
-                    break;
-                }
+            } else if all_subsets_conflict(&alt_sub_sets)
+                && all_subsets_equal(&alt_sub_sets) {
+                found_exact_ambig = true;
+                predicted_alt = get_single_viable_alt(&alt_sub_sets);
+                break;
             }
+
 
             if t != TOKEN_EOF {
                 local.input().consume();
@@ -517,18 +555,17 @@ impl ParserATNSimulator {
             }
 
             let updated_sem_ctx = config.semantic_context
-                .as_deref().unwrap()
                 .eval_precedence(local.parser, local.outer_context());
 
             if let Some(updated_sem_ctx) = updated_sem_ctx.as_deref() {
                 states_from_alt1.insert(config.get_state(), config.get_context());
 
-                if Some(updated_sem_ctx) != config.semantic_context.as_deref() {
+                if *updated_sem_ctx != *config.semantic_context {
                     config_set.add_cached(Box::new(ATNConfig::new_with_semantic(
                         config.get_state(),
                         config.get_alt(),
                         config.get_context().cloned(),
-                        Some(Box::new(updated_sem_ctx.clone())),
+                        Box::new(updated_sem_ctx.clone()),
                     )), Some(local.merge_cache));
                 } else {
                     config_set.add_cached(Box::new(config.clone()), Some(local.merge_cache));
@@ -566,7 +603,7 @@ impl ParserATNSimulator {
         for c in configs.configs.iter() {
             let alt = c.get_alt() as usize;
             if ambig_alts.contains(alt) {
-                alt_to_pred[alt] = Some(SemanticContext::or(alt_to_pred[alt].as_ref(), c.semantic_context.as_deref()));
+                alt_to_pred[alt] = Some(SemanticContext::or(alt_to_pred[alt].as_ref(), Some(&*c.semantic_context)));
             }
         }
 
@@ -628,8 +665,8 @@ impl ParserATNSimulator {
         let mut failed = ATNConfigSet::new_base_atnconfig_set(configs.full_context());
         for c in configs.get_items() {
             let clone = Box::new(c.clone());
-            if c.get_semantic_context().map(|sem| sem != &SemanticContext::NONE) == Some(true) {
-                let predicate_eval_result = self.eval_predicate(local, c.get_semantic_context().unwrap(), c.get_alt(), configs.full_context());
+            if *c.semantic_context != SemanticContext::NONE {
+                let predicate_eval_result = self.eval_predicate(local, &*c.semantic_context, c.get_alt(), configs.full_context());
                 if predicate_eval_result {
                     succeeded.add(clone);
                 } else {
@@ -719,7 +756,7 @@ impl ParserATNSimulator {
 //        println!("closure({:?})",config);
         if let RuleStopState = self.atn().states[config.get_state()].get_state_type() {
             if !config.get_context().unwrap().is_empty() {
-                let _temp = config.get_context().unwrap().run(|temp| {
+                config.get_context().unwrap().run(|temp| {
                     if temp.get_return_state(temp.length() - 1) == PREDICTION_CONTEXT_EMPTY_RETURN_STATE {
                         if full_ctx {
                             let new_config = config.cloned_with_new_ctx(
@@ -995,8 +1032,8 @@ impl ParserATNSimulator {
                     return Some(config.cloned(target));
                 }
             } else {
-                let new_sem_ctx = SemanticContext::and(config.semantic_context.as_deref(), pt.get_predicate());
-                return Some(config.cloned_with_new_semantic(target, Some(Box::new(new_sem_ctx))));
+                let new_sem_ctx = SemanticContext::and(Some(&*config.semantic_context), pt.get_predicate());
+                return Some(config.cloned_with_new_semantic(target, Box::new(new_sem_ctx)));
             }
         } else {
             return Some(config.cloned(target));
@@ -1026,8 +1063,8 @@ impl ParserATNSimulator {
                     return Some(config.cloned(target));
                 }
             } else {
-                let new_sem_ctx = SemanticContext::and(config.semantic_context.as_deref(), pt.get_predicate());
-                return Some(config.cloned_with_new_semantic(target, Some(Box::new(new_sem_ctx))));
+                let new_sem_ctx = SemanticContext::and(Some(&*config.semantic_context), pt.get_predicate());
+                return Some(config.cloned_with_new_semantic(target, Box::new(new_sem_ctx)));
             }
         } else {
             return Some(config.cloned(target));

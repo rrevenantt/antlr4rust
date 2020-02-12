@@ -1,8 +1,17 @@
-// Generated from Labels.g4 by ANTLR 4.7.2
+// Generated from Labels.g4 by ANTLR 4.8
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
-#![feature(try_blocks)]
+#![allow(unused_imports)]
+#![allow(unused_mut)]
+
+use std::any::Any;
+use std::borrow::{Borrow, BorrowMut};
+use std::cell::RefCell;
+use std::convert::TryFrom;
+use std::ops::{Deref, DerefMut};
+use std::rc::Rc;
+use std::sync::Arc;
 
 use antlr_rust::atn::{ATN, INVALID_ALT};
 use antlr_rust::atn_deserializer::ATNDeserializer;
@@ -13,7 +22,7 @@ use antlr_rust::int_stream::EOF;
 use antlr_rust::parser::{BaseParser, Parser, ParserRecog};
 use antlr_rust::parser_atn_simulator::ParserATNSimulator;
 use antlr_rust::parser_rule_context::{BaseParserRuleContext, cast, cast_mut, ParserRuleContext, ParserRuleContextType};
-use antlr_rust::prediction_context::PredictionContextCache;
+use antlr_rust::PredictionContextCache;
 use antlr_rust::recognizer::{Actions, Recognizer};
 use antlr_rust::rule_context::{BaseRuleContext, CustomRuleContext, RuleContext};
 use antlr_rust::token::{OwningToken, Token, TOKEN_EOF};
@@ -21,13 +30,6 @@ use antlr_rust::token_source::TokenSource;
 use antlr_rust::token_stream::TokenStream;
 use antlr_rust::tree::{ParseTree, TerminalNode};
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
-use std::any::Any;
-use std::borrow::{Borrow, BorrowMut};
-use std::cell::RefCell;
-use std::convert::TryFrom;
-use std::ops::{Deref, DerefMut};
-use std::rc::Rc;
-use std::sync::Arc;
 
 use super::labelslistener::*;
 
@@ -40,11 +42,10 @@ pub const T__5: isize = 6;
 pub const ID: isize = 7;
 pub const INT: isize = 8;
 pub const WS: isize = 9;
-pub const RULE_z: usize = 0;
-pub const RULE_s: usize = 1;
-pub const RULE_e: usize = 2;
-pub const ruleNames: [&'static str; 3] = [
-    "z", "s", "e"
+pub const RULE_s: usize = 0;
+pub const RULE_e: usize = 1;
+pub const ruleNames: [&'static str; 2] = [
+    "s", "e"
 ];
 
 
@@ -61,14 +62,13 @@ lazy_static! {
 	}
 
 
-type BaseParserType = BaseParser<LabelsParserExt, dyn LabelsListener, LabelsListenerCaller>;
+type BaseParserType = BaseParser<LabelsParserExt, dyn LabelsListener>;
 
 pub struct LabelsParser {
-    base: BaseParser<LabelsParserExt, dyn LabelsListener, LabelsListenerCaller>,
+    base: BaseParserType,
     interpreter: Arc<ParserATNSimulator>,
     _shared_context_cache: Box<PredictionContextCache>,
     pub err_handler: Box<dyn ErrorStrategy>,
-
 }
 
 impl LabelsParser {
@@ -79,6 +79,7 @@ impl LabelsParser {
     }
 
     pub fn new(input: Box<dyn TokenStream>) -> Self {
+        antlr_rust::recognizer::check_version("0", "1");
         let interpreter = Arc::new(ParserATNSimulator::new(
             _ATN.clone(),
             _decision_to_DFA.clone(),
@@ -98,7 +99,7 @@ impl LabelsParser {
 }
 
 impl Deref for LabelsParser {
-    type Target = BaseParser<LabelsParserExt, dyn LabelsListener, LabelsListenerCaller>;
+    type Target = BaseParserType;
 
     fn deref(&self) -> &Self::Target {
         &self.base
@@ -126,12 +127,12 @@ impl Recognizer for LabelsParserExt {
 }
 
 impl Actions for LabelsParserExt {
-    type Recog = BaseParser<LabelsParserExt, dyn LabelsListener, LabelsListenerCaller>;
+    type Recog = BaseParserType;
     fn sempred(_localctx: &dyn ParserRuleContext, rule_index: isize, pred_index: isize,
                recog: &mut <Self as Actions>::Recog,
     ) -> bool {
         match rule_index {
-            2 => Self::e_sempred(cast::<_, EContext>(_localctx), pred_index, recog),
+            1 => Self::e_sempred(cast::<_, EContext>(_localctx), pred_index, recog),
             _ => true
         }
     }
@@ -158,83 +159,6 @@ impl LabelsParserExt {
         }
     }
 }
-
-//------------------- z ----------------
-pub type ZContextAll = ZContext;
-
-
-pub type ZContext = BaseParserRuleContext<ZContextExt>;
-
-#[derive(Clone)]
-pub struct ZContextExt {}
-
-impl CustomRuleContext for ZContextExt {
-    fn get_rule_index(&self) -> usize {
-        RULE_z
-    }
-    fn enter(ctx: &BaseParserRuleContext<Self>, listener: &mut dyn Any) where Self: Sized {
-        listener.downcast_mut::<Box<dyn LabelsListener>>()
-            .map(|it| it.enter_z(ctx));
-    }
-    fn exit(ctx: &BaseParserRuleContext<Self>, listener: &mut dyn Any) where Self: Sized {
-        listener.downcast_mut::<Box<dyn LabelsListener>>()
-            .map(|it| it.exit_z(ctx));
-    }
-}
-
-impl ZContextExt {
-    fn new(parent: Option<ParserRuleContextType>, invoking_state: isize) -> Rc<ZContextAll> {
-        Rc::new(
-            BaseParserRuleContext::new_parser_ctx(parent, invoking_state, ZContextExt {}),
-        )
-    }
-}
-
-pub trait ZContextAttrs: ParserRuleContext + BorrowMut<ZContextExt> {
-    fn s(&self) -> Rc<SContextAll> where Self: Sized {
-        self.child_of_type(0)
-    }
-}
-
-impl ZContextAttrs for ZContext {}
-
-//impl ZContext{
-
-//}
-
-impl LabelsParser {
-    pub fn z(&mut self)
-             -> Result<Rc<ZContextAll>, ANTLRError> {
-        let mut recog = self;
-        let _parentctx = recog.ctx.take();
-        let mut _localctx = ZContextExt::new(_parentctx.clone(), recog.base.get_state());
-        recog.base.enter_rule(_localctx.clone(), 0, RULE_z);
-        let mut _localctx: Rc<ZContextAll> = _localctx;
-        let result: Result<(), ANTLRError> = try {
-
-            //recog.base.enter_outer_alt(_localctx.clone(), 1);
-            recog.base.enter_outer_alt(None, 1);
-            {
-                /*InvokeRule s*/
-                recog.base.set_state(6);
-                recog.s(0)?;
-            }
-        };
-        match result {
-            Ok(_) => {},
-            Err(e @ ANTLRError::FallThrough(_)) => return Err(e),
-            Err(ref re) => {
-                //_localctx.exception = re;
-                recog.err_handler.report_error(&mut recog.base, re);
-                recog.err_handler.recover(&mut recog.base, re)?;
-            }
-        }
-        recog.base.exit_rule();
-
-        Ok(_localctx)
-    }
-}
-
 //------------------- s ----------------
 pub type SContextAll = SContext;
 
@@ -243,9 +167,7 @@ pub type SContext = BaseParserRuleContext<SContextExt>;
 
 #[derive(Clone)]
 pub struct SContextExt {
-    pub v: isize,
-    pub q: Option<Rc<EContextAll>>,
-    pub e: Option<Rc<EContextAll>>,
+    pub q: Option<Rc<EContextAll>>
 }
 
 impl CustomRuleContext for SContextExt {
@@ -263,20 +185,16 @@ impl CustomRuleContext for SContextExt {
 }
 
 impl SContextExt {
-    fn new(parent: Option<ParserRuleContextType>, invoking_state: isize, v: isize) -> Rc<SContextAll> {
+    fn new(parent: Option<ParserRuleContextType>, invoking_state: isize) -> Rc<SContextAll> {
         Rc::new(
             BaseParserRuleContext::new_parser_ctx(parent, invoking_state, SContextExt {
                 q: None,
-                e: None,
-                v,
             }),
         )
     }
 }
 
 pub trait SContextAttrs: ParserRuleContext + BorrowMut<SContextExt> {
-    fn get_v(&self) -> &isize { &self.borrow().v }
-    fn set_v(&mut self, attr: isize) { self.borrow_mut().v = attr; }
     fn e(&self) -> Rc<EContextAll> where Self: Sized {
         self.child_of_type(0)
     }
@@ -289,12 +207,12 @@ impl SContextAttrs for SContext {}
 //}
 
 impl LabelsParser {
-    pub fn s(&mut self, v: isize)
+    pub fn s(&mut self)
              -> Result<Rc<SContextAll>, ANTLRError> {
         let mut recog = self;
         let _parentctx = recog.ctx.take();
-        let mut _localctx = SContextExt::new(_parentctx.clone(), recog.base.get_state(), v);
-        recog.base.enter_rule(_localctx.clone(), 2, RULE_s);
+        let mut _localctx = SContextExt::new(_parentctx.clone(), recog.base.get_state());
+        recog.base.enter_rule(_localctx.clone(), 0, RULE_s);
         let mut _localctx: Rc<SContextAll> = _localctx;
         let result: Result<(), ANTLRError> = try {
 
@@ -302,15 +220,9 @@ impl LabelsParser {
             recog.base.enter_outer_alt(None, 1);
             {
                 /*InvokeRule e*/
-                recog.base.set_state(8);
+                recog.base.set_state(4);
                 let tmp = recog.e_rec(0)?;
                 cast_mut::<_, SContext>(&mut _localctx).q = Some(tmp.clone());
-
-                cast_mut::<_, SContext>(&mut _localctx).e = Some(tmp.clone());
-
-
-                println!("{}", /* Qret */(cast::<_, SContext>(&*_localctx))
-                    .e.as_ref().unwrap().get_v())
             }
         };
         match result {
@@ -365,7 +277,7 @@ pub type EContext = BaseParserRuleContext<EContextExt>;
 
 #[derive(Clone)]
 pub struct EContextExt {
-    pub v: isize
+    pub v: String
 }
 
 impl CustomRuleContext for EContextExt {
@@ -387,8 +299,8 @@ impl EContextExt {
 }
 
 pub trait EContextAttrs: ParserRuleContext + BorrowMut<EContextExt> {
-    fn get_v(&self) -> &isize { &self.borrow().v }
-    fn set_v(&mut self, attr: isize) { self.borrow_mut().v = attr; }
+    fn get_v(&self) -> &String { &self.borrow().v }
+    fn set_v(&mut self, attr: String) { self.borrow_mut().v = attr; }
 }
 
 impl EContextAttrs for EContext {}
@@ -402,24 +314,6 @@ impl EContextAttrs for EContext {}
 //}
 //}
 
-//pub struct AddContext  {
-//    
-//    base : BaseParserRuleContext<AddContextExt>,
-//}
-//
-//impl Deref for AddContext{
-//    type Target = BaseParserRuleContext<AddContextExt>;
-//
-//    fn deref(&self) -> &Self::Target {
-//        &self.base
-//    }
-//}
-//
-//impl DerefMut for AddContext{
-//    fn deref_mut(&mut self) -> &mut Self::Target {
-//        &mut self.base
-//    }
-//}
 pub type AddContext = BaseParserRuleContext<AddContextExt>;
 
 pub trait AddContextAttrs: ParserRuleContext {
@@ -478,24 +372,6 @@ impl AddContextExt {
     }
 }
 
-//pub struct ParensContext  {
-//    
-//    base : BaseParserRuleContext<ParensContextExt>,
-//}
-//
-//impl Deref for ParensContext{
-//    type Target = BaseParserRuleContext<ParensContextExt>;
-//
-//    fn deref(&self) -> &Self::Target {
-//        &self.base
-//    }
-//}
-//
-//impl DerefMut for ParensContext{
-//    fn deref_mut(&mut self) -> &mut Self::Target {
-//        &mut self.base
-//    }
-//}
 pub type ParensContext = BaseParserRuleContext<ParensContextExt>;
 
 pub trait ParensContextAttrs: ParserRuleContext {
@@ -549,24 +425,6 @@ impl ParensContextExt {
     }
 }
 
-//pub struct MultContext  {
-//    
-//    base : BaseParserRuleContext<MultContextExt>,
-//}
-//
-//impl Deref for MultContext{
-//    type Target = BaseParserRuleContext<MultContextExt>;
-//
-//    fn deref(&self) -> &Self::Target {
-//        &self.base
-//    }
-//}
-//
-//impl DerefMut for MultContext{
-//    fn deref_mut(&mut self) -> &mut Self::Target {
-//        &mut self.base
-//    }
-//}
 pub type MultContext = BaseParserRuleContext<MultContextExt>;
 
 pub trait MultContextAttrs: ParserRuleContext {
@@ -627,24 +485,6 @@ impl MultContextExt {
     }
 }
 
-//pub struct DecContext  {
-//    
-//    base : BaseParserRuleContext<DecContextExt>,
-//}
-//
-//impl Deref for DecContext{
-//    type Target = BaseParserRuleContext<DecContextExt>;
-//
-//    fn deref(&self) -> &Self::Target {
-//        &self.base
-//    }
-//}
-//
-//impl DerefMut for DecContext{
-//    fn deref_mut(&mut self) -> &mut Self::Target {
-//        &mut self.base
-//    }
-//}
 pub type DecContext = BaseParserRuleContext<DecContextExt>;
 
 pub trait DecContextAttrs: ParserRuleContext {
@@ -657,6 +497,7 @@ impl DecContextAttrs for DecContext {}
 
 pub struct DecContextExt {
     base: EContextExt,
+    pub x: Option<Rc<EContextAll>>,
 }
 
 impl CustomRuleContext for DecContextExt {
@@ -689,35 +530,20 @@ impl DecContextExt {
         Rc::new(
             EContextAll::DecContext(
                 BaseParserRuleContext::copy_from(ctx, DecContextExt {
-                    base: ctx.borrow().clone()
+                    x: None,
+                    base: ctx.borrow().clone(),
                 })
             )
         )
     }
 }
 
-//pub struct AnIDContext  {
-//    
-//    base : BaseParserRuleContext<AnIDContextExt>,
-//}
-//
-//impl Deref for AnIDContext{
-//    type Target = BaseParserRuleContext<AnIDContextExt>;
-//
-//    fn deref(&self) -> &Self::Target {
-//        &self.base
-//    }
-//}
-//
-//impl DerefMut for AnIDContext{
-//    fn deref_mut(&mut self) -> &mut Self::Target {
-//        &mut self.base
-//    }
-//}
 pub type AnIDContext = BaseParserRuleContext<AnIDContextExt>;
 
 pub trait AnIDContextAttrs: ParserRuleContext {
-    fn ID(&self) -> Rc<TerminalNode> where Self: Sized {
+    /// Retrieves first TerminalNode corresponding to token ID
+    /// Returns `None` if there is no child corresponding to token ID
+    fn ID(&self) -> Option<Rc<TerminalNode>> where Self: Sized {
         self.get_token(ID, 0)
     }
 }
@@ -726,6 +552,7 @@ impl AnIDContextAttrs for AnIDContext {}
 
 pub struct AnIDContextExt {
     base: EContextExt,
+    pub ID: Option<OwningToken>,
 }
 
 impl CustomRuleContext for AnIDContextExt {
@@ -758,35 +585,20 @@ impl AnIDContextExt {
         Rc::new(
             EContextAll::AnIDContext(
                 BaseParserRuleContext::copy_from(ctx, AnIDContextExt {
-                    base: ctx.borrow().clone()
+                    ID: None,
+                    base: ctx.borrow().clone(),
                 })
             )
         )
     }
 }
 
-//pub struct AnIntContext  {
-//    
-//    base : BaseParserRuleContext<AnIntContextExt>,
-//}
-//
-//impl Deref for AnIntContext{
-//    type Target = BaseParserRuleContext<AnIntContextExt>;
-//
-//    fn deref(&self) -> &Self::Target {
-//        &self.base
-//    }
-//}
-//
-//impl DerefMut for AnIntContext{
-//    fn deref_mut(&mut self) -> &mut Self::Target {
-//        &mut self.base
-//    }
-//}
 pub type AnIntContext = BaseParserRuleContext<AnIntContextExt>;
 
 pub trait AnIntContextAttrs: ParserRuleContext {
-    fn INT(&self) -> Rc<TerminalNode> where Self: Sized {
+    /// Retrieves first TerminalNode corresponding to token INT
+    /// Returns `None` if there is no child corresponding to token INT
+    fn INT(&self) -> Option<Rc<TerminalNode>> where Self: Sized {
         self.get_token(INT, 0)
     }
 }
@@ -836,24 +648,6 @@ impl AnIntContextExt {
     }
 }
 
-//pub struct IncContext  {
-//    
-//    base : BaseParserRuleContext<IncContextExt>,
-//}
-//
-//impl Deref for IncContext{
-//    type Target = BaseParserRuleContext<IncContextExt>;
-//
-//    fn deref(&self) -> &Self::Target {
-//        &self.base
-//    }
-//}
-//
-//impl DerefMut for IncContext{
-//    fn deref_mut(&mut self) -> &mut Self::Target {
-//        &mut self.base
-//    }
-//}
 pub type IncContext = BaseParserRuleContext<IncContextExt>;
 
 pub trait IncContextAttrs: ParserRuleContext {
@@ -919,16 +713,16 @@ impl LabelsParser {
         let _parentctx = recog.ctx.take();
         let _parentState = recog.base.get_state();
         let mut _localctx = EContextExt::new(_parentctx.clone(), recog.base.get_state());
-        recog.base.enter_recursion_rule(_localctx.clone(), 4, RULE_e, _p);
+        recog.base.enter_recursion_rule(_localctx.clone(), 2, RULE_e, _p);
         let mut _localctx: Rc<EContextAll> = _localctx;
         let mut _prevctx = _localctx.clone();
-        let _startState = 4;
+        let _startState = 2;
         let result: Result<(), ANTLRError> = try {
             let mut _alt: isize;
             //recog.base.enter_outer_alt(_localctx.clone(), 1);
             recog.base.enter_outer_alt(None, 1);
             {
-                recog.base.set_state(21);
+                recog.base.set_state(16);
                 recog.err_handler.sync(&mut recog.base)?;
                 match recog.base.input.la(1) {
                     INT
@@ -939,7 +733,7 @@ impl LabelsParser {
                             _localctx = tmp;
                             _prevctx = _localctx.clone();
 
-                            recog.base.set_state(12);
+                            recog.base.set_state(7);
                             let tmp = recog.base.match_token(INT, recog.err_handler.as_mut())?;
                             if let EContextAll::AnIntContext(ctx) = cast_mut::<_, EContextAll>(&mut _localctx) {
                                 ctx.INT = Some(tmp.clone());
@@ -948,7 +742,7 @@ impl LabelsParser {
                             let tmp = {
                                 if let Some(it) = &if let EContextAll::AnIntContext(ctx) = cast::<_, EContextAll>(&*_localctx) {
                                     ctx
-                                } else { unreachable!("cant cast") }.INT { isize::from_str_radix(it.get_text(), 10).unwrap() } else { 0 }
+                                } else { unreachable!("cant cast") }.INT { it.get_text() } else { "null" }.to_owned()
                             }.to_owned();
                             if let EContextAll::AnIntContext(ctx) = cast_mut::<_, EContextAll>(&mut _localctx) {
                                 ctx.set_v(tmp);
@@ -963,21 +757,21 @@ impl LabelsParser {
                             recog.ctx = Some(tmp.clone());
                             _localctx = tmp;
                             _prevctx = _localctx.clone();
-                            recog.base.set_state(14);
+                            recog.base.set_state(9);
                             recog.base.match_token(T__2, recog.err_handler.as_mut())?;
 
                             /*InvokeRule e*/
-                            recog.base.set_state(15);
+                            recog.base.set_state(10);
                             let tmp = recog.e_rec(0)?;
                             if let EContextAll::ParensContext(ctx) = cast_mut::<_, EContextAll>(&mut _localctx) {
                                 ctx.x = Some(tmp.clone());
                             } else { unreachable!("cant cast"); }
 
-                            recog.base.set_state(16);
+                            recog.base.set_state(11);
                             recog.base.match_token(T__3, recog.err_handler.as_mut())?;
 
                             let tmp = {
-                                /* Qret */if let EContextAll::ParensContext(ctx) = cast::<_, EContextAll>(&*_localctx) {
+                                if let EContextAll::ParensContext(ctx) = cast::<_, EContextAll>(&*_localctx) {
                                     ctx
                                 } else { unreachable!("cant cast") }.x.as_ref().unwrap().get_v()
                             }.to_owned();
@@ -994,10 +788,17 @@ impl LabelsParser {
                             recog.ctx = Some(tmp.clone());
                             _localctx = tmp;
                             _prevctx = _localctx.clone();
-                            recog.base.set_state(19);
-                            recog.base.match_token(ID, recog.err_handler.as_mut())?;
+                            recog.base.set_state(14);
+                            let tmp = recog.base.match_token(ID, recog.err_handler.as_mut())?;
+                            if let EContextAll::AnIDContext(ctx) = cast_mut::<_, EContextAll>(&mut _localctx) {
+                                ctx.ID = Some(tmp.clone());
+                            } else { unreachable!("cant cast"); }
 
-                            let tmp = { 3 }.to_owned();
+                            let tmp = {
+                                if let Some(it) = &if let EContextAll::AnIDContext(ctx) = cast::<_, EContextAll>(&*_localctx) {
+                                    ctx
+                                } else { unreachable!("cant cast") }.ID { it.get_text() } else { "null" }.to_owned()
+                            }.to_owned();
                             if let EContextAll::AnIDContext(ctx) = cast_mut::<_, EContextAll>(&mut _localctx) {
                                 ctx.set_v(tmp);
                             } else { unreachable!("cant cast"); }
@@ -1008,7 +809,7 @@ impl LabelsParser {
                 }
                 let tmp = recog.input.lt(-1).map(Token::to_owned);
                 recog.ctx.as_ref().unwrap().set_stop(tmp);
-                recog.base.set_state(40);
+                recog.base.set_state(36);
                 recog.err_handler.sync(&mut recog.base)?;
                 _alt = recog.interpreter.adaptive_predict(2, &mut recog.base)?;
                 while { _alt != 2 && _alt != INVALID_ALT } {
@@ -1016,7 +817,7 @@ impl LabelsParser {
                         recog.trigger_exit_rule_event();
                         _prevctx = _localctx.clone();
                         {
-                            recog.base.set_state(38);
+                            recog.base.set_state(34);
                             recog.err_handler.sync(&mut recog.base)?;
                             match recog.interpreter.adaptive_predict(1, &mut recog.base)? {
                                 1 => {
@@ -1028,27 +829,27 @@ impl LabelsParser {
                                         } else { unreachable!("cant cast"); }
                                         recog.push_new_recursion_context(tmp.clone(), _startState, RULE_e);
                                         _localctx = tmp;
-                                        recog.base.set_state(23);
+                                        recog.base.set_state(18);
                                         if !({ recog.precpred(None, 7) }) {
                                             Err(FailedPredicateError::new(&mut recog.base, Some("recog.precpred(None, 7)".to_owned()), None))?;
                                         }
-                                        recog.base.set_state(24);
+                                        recog.base.set_state(19);
                                         let tmp = recog.base.match_token(T__0, recog.err_handler.as_mut())?;
                                         if let EContextAll::MultContext(ctx) = cast_mut::<_, EContextAll>(&mut _localctx) {
                                             ctx.op = Some(tmp.clone());
                                         } else { unreachable!("cant cast"); }
 
                                         /*InvokeRule e*/
-                                        recog.base.set_state(25);
+                                        recog.base.set_state(20);
                                         let tmp = recog.e_rec(8)?;
                                         if let EContextAll::MultContext(ctx) = cast_mut::<_, EContextAll>(&mut _localctx) {
                                             ctx.b = Some(tmp.clone());
                                         } else { unreachable!("cant cast"); }
 
                                         let tmp = {
-                                            /* Qret */if let EContextAll::MultContext(ctx) = cast::<_, EContextAll>(&*_localctx) {
+                                            "* ".to_owned() + if let EContextAll::MultContext(ctx) = cast::<_, EContextAll>(&*_localctx) {
                                                 ctx
-                                            } else { unreachable!("cant cast") }.a.as_ref().unwrap().get_v() * /* Qret */if let EContextAll::MultContext(ctx) = cast::<_, EContextAll>(&*_localctx) {
+                                            } else { unreachable!("cant cast") }.a.as_ref().unwrap().get_v() + " " + if let EContextAll::MultContext(ctx) = cast::<_, EContextAll>(&*_localctx) {
                                                 ctx
                                             } else { unreachable!("cant cast") }.b.as_ref().unwrap().get_v()
                                         }.to_owned();
@@ -1067,24 +868,24 @@ impl LabelsParser {
                                         } else { unreachable!("cant cast"); }
                                         recog.push_new_recursion_context(tmp.clone(), _startState, RULE_e);
                                         _localctx = tmp;
-                                        recog.base.set_state(28);
+                                        recog.base.set_state(23);
                                         if !({ recog.precpred(None, 6) }) {
                                             Err(FailedPredicateError::new(&mut recog.base, Some("recog.precpred(None, 6)".to_owned()), None))?;
                                         }
-                                        recog.base.set_state(29);
+                                        recog.base.set_state(24);
                                         recog.base.match_token(T__1, recog.err_handler.as_mut())?;
 
                                         /*InvokeRule e*/
-                                        recog.base.set_state(30);
+                                        recog.base.set_state(25);
                                         let tmp = recog.e_rec(7)?;
                                         if let EContextAll::AddContext(ctx) = cast_mut::<_, EContextAll>(&mut _localctx) {
                                             ctx.b = Some(tmp.clone());
                                         } else { unreachable!("cant cast"); }
 
                                         let tmp = {
-                                            /* Qret */if let EContextAll::AddContext(ctx) = cast::<_, EContextAll>(&*_localctx) {
+                                            "+ ".to_owned() + if let EContextAll::AddContext(ctx) = cast::<_, EContextAll>(&*_localctx) {
                                                 ctx
-                                            } else { unreachable!("cant cast") }.a.as_ref().unwrap().get_v() + /* Qret */if let EContextAll::AddContext(ctx) = cast::<_, EContextAll>(&*_localctx) {
+                                            } else { unreachable!("cant cast") }.a.as_ref().unwrap().get_v() + " " + if let EContextAll::AddContext(ctx) = cast::<_, EContextAll>(&*_localctx) {
                                                 ctx
                                             } else { unreachable!("cant cast") }.b.as_ref().unwrap().get_v()
                                         }.to_owned();
@@ -1103,17 +904,17 @@ impl LabelsParser {
                                         } else { unreachable!("cant cast"); }
                                         recog.push_new_recursion_context(tmp.clone(), _startState, RULE_e);
                                         _localctx = tmp;
-                                        recog.base.set_state(33);
+                                        recog.base.set_state(28);
                                         if !({ recog.precpred(None, 3) }) {
                                             Err(FailedPredicateError::new(&mut recog.base, Some("recog.precpred(None, 3)".to_owned()), None))?;
                                         }
-                                        recog.base.set_state(34);
+                                        recog.base.set_state(29);
                                         recog.base.match_token(T__4, recog.err_handler.as_mut())?;
 
                                         let tmp = {
-                                            /* Qret */if let EContextAll::IncContext(ctx) = cast::<_, EContextAll>(&*_localctx) {
+                                            " ++".to_owned() + if let EContextAll::IncContext(ctx) = cast::<_, EContextAll>(&*_localctx) {
                                                 ctx
-                                            } else { unreachable!("cant cast") }.x.as_ref().unwrap().get_v() + 1
+                                            } else { unreachable!("cant cast") }.x.as_ref().unwrap().get_v()
                                         }.to_owned();
                                         if let EContextAll::IncContext(ctx) = cast_mut::<_, EContextAll>(&mut _localctx) {
                                             ctx.set_v(tmp);
@@ -1125,14 +926,26 @@ impl LabelsParser {
                                     {
                                         /*recRuleLabeledAltStartAction*/
                                         let mut tmp = DecContextExt::new(&**EContextExt::new(_parentctx.clone(), _parentState));
+                                        if let EContextAll::DecContext(ctx) = cast_mut::<_, EContextAll>(&mut tmp) {
+                                            ctx.x = Some(_prevctx.clone());
+                                        } else { unreachable!("cant cast"); }
                                         recog.push_new_recursion_context(tmp.clone(), _startState, RULE_e);
                                         _localctx = tmp;
-                                        recog.base.set_state(36);
+                                        recog.base.set_state(31);
                                         if !({ recog.precpred(None, 2) }) {
                                             Err(FailedPredicateError::new(&mut recog.base, Some("recog.precpred(None, 2)".to_owned()), None))?;
                                         }
-                                        recog.base.set_state(37);
+                                        recog.base.set_state(32);
                                         recog.base.match_token(T__5, recog.err_handler.as_mut())?;
+
+                                        let tmp = {
+                                            " --".to_owned() + if let EContextAll::DecContext(ctx) = cast::<_, EContextAll>(&*_localctx) {
+                                                ctx
+                                            } else { unreachable!("cant cast") }.x.as_ref().unwrap().get_v()
+                                        }.to_owned();
+                                        if let EContextAll::DecContext(ctx) = cast_mut::<_, EContextAll>(&mut _localctx) {
+                                            ctx.set_v(tmp);
+                                        } else { unreachable!("cant cast"); }
                                     }
                                 }
 
@@ -1140,7 +953,7 @@ impl LabelsParser {
                             }
                         }
                     }
-                    recog.base.set_state(42);
+                    recog.base.set_state(38);
                     recog.err_handler.sync(&mut recog.base)?;
                     _alt = recog.interpreter.adaptive_predict(2, &mut recog.base)?;
                 }
@@ -1182,27 +995,25 @@ lazy_static! {
 
 const _serializedATN: &'static str =
     "\x03\u{608b}\u{a72a}\u{8133}\u{b9ed}\u{417c}\u{3be7}\u{7786}\u{5964}\x03\
-	\x0b\x2e\x04\x02\x09\x02\x04\x03\x09\x03\x04\x04\x09\x04\x03\x02\x03\x02\
-	\x03\x03\x03\x03\x03\x03\x03\x04\x03\x04\x03\x04\x03\x04\x03\x04\x03\x04\
-	\x03\x04\x03\x04\x03\x04\x03\x04\x05\x04\x18\x0a\x04\x03\x04\x03\x04\x03\
-	\x04\x03\x04\x03\x04\x03\x04\x03\x04\x03\x04\x03\x04\x03\x04\x03\x04\x03\
-	\x04\x03\x04\x03\x04\x03\x04\x07\x04\x29\x0a\x04\x0c\x04\x0e\x04\x2c\x0b\
-	\x04\x03\x04\x02\x03\x06\x05\x02\x04\x06\x02\x02\x02\x30\x02\x08\x03\x02\
-	\x02\x02\x04\x0a\x03\x02\x02\x02\x06\x17\x03\x02\x02\x02\x08\x09\x05\x04\
-	\x03\x02\x09\x03\x03\x02\x02\x02\x0a\x0b\x05\x06\x04\x02\x0b\x0c\x08\x03\
-	\x01\x02\x0c\x05\x03\x02\x02\x02\x0d\x0e\x08\x04\x01\x02\x0e\x0f\x07\x0a\
-	\x02\x02\x0f\x18\x08\x04\x01\x02\x10\x11\x07\x05\x02\x02\x11\x12\x05\x06\
-	\x04\x02\x12\x13\x07\x06\x02\x02\x13\x14\x08\x04\x01\x02\x14\x18\x03\x02\
-	\x02\x02\x15\x16\x07\x09\x02\x02\x16\x18\x08\x04\x01\x02\x17\x0d\x03\x02\
-	\x02\x02\x17\x10\x03\x02\x02\x02\x17\x15\x03\x02\x02\x02\x18\x2a\x03\x02\
-	\x02\x02\x19\x1a\x0c\x09\x02\x02\x1a\x1b\x07\x03\x02\x02\x1b\x1c\x05\x06\
-	\x04\x0a\x1c\x1d\x08\x04\x01\x02\x1d\x29\x03\x02\x02\x02\x1e\x1f\x0c\x08\
-	\x02\x02\x1f\x20\x07\x04\x02\x02\x20\x21\x05\x06\x04\x09\x21\x22\x08\x04\
-	\x01\x02\x22\x29\x03\x02\x02\x02\x23\x24\x0c\x05\x02\x02\x24\x25\x07\x07\
-	\x02\x02\x25\x29\x08\x04\x01\x02\x26\x27\x0c\x04\x02\x02\x27\x29\x07\x08\
-	\x02\x02\x28\x19\x03\x02\x02\x02\x28\x1e\x03\x02\x02\x02\x28\x23\x03\x02\
-	\x02\x02\x28\x26\x03\x02\x02\x02\x29\x2c\x03\x02\x02\x02\x2a\x28\x03\x02\
-	\x02\x02\x2a\x2b\x03\x02\x02\x02\x2b\x07\x03\x02\x02\x02\x2c\x2a\x03\x02\
-	\x02\x02\x05\x17\x28\x2a";
+	\x0b\x2a\x04\x02\x09\x02\x04\x03\x09\x03\x03\x02\x03\x02\x03\x03\x03\x03\
+	\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x05\x03\
+	\x13\x0a\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\
+	\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x07\
+	\x03\x25\x0a\x03\x0c\x03\x0e\x03\x28\x0b\x03\x03\x03\x02\x03\x04\x04\x02\
+	\x04\x02\x02\x02\x2d\x02\x06\x03\x02\x02\x02\x04\x12\x03\x02\x02\x02\x06\
+	\x07\x05\x04\x03\x02\x07\x03\x03\x02\x02\x02\x08\x09\x08\x03\x01\x02\x09\
+	\x0a\x07\x0a\x02\x02\x0a\x13\x08\x03\x01\x02\x0b\x0c\x07\x05\x02\x02\x0c\
+	\x0d\x05\x04\x03\x02\x0d\x0e\x07\x06\x02\x02\x0e\x0f\x08\x03\x01\x02\x0f\
+	\x13\x03\x02\x02\x02\x10\x11\x07\x09\x02\x02\x11\x13\x08\x03\x01\x02\x12\
+	\x08\x03\x02\x02\x02\x12\x0b\x03\x02\x02\x02\x12\x10\x03\x02\x02\x02\x13\
+	\x26\x03\x02\x02\x02\x14\x15\x0c\x09\x02\x02\x15\x16\x07\x03\x02\x02\x16\
+	\x17\x05\x04\x03\x0a\x17\x18\x08\x03\x01\x02\x18\x25\x03\x02\x02\x02\x19\
+	\x1a\x0c\x08\x02\x02\x1a\x1b\x07\x04\x02\x02\x1b\x1c\x05\x04\x03\x09\x1c\
+	\x1d\x08\x03\x01\x02\x1d\x25\x03\x02\x02\x02\x1e\x1f\x0c\x05\x02\x02\x1f\
+	\x20\x07\x07\x02\x02\x20\x25\x08\x03\x01\x02\x21\x22\x0c\x04\x02\x02\x22\
+	\x23\x07\x08\x02\x02\x23\x25\x08\x03\x01\x02\x24\x14\x03\x02\x02\x02\x24\
+	\x19\x03\x02\x02\x02\x24\x1e\x03\x02\x02\x02\x24\x21\x03\x02\x02\x02\x25\
+	\x28\x03\x02\x02\x02\x26\x24\x03\x02\x02\x02\x26\x27\x03\x02\x02\x02\x27\
+	\x05\x03\x02\x02\x02\x28\x26\x03\x02\x02\x02\x05\x12\x24\x26";
 
 

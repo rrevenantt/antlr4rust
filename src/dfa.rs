@@ -37,6 +37,7 @@ impl<Any: Sized> ScopeExt for Any {}
 
 
 pub struct DFA {
+    /// ATN state from which this DFA creation was started from
     pub atn_start_state: ATNStateRef,
 
     pub decision: isize,
@@ -46,15 +47,13 @@ pub struct DFA {
 
     // for faster duplicate search
     // TODO i think DFAState.edges can contain references to its elements
-    pub states_map: RwLock<HashMap</*DFAState hash*/ u64, Vec<DFAStateRef>>>,
+    pub(crate) states_map: RwLock<HashMap</*DFAState hash*/ u64, Vec<DFAStateRef>>>,
     //    states_mu sync.RWMutex
+    /// Initial DFA state
     pub s0: RwLock<Option<DFAStateRef>>,
     //    s0_mu sync.RWMutex
     is_precedence_dfa: bool,
 }
-
-//struct DFAStateRef{
-//}
 
 impl DFA {
     pub fn new(atn: Arc<ATN>, atn_start_state: ATNStateRef, decision: isize) -> DFA {
@@ -142,22 +141,6 @@ impl DFA {
 
     pub fn set_precedence_dfa(&mut self, precedence_dfa: bool) {
         self.is_precedence_dfa = precedence_dfa
-    }
-
-    fn get_s0(&self) -> &DFAState {
-        unimplemented!()
-    }
-
-    fn set_s0(&mut self, _s: &DFAState) {
-        unimplemented!()
-    }
-
-    fn get_state(&self, _id: isize) -> Option<&DFAState> {
-        unimplemented!()
-    }
-
-    fn set_state(&self, _id: isize, _state: &DFAState) {
-        unimplemented!()
     }
 
     fn num_states(&self) -> isize {

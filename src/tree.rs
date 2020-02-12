@@ -1,6 +1,6 @@
 use std::any::{Any, TypeId};
 use std::cell::{Ref, RefCell};
-use std::fmt::{Debug, Error, Formatter, Write};
+use std::fmt::{Debug, Error, Formatter};
 use std::ops::Deref;
 
 use crate::atn::INVALID_ALT;
@@ -10,12 +10,12 @@ use crate::parser::Parser;
 use crate::parser_rule_context::{BaseParserRuleContext, cast, ParserRuleContext, ParserRuleContextType};
 use crate::rule_context::CustomRuleContext;
 use crate::token::{OwningToken, Token};
+use crate::trees;
 
 //todo try to make in more generic
 pub trait Tree: NodeText {
     fn get_parent(&self) -> Option<ParserRuleContextType>;
     fn has_parent(&self) -> bool;
-    //    fn set_parent(&self, tree: Self);
     fn get_payload(&self) -> Box<dyn Any>;
     fn get_child(&self, i: usize) -> Option<ParserRuleContextType>;
     fn get_child_count(&self) -> usize;
@@ -24,12 +24,24 @@ pub trait Tree: NodeText {
 }
 
 pub trait ParseTree: Tree {
-    //    fn accept(&self, v: ParseTreeVisitor) -> interface;
+    /// Returns interval in input string which corresponds to this subtree
     fn get_source_interval(&self) -> Interval;
 
+    /// Return combined text of this AST node.
+    /// To create resulting string it does traverse whole subtree,
+    /// also it includes only tokens added to the parse tree
+    ///
+    /// Since tokens on hidden channels (e.g. whitespace or comments) are not
+    ///	added to the parse trees, they will not appear in the output of this
+    ///	method.
     fn get_text(&self) -> String;
 
-    fn to_string_tree(&self, r: &dyn Parser) -> String;
+    /// Print out a whole tree, not just a node, in LISP format
+    /// (root child1 .. childN). Print just a node if this is a leaf.
+    /// We have to know the recognizer so we can get rule names.
+    fn to_string_tree(&self, r: &dyn Parser) -> String {
+        trees::string_tree(self, r.get_rule_names())
+    }
 }
 
 pub trait NodeText {
@@ -54,10 +66,8 @@ impl<T: ParserRuleContext> NodeText for T {
     }
 }
 
-//pub trait RuleNode: ParseTree {
-//    fn get_rule_context(&self) -> RuleContext;
-//    fn get_base_rule_context(&self) -> * BaseRuleContext;
-//}
+//todo unify code for terminal and error nodes
+
 /// AST leaf
 pub type TerminalNode = BaseParserRuleContext<TerminalNodeCtx>;
 
@@ -74,6 +84,12 @@ impl CustomRuleContext for TerminalNodeCtx {
 impl NodeText for TerminalNode {
     fn get_node_text(&self, _rule_names: &[&str]) -> String {
         self.symbol.get_text().to_owned()
+    }
+}
+
+impl ParseTree for TerminalNode {
+    fn get_text(&self) -> String {
+        self.symbol.text.to_owned()
     }
 }
 
@@ -102,6 +118,12 @@ impl Deref for ErrorNodeCtx {
 impl NodeText for ErrorNode {
     fn get_node_text(&self, _rule_names: &[&str]) -> String {
         self.symbol.get_text().to_owned()
+    }
+}
+
+impl ParseTree for ErrorNode {
+    fn get_text(&self) -> String {
+        self.symbol.text.to_owned()
     }
 }
 
@@ -167,83 +189,11 @@ pub trait ParseTreeListener: 'static {
 //    }
 //}
 
-//pub trait ListenerAcceptor{
-//    fn enter(&self, listener: &mut dyn Any);
-//    fn exit(&self, listener: &mut dyn Any);
-//}
-//
-//impl<Ctx:CustomRuleContext> ListenerAcceptor for BaseParserRuleContext<Ctx>{
-//    default fn enter(&self, listener: &mut dyn Any) {}
-//    default fn exit(& self, listener: &mut dyn Any) {}
-//}
-
-//pub struct BaseParseTreeListener {  }
-//
-//impl ParseTreeListener for BaseParseTreeListener {
-//    fn visit_terminal(&self, node: TerminalNode) { unimplemented!() }
-//
-//    fn visit_error_node(&self, node: ErrorNode) { unimplemented!() }
-//
-//    fn enter_every_rule(&self, ctx: ParserRuleContext) { unimplemented!() }
-//
-//    fn exit_every_rule(&self, ctx: ParserRuleContext) { unimplemented!() }
-//}
-//pub struct TerminalNodeImpl {
-//    parent_ctx: RuleContext,
-//    symbol: Token,
-//}
-//
-//impl TerminalNodeImpl {
-//    fn new_terminal_node_impl(symbol Token) -> * TerminalNodeImpl { unimplemented!() }
-//
-//    fn get_child(&self, i: isize) -> Tree { unimplemented!() }
-//
-//    fn get_children(&self) -> Vec<Tree> { unimplemented!() }
-//
-//    fn set_children(&self, tree Vec<Tree>) { unimplemented!() }
-//
-//    fn get_symbol(&self) -> Token { unimplemented!() }
-//
-//    fn get_parent(&self) -> Tree { unimplemented!() }
-//
-//    fn set_parent(&self, tree: Tree) { unimplemented!() }
-//
-//    fn get_payload(&self) -> interface { unimplemented!() } {
-//    return t.symbol
-//    }
-//
-//    fn get_source_interval(&self) -> * Interval { unimplemented!() }
-//
-//    fn get_child_count(&self) -> int { unimplemented!() }
-//
-//    fn accept(&self, v: ParseTreeVisitor) -> interface { unimplemented!() } {
-//    return v.VisitTerminal(t)
-//    }
-//
-//    fn get_text(&self) -> String { unimplemented!() }
-//
-//    fn String(&self) -> String { unimplemented!() }
-//
-//    fn to_string_tree(&self, s Vec<String>, r: Recognizer) -> String { unimplemented!() }
-//}
-//
-//pub struct ErrorNodeImpl {
-//    base: TerminalNodeImpl,
-//}
-//
-//impl ErrorNodeImpl {
-//    fn new_error_node_impl(token Token) -> * ErrorNodeImpl { unimplemented!() }
-//
-//    fn error_node(&self) { unimplemented!() }
-//
-//    fn accept(&self, v: ParseTreeVisitor) -> interface { unimplemented!() } {
-//    return v.VisitErrorNode(e)
-//    }
-//}
+/// Helper struct to accept parse listener on already generated tree
 pub struct ParseTreeWalker;
 
 impl ParseTreeWalker {
-    fn new() -> ParseTreeWalker { ParseTreeWalker }
+//    fn new() -> ParseTreeWalker { ParseTreeWalker }
 
     pub fn walk<T: ParseTreeListener + ?Sized, Ctx: ParserRuleContext + ?Sized>(&self, listener: &mut Box<T>, t: &Ctx) {
         if t.type_id() == TypeId::of::<ErrorNode>() {
@@ -268,9 +218,4 @@ impl ParseTreeWalker {
         listener.exit_every_rule(t.upcast());
     }
 
-//    fn enter_rule(&self, listener: ParseTreeListener, r: RuleNode) { unimplemented!() }
-//
-//    fn exit_rule(&self, listener: ParseTreeListener, r: RuleNode) { unimplemented!() }
-
-//var ParseTreeWalkerDefault = NewParseTreeWalker()
 }

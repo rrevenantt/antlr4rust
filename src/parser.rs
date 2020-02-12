@@ -56,22 +56,31 @@ pub trait Parser: Recognizer {
     fn get_rule_invocation_stack(&self) -> Vec<String>;
 }
 
-/// helper trait to be able to extend listener behavior
-pub trait ListenerCaller<T: ParseTreeListener + ?Sized + 'static = dyn ParseTreeListener> {
-    fn enter_rule(_ctx: &dyn ParserRuleContext, _listener: &mut Box<T>) {}
-    fn exit_rule(_ctx: &dyn ParserRuleContext, _listener: &mut Box<T>) {}
-}
-
-pub struct ListenerCallerDefault;
-
-impl ListenerCaller for ListenerCallerDefault {}
 
 pub struct BaseParser<
     Ext: ParserRecog<Recog=Self> + 'static,
     T: ParseTreeListener + ?Sized + 'static = dyn ParseTreeListener> {
     interp: Arc<ParserATNSimulator>,
     pub ctx: Option<ParserRuleContextType>,
+
+    /// Track the {@link ParserRuleContext} objects during the parse and hook
+    /// them up using the {@link ParserRuleContext#children} list so that it
+    /// forms a parse tree. The {@link ParserRuleContext} returned from the start
+    /// rule represents the root of the parse tree.
+    ///
+    /// <p>Note that if we are not building parse trees, rule contexts only point
+    /// upwards. When a rule exits, it returns the context but that gets garbage
+    /// collected if nobody holds a reference. It points upwards but nobody
+    /// points at it.</p>
+    ///
+    /// <p>When we build parse trees, we are adding all of these contexts to
+    /// {@link ParserRuleContext#children} list. Contexts are then not candidates
+    /// for garbage collection.</p>
+    ///
+    /// Returns {@code true} if a complete parse tree will be constructed while
+    /// parsing, otherwise {@code false}
     pub build_parse_trees: bool,
+
     pub matched_eof: bool,
 
     state: isize,

@@ -1,11 +1,3 @@
-//lexer_atnsimulator_debug    = false
-//lexer_atnsimulator_dfadebug = false
-//
-//lexer_atnsimulator_min_dfaedge = 0
-//lexer_atnsimulator_max_dfaedge = 127
-//lexer_atnsimulator_match_calls = 0
-
-
 use std::cell::Cell;
 use std::convert::TryFrom;
 use std::io::Write;
@@ -63,13 +55,12 @@ pub trait ILexerATNSimulator: IATNSimulator {
 pub struct LexerATNSimulator {
     base: BaseATNSimulator,
 
-    prediction_mode: isize,
     //    merge_cache: DoubleDict,
     start_index: isize,
     pub(crate) current_pos: Rc<LexerPosition>,
     mode: usize,
     prev_accept: SimState,
-    pub lexer_action_executor: Option<Box<LexerActionExecutor>>,
+    lexer_action_executor: Option<Box<LexerActionExecutor>>,
 }
 
 impl ILexerATNSimulator for LexerATNSimulator {
@@ -90,8 +81,8 @@ impl ILexerATNSimulator for LexerATNSimulator {
             self.start_index = lexer.get_input_stream().index();
             self.prev_accept.reset();
             let temp = self.decision_to_dfa();
-            let dfa = temp.get(mode as usize)
-                .ok_or(ANTLRError::IllegalStateError("invalid mode".into()))?;
+            let dfa = temp.get(mode)
+                .ok_or_else(|| ANTLRError::IllegalStateError("invalid mode".into()))?;
 
             let s0 = dfa.s0.read().unwrap().as_ref().copied();
             match s0 {
@@ -165,8 +156,6 @@ impl LexerATNSimulator {
     ) -> LexerATNSimulator {
         LexerATNSimulator {
             base: BaseATNSimulator::new_base_atnsimulator(atn, decision_to_dfa, shared_context_cache),
-//            recog: Rc::new(RefCell::new(recog)),
-            prediction_mode: 0,
             start_index: 0,
             current_pos: Rc::new(LexerPosition { line: Cell::new(0), char_position_in_line: Cell::new(0) }),
             mode: 0,
@@ -180,13 +169,11 @@ impl LexerATNSimulator {
 //    }
 
     fn match_atn(&mut self, lexer: &mut dyn Lexer) -> Result<isize, ANTLRError> {
-        assert!(self.mode >= 0);
-//        println!("\n---start matching");
         //        let start_state = self.atn().mode_to_start_state.get(self.mode as usize).ok_or(ANTLRError::IllegalStateError("invalid mode".into()))?;
         let atn = self.atn();
         let start_state = *atn.mode_to_start_state
-            .get(self.mode as usize)
-            .ok_or(ANTLRError::IllegalStateError("invalid mode".into()))?;
+            .get(self.mode)
+            .ok_or_else(|| ANTLRError::IllegalStateError("invalid mode".into()))?;
 
         let _old_mode = self.mode;
         let mut s0_closure = self.compute_start_state(atn.states[start_state].as_ref(), lexer);
@@ -200,12 +187,6 @@ impl LexerATNSimulator {
 
         self.exec_atn(next_state, lexer)
     }
-
-    //    fn get_dfa_state(&self, state_number: DFAStateRef) -> Box<dyn Deref<Target=&DFAState>>{
-    //        let dfa = self.get_dfa();
-    //
-    //        dfa.states.read().unwrap()
-    //    }
 
     fn exec_atn(
         &mut self,
@@ -221,7 +202,7 @@ impl LexerATNSimulator {
         let mut s = ds0;
         loop {
             let target = self.get_existing_target_state(s, symbol);
-            let target = target.unwrap_or(self.compute_target_state(s, symbol, lexer));
+            let target = target.unwrap_or_else(|| self.compute_target_state(s, symbol, lexer));
             //              let target = dfastates.deref().get(s).unwrap() ;x
 
 
@@ -369,8 +350,9 @@ impl LexerATNSimulator {
 //                println!("accepted, prediction = {}, on dfastate {}", dfa_state_prediction.prediction, dfa_state_prediction.state_number);
 //                lexer_action_executor = dfa_state_prediction.lexer_action_executor.clone();
 //                let recog = self.recog.clone();
-                dfa_state_prediction.lexer_action_executor.as_ref()
-                    .map(|x| x.execute(lexer, self.start_index));
+                if let Some(x) = dfa_state_prediction.lexer_action_executor.as_ref() {
+                    x.execute(lexer, self.start_index)
+                }
 
                 dfa_state_prediction.prediction
             };
@@ -448,7 +430,7 @@ impl LexerATNSimulator {
             }
 
             if config.get_context().map(|x| x.is_empty()) == Some(false) {
-                let mut ctx = config.take_context();
+                let ctx = config.take_context();
                 for i in 0..ctx.length() {
                     if ctx.get_return_state(i) != PREDICTION_CONTEXT_EMPTY_RETURN_STATE {
                         let new_ctx = ctx.get_parent(i).cloned();
