@@ -411,6 +411,7 @@ impl ParserATNSimulator {
         Ok(predicted_alt)
     }
 
+    // ATNConfigSet is pretty big so should be boxed to move it cheaper
     fn compute_reach_set(&self, closure: &ATNConfigSet, t: isize, full_ctx: bool, local: &mut Local) -> Option<ATNConfigSet> {
 //        println!("in computeReachSet, starting closure: {:?}",closure);
         let mut intermediate = ATNConfigSet::new_base_atnconfig_set(full_ctx);

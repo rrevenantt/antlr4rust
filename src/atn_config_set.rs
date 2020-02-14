@@ -1,16 +1,17 @@
 use std::cmp::max;
 use std::collections::HashMap;
 use std::fmt::{Debug, Error, Formatter};
-use std::hash::{Hash, Hasher};
+use std::hash::{BuildHasher, Hash, Hasher};
 use std::ops::Deref;
 
 use bit_set::BitSet;
+use murmur3::murmur3_32::MurmurHasher;
 
 use crate::atn_config::ATNConfig;
 use crate::atn_simulator::IATNSimulator;
 use crate::atn_state::ATNStateRef;
 use crate::parser_atn_simulator::MergeCache;
-use crate::prediction_context::PredictionContext;
+use crate::prediction_context::{MurmurHasherBuilder, PredictionContext};
 use crate::semantic_context::SemanticContext;
 
 pub struct ATNConfigSet {
@@ -18,7 +19,7 @@ pub struct ATNConfigSet {
 
     //todo looks like we need only iteration for configs
     // so i think we can replace configs and lookup with indexhashset
-    config_lookup: HashMap<Key, usize>,
+    config_lookup: HashMap<Key, usize, MurmurHasherBuilder>,
 
     //todo remove box?
     pub(crate) configs: Vec<Box<ATNConfig>>,
@@ -41,10 +42,19 @@ pub struct ATNConfigSet {
     hasher: fn(&ATNConfig) -> Key,
 }
 
-#[derive(Hash, Eq, PartialEq)]
+#[derive(Eq, PartialEq)]
 enum Key {
     Full(ATNConfig),
-    Partial(ATNStateRef, isize, SemanticContext),
+    Partial(i32, ATNStateRef, isize, SemanticContext),
+}
+
+impl Hash for Key {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            Key::Full(x) => x.hash(state),
+            Key::Partial(hash, _, _, _) => state.write_i32(*hash),
+        }
+    }
 }
 
 impl Debug for ATNConfigSet {
@@ -85,7 +95,7 @@ impl ATNConfigSet {
     pub fn new_base_atnconfig_set(full_ctx: bool) -> ATNConfigSet {
         ATNConfigSet {
             cached_hash: 0,
-            config_lookup: HashMap::new(),
+            config_lookup: HashMap::with_hasher(MurmurHasherBuilder {}),
             configs: vec![],
             conflicting_alts: Default::default(),
             dips_into_outer_context: false,
@@ -110,7 +120,12 @@ impl ATNConfigSet {
     }
 
     fn local_hash_key(config: &ATNConfig) -> Key {
-        Key::Partial(config.get_state(), config.get_alt(), config.semantic_context.deref().clone())
+        let mut hasher = MurmurHasher::default();
+        config.get_state().hash(&mut hasher);
+        config.get_alt().hash(&mut hasher);
+        config.semantic_context.hash(&mut hasher);
+
+        Key::Partial(hasher.finish() as i32, config.get_state(), config.get_alt(), config.semantic_context.deref().clone())
     }
 
     pub fn add_cached(

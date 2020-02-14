@@ -112,8 +112,6 @@ if (x < x && a > 0) then duh
     fn parser_test_csv() {
         println!("test started");
         let mut _lexer = CSVLexer::new(Box::new(InputStream::new("V123, V2\nd1,d2\n".into())));
-        //        _lexer.base.add_error_listener();
-//        let mut token_source = UnbufferedTokenStream::new_unbuffered(_lexer);
         let token_source = CommonTokenStream::new(_lexer);
         let mut parser = CSVParser::new(Box::new(token_source));
         parser.add_parse_listener(Box::new(Listener {}));
@@ -135,8 +133,6 @@ if (x < x && a > 0) then duh
     #[test]
     fn adaptive_predict_test() {
         let mut _lexer = ReferenceToATNLexer::new(Box::new(InputStream::new("a 34 b".into())));
-        //        _lexer.base.add_error_listener();
-//        let mut token_source = UnbufferedTokenStream::new_unbuffered(_lexer);
         let token_source = CommonTokenStream::new(_lexer);
         let mut parser = ReferenceToATNParser::new(Box::new(token_source));
         parser.add_parse_listener(Box::new(Listener2 {}));

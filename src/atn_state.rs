@@ -5,20 +5,20 @@ use once_cell::sync::OnceCell;
 use crate::interval_set::IntervalSet;
 use crate::transition::Transition;
 
-pub const ATNSTATE_INVALID_TYPE: isize = 0;
-pub const ATNSTATE_BASIC: isize = 1;
-pub const ATNSTATE_RULE_START: isize = 2;
-pub const ATNSTATE_BLOCK_START: isize = 3;
-pub const ATNSTATE_PLUS_BLOCK_START: isize = 4;
-pub const ATNSTATE_STAR_BLOCK_START: isize = 5;
-pub const ATNSTATE_TOKEN_START: isize = 6;
-pub const ATNSTATE_RULE_STOP: isize = 7;
-pub const ATNSTATE_BLOCK_END: isize = 8;
-pub const ATNSTATE_STAR_LOOP_BACK: isize = 9;
-pub const ATNSTATE_STAR_LOOP_ENTRY: isize = 10;
-pub const ATNSTATE_PLUS_LOOP_BACK: isize = 11;
-pub const ATNSTATE_LOOP_END: isize = 12;
-pub const ATNSTATE_INVALID_STATE_NUMBER: isize = -1;
+pub(crate) const ATNSTATE_INVALID_TYPE: isize = 0;
+pub(crate) const ATNSTATE_BASIC: isize = 1;
+pub(crate) const ATNSTATE_RULE_START: isize = 2;
+pub(crate) const ATNSTATE_BLOCK_START: isize = 3;
+pub(crate) const ATNSTATE_PLUS_BLOCK_START: isize = 4;
+pub(crate) const ATNSTATE_STAR_BLOCK_START: isize = 5;
+pub(crate) const ATNSTATE_TOKEN_START: isize = 6;
+pub(crate) const ATNSTATE_RULE_STOP: isize = 7;
+pub(crate) const ATNSTATE_BLOCK_END: isize = 8;
+pub(crate) const ATNSTATE_STAR_LOOP_BACK: isize = 9;
+pub(crate) const ATNSTATE_STAR_LOOP_ENTRY: isize = 10;
+pub(crate) const ATNSTATE_PLUS_LOOP_BACK: isize = 11;
+pub(crate) const ATNSTATE_LOOP_END: isize = 12;
+pub(crate) const ATNSTATE_INVALID_STATE_NUMBER: isize = -1;
 
 //might be changed later
 #[derive(Debug, Eq, PartialEq)]

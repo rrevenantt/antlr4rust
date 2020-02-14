@@ -17,15 +17,25 @@ This very likely will be the case until `specialization`,`try_blocks` and `unsiz
 Remaining core things:
 - [ ] Documentation
   - [ ] Quite some things are already documented but still far from perfect
-  - [ ] More doctests. Currently the only examples are tests
 - [ ] API stabilization
   - [ ] Rust api guidelines compliance  
   - [ ] more tests for API because it is quite different from Java
 - [ ] Code quality
   - [ ] Rustfmt fails to run currently
   - [ ] Clippy sanitation 
+  - [ ] Not all warning are fixed
   
 See tracking [issue](https://github.com/antlr/antlr4/issues/1839) for more info
+  
+### Additional improvements:
+ - make parsing zero copy(i.e. use &str(or Cow) instead String in token and &Token in tree nodes)
+ - profiling and performance optimizations
+ - use & instead of Rc for nodes in parser
+ - visitor
+ - build.rs integration example
+ - run rustfmt on generated parser
+ - support stable rust
+ - support no_std(although alloc would still be required)  
   
 ### Usage
 
@@ -64,20 +74,14 @@ there are quite some differences because Rust is not an OOP language and is much
  struct generated for rule is a enum with variant for each alternative
  - Parser needs to have ownership for listeners, but it is possible te get listener back via `ListenerId`
  otherwise `ParseTreeWalker` should be used.
+ - In embedded actions to access parser you should use `recog` variable instead of `self`. 
+ This is because predicate have to be inserted into two syntactically different places in generated parser 
  
  
 ### Unsafe
 Currently unsafe is used only to cast from trait object back to original type 
 and to update data inside Rc via `get_mut_unchecked`(returned mutable reference is used immediately and not stored anywhere)
   
-### Future improvements:
- - make parsing zero copy(i.e. use &str(or Cow) instead String in token and &Token in tree nodes)
- - use & instead of Rc for nodes in parser
- - support stable rust
- - visitor
- - run rustfmt on generated parser
- - support no_std(although alloc would still be required)
-
 ## Licence
 
 BSD 3-clause 
