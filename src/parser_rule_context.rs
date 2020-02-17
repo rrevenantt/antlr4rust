@@ -41,13 +41,13 @@ pub trait ParserRuleContext: RuleContext + CustomRuleContext + ParseTree + Any +
     fn enter_rule(&self, listener: &mut dyn Any);
     fn exit_rule(&self, listener: &mut dyn Any);
 
-    fn child_of_type<T: ParserRuleContext>(&self, pos: usize) -> Rc<T> where Self: Sized {
+    fn child_of_type<T: ParserRuleContext>(&self, pos: usize) -> Option<Rc<T>> where Self: Sized {
         let result = self.get_children().iter()
             .filter(|&it| it.deref().type_id() == TypeId::of::<T>())
-            .nth(pos).unwrap()
-            .clone();
+            .nth(pos)
+            .cloned();
 
-        cast_rc(result)
+        result.map(cast_rc)
     }
 
     fn children_of_type<T: ParserRuleContext>(&self) -> Vec<Rc<T>> where Self: Sized {

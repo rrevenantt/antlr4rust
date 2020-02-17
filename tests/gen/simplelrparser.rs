@@ -173,7 +173,7 @@ impl SContextExt {
 }
 
 pub trait SContextAttrs: ParserRuleContext + BorrowMut<SContextExt> {
-    fn a(&self) -> Rc<AContextAll> where Self: Sized {
+    fn a(&self) -> Option<Rc<AContextAll>> where Self: Sized {
         self.child_of_type(0)
     }
 }
@@ -257,7 +257,7 @@ pub trait AContextAttrs: ParserRuleContext + BorrowMut<AContextExt> {
     fn ID(&self) -> Option<Rc<TerminalNode>> where Self: Sized {
         self.get_token(ID, 0)
     }
-    fn a(&self) -> Rc<AContextAll> where Self: Sized {
+    fn a(&self) -> Option<Rc<AContextAll>> where Self: Sized {
         self.child_of_type(0)
     }
 }

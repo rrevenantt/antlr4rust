@@ -45,12 +45,6 @@ impl PartialEq for DFAState {
     }
 }
 
-//impl Hash for *DFAState{
-//    fn hash<H: Hasher>(&self, state: &mut H) {
-//        unsafe{ (**self).hash(state) }
-//    }
-//}
-
 impl Hash for DFAState {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.configs.hash(state);

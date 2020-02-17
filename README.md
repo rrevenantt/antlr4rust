@@ -8,32 +8,39 @@ and [tests/my_tests.rs](tests/my_test.rs) for actual usage examples
 
 ### Implementation status
 
-Everything is implemented, business logic is quite stable and well tested, but user facing 
+Everything is implemented, "business" logic is quite stable and well tested, but user facing 
 API is not very robust yet an very likely will have some changes.
+
+For now development is going on in this repository 
+but eventually it will be merged to main ANTLR4 repo
 
 Currently requires nightly version of rust. 
 This very likely will be the case until `specialization`,`try_blocks` and `unsize` features are stabilized. 
 
-Remaining core things:
-- [ ] Documentation
-  - [ ] Quite some things are already documented but still far from perfect
-- [ ] API stabilization
-  - [ ] Rust api guidelines compliance  
-  - [ ] more tests for API because it is quite different from Java
-- [ ] Code quality
-  - [ ] Rustfmt fails to run currently
-  - [ ] Clippy sanitation 
-  - [ ] Not all warning are fixed
-  
-See tracking [issue](https://github.com/antlr/antlr4/issues/1839) for more info
-  
-### Additional improvements:
+Remaining things before merge:
+ - API stabilization
+   - [ ] Rust api guidelines compliance  
+   - [ ] more tests for API because it is quite different from Java
  - make parsing zero copy(i.e. use &str(or Cow) instead String in token and &Token in tree nodes)
+ - more generic `PredictionContext`
+ - generic over ownership for string
  - profiling and performance optimizations
- - use & instead of Rc for nodes in parser
+ - generate enum for labeled alternatives without redundant `Error` option
+ - ? option to generate fields instead of getters by default
+
+Can be done after merge: 
+ - Documentation
+   - [ ] Quite some things are already documented but still far from perfect
+ - Code quality
+   - [ ] Rustfmt fails to run currently
+   - [ ] Clippy sanitation 
+   - [ ] Not all warning are fixed
  - visitor
- - build.rs integration example
+ - build.rs integration + example
  - run rustfmt on generated parser
+###### Long term improvements
+ - use & instead of Rc for nodes in parser
+ (requires GAT, otherwise it would be a problem for users that want ownership for parse tree)
  - support stable rust
  - support no_std(although alloc would still be required)  
   

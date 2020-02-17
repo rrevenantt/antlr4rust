@@ -156,7 +156,7 @@ pub trait AContextAttrs: ParserRuleContext + BorrowMut<AContextExt> {
     fn ATN_all(&self) -> Vec<Rc<TerminalNode>> where Self: Sized {
         self.children_of_type()
     }
-    /// Retrieves 'i's TerminalNode corresponding to token ATN starting from 0.
+    /// Retrieves 'i's TerminalNode corresponding to token ATN, starting from 0.
     /// Returns `None` if number of children corresponding to token ATN is less or equal than `i`.
     fn ATN(&self, i: usize) -> Option<Rc<TerminalNode>> where Self: Sized {
         self.get_token(ATN, i)
@@ -165,7 +165,7 @@ pub trait AContextAttrs: ParserRuleContext + BorrowMut<AContextExt> {
     fn ID_all(&self) -> Vec<Rc<TerminalNode>> where Self: Sized {
         self.children_of_type()
     }
-    /// Retrieves 'i's TerminalNode corresponding to token ID starting from 0.
+    /// Retrieves 'i's TerminalNode corresponding to token ID, starting from 0.
     /// Returns `None` if number of children corresponding to token ID is less or equal than `i`.
     fn ID(&self, i: usize) -> Option<Rc<TerminalNode>> where Self: Sized {
         self.get_token(ID, i)
@@ -230,8 +230,8 @@ impl ReferenceToATNParser {
                     recog.input.get_text_from_interval(recog.get_parser_rule_context().get_start().get_token_index(), temp)
                 });
             }
-		};
-		match result {
+        };
+        match result {
             Ok(_) => {},
             Err(e @ ANTLRError::FallThrough(_)) => return Err(e),
             Err(ref re) => {

@@ -47,6 +47,7 @@ pub enum TransitionType {
     TRANSITION_PRECEDENCE,
 }
 
+// todo remove trait because it is too slow
 /// Transition between ATNStates
 pub trait Transition: Sync + Send + Debug + Any {
     fn get_target(&self) -> ATNStateRef;

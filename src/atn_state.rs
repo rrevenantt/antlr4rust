@@ -63,6 +63,8 @@ pub enum ATNBlockStart {
 
 pub type ATNStateRef = usize;
 
+
+// todo no need for trait here, it is too slow for hot code
 pub trait ATNState: Sync + Send + Debug {
     fn has_epsilon_only_transitions(&self) -> bool;
 
