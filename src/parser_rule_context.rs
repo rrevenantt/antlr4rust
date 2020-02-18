@@ -50,6 +50,7 @@ pub trait ParserRuleContext: RuleContext + CustomRuleContext + ParseTree + Any +
         result.map(cast_rc)
     }
 
+    // todo, return iterator
     fn children_of_type<T: ParserRuleContext>(&self) -> Vec<Rc<T>> where Self: Sized {
         self.get_children()
             .iter()

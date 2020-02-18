@@ -1,10 +1,12 @@
 # antlr4rust
 ANTLR4 runtime for Rust programming language 
 
-Generator part is currently located in rust-target branch of my antlr4 fork [rrevenantt/antlr4/tree/rust-target](https://github.com/rrevenantt/antlr4/tree/rust-target)
+Tool(generator) part is currently located in rust-target branch of my antlr4 fork [rrevenantt/antlr4/tree/rust-target](https://github.com/rrevenantt/antlr4/tree/rust-target)
+Latest version is automatically built to [releases](https://github.com/rrevenantt/antlr4rust/releases) on this repository.
+Also you can checkout it and `mvn -DskipTests install`
 
 For examples you can see [grammars](grammars), [tests/gen](tests/gen) for corresponding generated code 
-and [tests/my_tests.rs](tests/my_test.rs) for actual usage examples 
+and [tests/my_tests.rs](tests/my_test.rs) for actual usage examples
 
 ### Implementation status
 
@@ -24,13 +26,14 @@ Remaining things before merge:
  - make parsing zero copy(i.e. use &str(or Cow) instead String in token and &Token in tree nodes)
  - more generic `PredictionContext`
  - generic over ownership for string
- - profiling and performance optimizations
  - generate enum for labeled alternatives without redundant `Error` option
- - ? option to generate fields instead of getters by default
+ - option to generate fields instead of getters by default
+ - move useful exports to lib.rs for better documentation
 
 Can be done after merge: 
+ - profiling and performance optimizations
  - Documentation
-   - [ ] Quite some things are already documented but still far from perfect
+   - [ ] Some things are already documented but still far from perfect, also more links needed.
  - Code quality
    - [ ] Rustfmt fails to run currently
    - [ ] Clippy sanitation 
@@ -39,24 +42,37 @@ Can be done after merge:
  - build.rs integration + example
  - run rustfmt on generated parser
 ###### Long term improvements
- - use & instead of Rc for nodes in parser
+ - make tree generic over pointer type
  (requires GAT, otherwise it would be a problem for users that want ownership for parse tree)
  - support stable rust
  - support no_std(although alloc would still be required)  
   
 ### Usage
 
-Add to `Cargo.toml`
+You use the ANTLR4 "tool" to generate a parser, that will use the ANTLR 
+runtime, located here.
+
+Suppose you're using a UNIX system and have set up an alias for the ANTLR4 tool 
+as described in [the getting started guide](https://github.com/antlr/antlr4/blob/master/doc/getting-started.md). 
+To generate your Rust parser, run the following command:
+```bash
+antlr4 -Dlanguage=Rust MyGrammar.g4
+```
+
+For a full list of antlr4 tool options, please visit the 
+[tool documentation page](https://github.com/antlr/antlr4/blob/master/doc/tool-options.md).
+
+Then add to `Cargo.toml` of the crate from which generated parser is going to be used.
 ```toml 
 [dependencies]
 lazy_static = "1.4"
 antlr-rust = "0.1"
 ```
-and `#![feature(try_blocks)]` in your project root module
+and `#![feature(try_blocks)]` in your project root module.
  
 ### Parse Tree structure
 
-It is possible to generate idiomatic Rust syntax trees. For this you would need to use labels feature of ANTLR.
+It is possible to generate idiomatic Rust syntax trees. For this you would need to use labels feature of ANTLR tool.
 You can see [Labels](grammars/Labels.g4) grammar for example.
 Consider following rule :
 ```text
