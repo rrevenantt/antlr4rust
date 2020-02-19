@@ -9,6 +9,7 @@ use std::sync::{Arc, RwLock};
 use murmur3::murmur3_32::MurmurHasher;
 
 use crate::atn::ATN;
+use crate::dfa::ScopeExt;
 use crate::parser_atn_simulator::MergeCache;
 use crate::parser_rule_context::{empty_ctx, ParserRuleContext};
 use crate::prediction_context::PredictionContext::{Array, Singleton};
@@ -159,7 +160,7 @@ impl PredictionContext {
             cached_hash: 0,
             parent_ctx,
             return_state,
-        })
+        }).modify_with(|x| x.calc_hash())
     }
 
     pub fn new_empty() -> PredictionContext {
