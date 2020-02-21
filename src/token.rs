@@ -1,3 +1,4 @@
+use std::borrow::{Borrow, Cow};
 use std::fmt::{Debug, Display};
 use std::fmt::Formatter;
 
@@ -15,7 +16,7 @@ pub const HIDDEN: isize = TOKEN_HIDDEN_CHANNEL;
 
 
 pub trait Token: Debug {
-    fn get_source(&self) -> Option<(Box<dyn TokenSource>, Box<dyn CharStream>)>;
+    // fn get_source(&self) -> Option<(Box<dyn TokenSource>, Box<dyn CharStream>)>;
     fn get_token_type(&self) -> isize;
     fn get_channel(&self) -> isize;
     fn get_start(&self) -> isize;
@@ -29,14 +30,17 @@ pub trait Token: Debug {
     fn get_token_index(&self) -> isize;
     fn set_token_index(&mut self, v: isize);
 
-    fn get_token_source(&self) -> &dyn TokenSource;
-    fn get_input_stream(&self) -> &dyn CharStream;
+    // fn get_token_source(&self) -> &dyn TokenSource;
+    // fn get_input_stream(&self) -> &dyn CharStream;
 
     fn to_owned(&self) -> OwningToken;
 }
 
+pub type OwningToken = GenericToken<String>;
+pub type CommonToken<'a> = GenericToken<Cow<'a, String>>;
+
 #[derive(Debug, Clone)]
-pub struct OwningToken {
+pub struct GenericToken<T: Borrow<str> + Debug = String> {
     //    source: Option<(Box<TokenSource>,Box<CharStream>)>,
     pub token_type: isize,
     pub channel: isize,
@@ -45,13 +49,14 @@ pub struct OwningToken {
     pub token_index: isize,
     pub line: isize,
     pub column: isize,
-    pub text: String,
+    pub text: T,
     pub read_only: bool,
 }
 
-impl Display for OwningToken {
+
+impl<T: Borrow<str> + Debug> Display for GenericToken<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let txt = if self.token_type == TOKEN_EOF { "<EOF>" } else { &self.text };
+        let txt = if self.token_type == TOKEN_EOF { "<EOF>" } else { self.text.borrow() };
         let txt = txt.replace("\n", "\\n");
         let txt = txt.replace("\r", "\\r");
         let txt = txt.replace("\t", "\\t");
@@ -70,7 +75,7 @@ impl Display for OwningToken {
 }
 
 
-impl Token for OwningToken {
+impl<T: Borrow<str> + Debug> Token for GenericToken<T> {
     fn get_channel(&self) -> isize {
         self.channel
     }
@@ -95,9 +100,9 @@ impl Token for OwningToken {
         self.token_type
     }
 
-    fn get_source(&self) -> Option<(Box<dyn TokenSource>, Box<dyn CharStream>)> {
-        unimplemented!()
-    }
+    // fn get_source(&self) -> Option<(Box<dyn TokenSource>, Box<dyn CharStream>)> {
+    //     unimplemented!()
+    // }
 
     fn get_token_index(&self) -> isize {
         self.token_index
@@ -107,19 +112,19 @@ impl Token for OwningToken {
         self.token_index = _v
     }
 
-    fn get_token_source(&self) -> &dyn TokenSource {
-        unimplemented!()
-    }
-
-    fn get_input_stream(&self) -> &dyn CharStream {
-        unimplemented!()
-    }
+    // fn get_token_source(&self) -> &dyn TokenSource {
+    //     unimplemented!()
+    // }
+    //
+    // fn get_input_stream(&self) -> &dyn CharStream {
+    //     unimplemented!()
+    // }
 
     fn get_text(&self) -> &str {
         if self.token_type == EOF {
             "<EOF>"
         } else {
-            &self.text
+            self.text.borrow()
         }
     }
 
@@ -128,26 +133,33 @@ impl Token for OwningToken {
     }
 
     fn to_owned(&self) -> OwningToken {
-        self.clone()
+        OwningToken {
+            token_type: self.token_type,
+            channel: self.channel,
+            start: self.start,
+            stop: self.stop,
+            token_index: self.token_type,
+            line: self.line,
+            column: self.column,
+            text: self.text.borrow().to_owned(),
+            read_only: self.read_only,
+        }
     }
 }
 
-pub struct CommonToken {
-    base: OwningToken,
-}
-
-impl CommonToken {
-    fn new_common_token(
-        _source: Option<(Box<dyn TokenSource>, Box<dyn CharStream>)>,
-        _token_type: isize,
-        _channel: isize,
-        _start: isize,
-        _stop: isize,
-    ) -> CommonToken {
-        unimplemented!()
-    }
-
-    fn clone(&self) -> CommonToken {
-        unimplemented!()
-    }
-}
+//
+// impl CommonToken {
+//     fn new_common_token(
+//         _source: Option<(Box<dyn TokenSource>, Box<dyn CharStream>)>,
+//         _token_type: isize,
+//         _channel: isize,
+//         _start: isize,
+//         _stop: isize,
+//     ) -> CommonToken {
+//         unimplemented!()
+//     }
+//
+//     fn clone(&self) -> CommonToken {
+//         unimplemented!()
+//     }
+// }

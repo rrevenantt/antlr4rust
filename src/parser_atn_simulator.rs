@@ -28,7 +28,7 @@ use crate::prediction_context::{EMPTY_PREDICTION_CONTEXT, MurmurHasherBuilder, P
 use crate::prediction_mode::{all_subsets_conflict, all_subsets_equal, get_alts, get_conflicting_alt_subsets, get_single_viable_alt, has_sll_conflict_terminating_prediction, PredictionMode, resolves_to_just_one_viable_alt};
 use crate::rule_context::RuleContext;
 use crate::semantic_context::SemanticContext;
-use crate::token::{TOKEN_EOF, TOKEN_EPSILON};
+use crate::token::{Token, TOKEN_EOF, TOKEN_EPSILON};
 use crate::token_stream::TokenStream;
 use crate::transition::{ActionTransition, EpsilonTransition, PrecedencePredicateTransition, PredicateTransition, RuleTransition, Transition, TransitionType};
 
@@ -87,7 +87,7 @@ struct Local<'a, 'arena> {
 }
 
 impl Local<'_, '_> {
-    fn input(&mut self) -> &mut dyn TokenStream { self.parser.get_input_stream_mut() }
+    fn input(&mut self) -> &mut dyn TokenStream<Tok=dyn Token> { self.parser.get_input_stream_mut() }
     fn seek(&mut self, i: isize) { self.input().seek(i) }
     fn outer_context(&self) -> &dyn ParserRuleContext { self.outer_context.deref() }
 }

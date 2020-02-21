@@ -55,20 +55,20 @@ impl LexerActionExecutor {
 
     pub fn execute(&self, lexer: &mut dyn Lexer, start_index: isize) {
         let mut requires_seek = false;
-        let stop_index = lexer.get_input_stream().index();
+        let stop_index = lexer.get_input_stream().unwrap().index();
         for action in self.lexer_actions.iter() {
             //println!("executing action {:?}",action);
             if let LexerAction::LexerIndexedCustomAction { offset, .. } = action {
-                lexer.get_input_stream().seek(start_index + offset);
+                lexer.get_input_stream().unwrap().seek(start_index + offset);
                 requires_seek = start_index + offset != stop_index;
             } else if action.is_position_dependent() {
-                lexer.get_input_stream().seek(stop_index);
+                lexer.get_input_stream().unwrap().seek(stop_index);
                 requires_seek = false
             }
             action.execute(lexer);
         }
         if requires_seek {
-            lexer.get_input_stream().seek(stop_index);
+            lexer.get_input_stream().unwrap().seek(stop_index);
         }
     }
 

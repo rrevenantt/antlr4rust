@@ -68,8 +68,8 @@ impl SimpleLRParser {
         self.err_handler = strategy
     }
 
-    pub fn new(input: Box<dyn TokenStream>) -> Self {
-        antlr_rust::recognizer::check_version("0", "1");
+    pub fn new(input: Box<dyn TokenStream<Tok=dyn Token>>) -> Self {
+        antlr_rust::recognizer::check_version("0", "2");
         let interpreter = Arc::new(ParserATNSimulator::new(
             _ATN.clone(),
             _decision_to_DFA.clone(),

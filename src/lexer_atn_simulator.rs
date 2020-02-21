@@ -75,10 +75,10 @@ impl ILexerATNSimulator for LexerATNSimulator {
         lexer: &mut dyn Lexer,
     ) -> Result<isize, ANTLRError> {
         self.mode = mode;
-        let mark = lexer.get_input_stream().mark();
+        let mark = lexer.get_input_stream().unwrap().mark();
 //        println!("start matching on mode {}",mode);
         let result = (|| {
-            self.start_index = lexer.get_input_stream().index();
+            self.start_index = lexer.get_input_stream().unwrap().index();
             self.prev_accept.reset();
             let temp = self.decision_to_dfa();
             let dfa = temp.get(mode)
@@ -91,7 +91,7 @@ impl ILexerATNSimulator for LexerATNSimulator {
                 //                Err(_) => panic!("dfa rwlock error")
             }
         })();
-        lexer.get_input_stream().release(mark);
+        lexer.get_input_stream().unwrap().release(mark);
         result
     }
 
@@ -195,10 +195,10 @@ impl LexerATNSimulator {
         lexer: &mut dyn Lexer,
     ) -> Result<isize, ANTLRError> {
         //        if self.get_dfa().states.read().unwrap().get(ds0).unwrap().is_accept_state{
-        self.capture_sim_state(lexer.get_input_stream(), ds0);
+        self.capture_sim_state(lexer.get_input_stream().unwrap(), ds0);
         //        }
 
-        let mut symbol = lexer.get_input_stream().la(1);
+        let mut symbol = lexer.get_input_stream().unwrap().la(1);
         let mut s = ds0;
         loop {
             let target = self.get_existing_target_state(s, symbol);
@@ -212,16 +212,16 @@ impl LexerATNSimulator {
 //            println!(" --- target computed {:?}", self.get_dfa().states.read().unwrap()[target].configs.configs.iter().map(|it|it.get_state()).collect::<Vec<_>>());
 
             if symbol != EOF {
-                self.consume(lexer.get_input_stream())
+                self.consume(lexer.get_input_stream().unwrap())
             }
 
-            if self.capture_sim_state(lexer.get_input_stream(), target) {
+            if self.capture_sim_state(lexer.get_input_stream().unwrap(), target) {
                 if symbol == EOF {
                     break;
                 }
             }
 
-            symbol = lexer.get_input_stream().la(1);
+            symbol = lexer.get_input_stream().unwrap().la(1);
 
             s = target;
         }
@@ -312,7 +312,7 @@ impl LexerATNSimulator {
             for tr in atn_state.get_transitions() {
                 if let Some(target) = tr.get_reachable_target(_t) {
                     let exec = config.get_lexer_executor()
-                        .map(|x| x.clone().fix_offset_before_match(lexer.get_input_stream().index() - self.start_index));
+                        .map(|x| x.clone().fix_offset_before_match(lexer.get_input_stream().unwrap().index() - self.start_index));
 
                     let new = config.cloned_with_new_exec(self.atn().states[target].as_ref(), exec);
                     if self.closure(
@@ -356,11 +356,11 @@ impl LexerATNSimulator {
 
                 dfa_state_prediction.prediction
             };
-            self.accept(lexer.get_input_stream());
+            self.accept(lexer.get_input_stream().unwrap());
 //            self.lexer_action_executor = lexer_action_executor;
             Ok(prediction)
         } else {
-            if _t == EOF && lexer.get_input_stream().index() == self.start_index {
+            if _t == EOF && lexer.get_input_stream().unwrap().index() == self.start_index {
                 return Ok(TOKEN_EOF);
             }
             Err(LexerNoAltError {
@@ -567,16 +567,16 @@ impl LexerATNSimulator {
 
         let saved_column = self.current_pos.char_position_in_line.get();
         let saved_line = self.current_pos.line.get();
-        let index = lexer.get_input_stream().index();
-        let marker = lexer.get_input_stream().mark();
-        self.consume(lexer.get_input_stream());
+        let index = lexer.get_input_stream().unwrap().index();
+        let marker = lexer.get_input_stream().unwrap().mark();
+        self.consume(lexer.get_input_stream().unwrap());
 
         let result = lexer.sempred(&*empty_ctx(), rule_index, pred_index);
 
         self.current_pos.char_position_in_line.set(saved_column);
         self.current_pos.line.set(saved_line);
-        lexer.get_input_stream().seek(index);
-        lexer.get_input_stream().release(marker);
+        lexer.get_input_stream().unwrap().seek(index);
+        lexer.get_input_stream().unwrap().release(marker);
         return result;
     }
 

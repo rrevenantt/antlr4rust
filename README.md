@@ -17,7 +17,7 @@ For now development is going on in this repository
 but eventually it will be merged to main ANTLR4 repo
 
 Currently requires nightly version of rust. 
-This very likely will be the case until `specialization`,`try_blocks` and `unsize` features are stabilized. 
+This likely will be the case until `specialization`,`try_blocks` and `unsize` features are stabilized. 
 
 Remaining things before merge:
  - API stabilization
@@ -39,7 +39,6 @@ Can be done after merge:
    - [ ] Clippy sanitation 
    - [ ] Not all warning are fixed
  - visitor
- - build.rs integration + example
  - run rustfmt on generated parser
 ###### Long term improvements
  - make tree generic over pointer type
@@ -50,19 +49,18 @@ Can be done after merge:
 ### Usage
 
 You use the ANTLR4 "tool" to generate a parser, that will use the ANTLR 
-runtime, located here.
-
-Suppose you're using a UNIX system and have set up an alias for the ANTLR4 tool 
-as described in [the getting started guide](https://github.com/antlr/antlr4/blob/master/doc/getting-started.md). 
-To generate your Rust parser, run the following command:
+runtime, located here. You can run it with the following command:
 ```bash
-antlr4 -Dlanguage=Rust MyGrammar.g4
+java -jar <path to ANTLR4 tool> -Dlanguage=Rust MyGrammar.g4
 ```
-
 For a full list of antlr4 tool options, please visit the 
 [tool documentation page](https://github.com/antlr/antlr4/blob/master/doc/tool-options.md).
 
-Then add to `Cargo.toml` of the crate from which generated parser is going to be used.
+You can also see [build.rs](build.rs) as an example of `build.rs` configuration 
+to rebuild parser automatically if grammar file was changed
+
+Then add following to `Cargo.toml` of the crate from which generated parser 
+is going to be used:
 ```toml 
 [dependencies]
 lazy_static = "1.4"

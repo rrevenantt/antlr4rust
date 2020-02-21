@@ -95,7 +95,7 @@ impl SimpleLRLexer {
     }
 
     pub fn new(input: Box<dyn CharStream>) -> Self {
-        antlr_rust::recognizer::check_version("0", "1");
+        antlr_rust::recognizer::check_version("0", "2");
         Self {
             base: BaseLexer::new_base_lexer(
                 input,
@@ -125,6 +125,8 @@ impl Actions for SimpleLRLexerActions {
 impl SimpleLRLexerActions {}
 
 impl TokenSource for SimpleLRLexer {
+    type Tok = dyn Token;
+
     fn next_token(&mut self) -> Box<dyn Token> {
         self.base.next_token()
     }
@@ -137,7 +139,7 @@ impl TokenSource for SimpleLRLexer {
         self.base.get_char_position_in_line()
     }
 
-    fn get_input_stream(&mut self) -> &mut dyn CharStream {
+    fn get_input_stream(&mut self) -> Option<&mut dyn CharStream> {
         self.base.get_input_stream()
     }
 
@@ -145,7 +147,7 @@ impl TokenSource for SimpleLRLexer {
         self.base.get_source_name()
     }
 
-    fn get_token_factory(&self) -> &dyn TokenFactory {
+    fn get_token_factory(&self) -> &dyn TokenFactory<Tok=dyn Token> {
         self.base.get_token_factory()
     }
 }

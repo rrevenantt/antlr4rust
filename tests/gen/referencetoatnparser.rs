@@ -68,8 +68,8 @@ impl ReferenceToATNParser {
         self.err_handler = strategy
     }
 
-    pub fn new(input: Box<dyn TokenStream>) -> Self {
-        antlr_rust::recognizer::check_version("0", "1");
+    pub fn new(input: Box<dyn TokenStream<Tok=dyn Token>>) -> Self {
+        antlr_rust::recognizer::check_version("0", "2");
         let interpreter = Arc::new(ParserATNSimulator::new(
             _ATN.clone(),
             _decision_to_DFA.clone(),
@@ -240,10 +240,10 @@ impl ReferenceToATNParser {
                 recog.err_handler.recover(&mut recog.base, re)?;
             }
         }
-		recog.base.exit_rule();
+        recog.base.exit_rule();
 
-		Ok(_localctx)
-	}
+        Ok(_localctx)
+    }
 }
 
 lazy_static! {

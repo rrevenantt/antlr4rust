@@ -50,7 +50,9 @@ impl<T: TokenSource> IntStream for CommonTokenStream<T> {
 }
 
 impl<T: TokenSource> TokenStream for CommonTokenStream<T> {
-    fn lt(&mut self, k: isize) -> Option<&dyn Token> {
+    type Tok = T::Tok;
+
+    fn lt(&mut self, k: isize) -> Option<&Self::Tok> {
         if k == 0 { panic!(); }
         if k < 0 { return self.lb(-k); }
         let mut i = self.base.p;
@@ -67,11 +69,11 @@ impl<T: TokenSource> TokenStream for CommonTokenStream<T> {
         return self.base.tokens.get(i as usize).map(Deref::deref)
     }
 
-    fn get(&self, index: isize) -> &dyn Token {
+    fn get(&self, index: isize) -> &Self::Tok {
         self.base.get(index)
     }
 
-    fn get_token_source(&self) -> &dyn TokenSource {
+    fn get_token_source(&self) -> &dyn TokenSource<Tok=T::Tok> {
         self.base.get_token_source()
     }
 
@@ -176,7 +178,7 @@ impl<T: TokenSource> CommonTokenStream<T> {
 //
 //    fn adjust_seek_index(&self, i: isize) -> int { unimplemented!() }
 
-    fn lb(&mut self, k: isize) -> Option<&dyn Token> {
+    fn lb(&mut self, k: isize) -> Option<&T::Tok> {
         if k == 0 || (self.base.p - k) < 0 { return None }
 
         let mut i = self.base.p;

@@ -3,12 +3,13 @@ use crate::token::{OwningToken, TOKEN_INVALID_TYPE};
 use crate::token::Token;
 
 lazy_static! {
-    pub static ref CommonTokenFactoryDEFAULT: Box<dyn TokenFactory> =
-        Box::new(CommonTokenFactory::new(false));
+    pub static ref CommonTokenFactoryDEFAULT: Box<dyn TokenFactory<Tok=dyn Token>> =
+        Box::new(CommonTokenFactory::new());
     pub static ref INVALID_TOKEN:Box<OwningToken> = Box::new(CommonTokenFactoryDEFAULT.as_ref().create(None,TOKEN_INVALID_TYPE,0,-1,-1,-1,-1).to_owned());
 }
 
 pub trait TokenFactory: Sync {
+    type Tok: Token + ?Sized;
     fn create(
         &self,
         source: Option<&mut dyn CharStream>,
@@ -18,14 +19,14 @@ pub trait TokenFactory: Sync {
         stop: isize,
         line: isize,
         column: isize,
-    ) -> Box<dyn Token>;
+    ) -> Box<Self::Tok>;
 }
 
-pub struct CommonTokenFactory {
-    copy_text: bool,
-}
+pub struct CommonTokenFactory {}
 
 impl TokenFactory for CommonTokenFactory {
+    type Tok = dyn Token;
+
     fn create(
         &self,
         source: Option<&mut dyn CharStream>,
@@ -35,8 +36,7 @@ impl TokenFactory for CommonTokenFactory {
         stop: isize,
         line: isize,
         column: isize,
-    ) -> Box<dyn Token> {
-
+    ) -> Box<Self::Tok> {
         Box::new(OwningToken {
             token_type: ttype,
             channel,
@@ -55,10 +55,8 @@ impl TokenFactory for CommonTokenFactory {
 }
 
 impl CommonTokenFactory {
-    pub fn new(copy_text: bool) -> CommonTokenFactory {
-        CommonTokenFactory {
-            copy_text: copy_text,
-        }
+    pub fn new() -> CommonTokenFactory {
+        CommonTokenFactory {}
     }
 
     fn create_thin(&self, _ttype: isize, _text: String) -> Box<dyn Token> {

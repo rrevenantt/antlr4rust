@@ -77,19 +77,19 @@ impl DerefMut for CSVLexer {
 
 
 impl CSVLexer {
-    fn get_rule_names(&self) -> &'static [&'static str] {
-        &ruleNames
-    }
+	fn get_rule_names(&self) -> &'static [&'static str] {
+		&ruleNames
+	}
     fn get_literal_names(&self) -> &[Option<&str>] {
         &_LITERAL_NAMES
-    }
+	}
 
-    fn get_symbolic_names(&self) -> &[Option<&str>] {
-        &_SYMBOLIC_NAMES
-    }
+	fn get_symbolic_names(&self) -> &[Option<&str>] {
+		&_SYMBOLIC_NAMES
+	}
 
-    fn add_error_listener(&mut self, _listener: Box<dyn ErrorListener>) {
-        self.base.add_error_listener(_listener);
+	fn add_error_listener(&mut self, _listener: Box<dyn ErrorListener>) {
+		self.base.add_error_listener(_listener);
 	}
 
 	fn remove_error_listeners(&mut self) {
@@ -101,7 +101,7 @@ impl CSVLexer {
 	}
 
 	pub fn new(input: Box<dyn CharStream>) -> Self {
-		antlr_rust::recognizer::check_version("0", "1");
+		antlr_rust::recognizer::check_version("0", "2");
 		Self {
 			base: BaseLexer::new_base_lexer(
 				input,
@@ -131,6 +131,8 @@ impl Actions for CSVLexerActions {
 impl CSVLexerActions {}
 
 impl TokenSource for CSVLexer {
+	type Tok = dyn Token;
+
 	fn next_token(&mut self) -> Box<dyn Token> {
 		self.base.next_token()
 	}
@@ -143,7 +145,7 @@ impl TokenSource for CSVLexer {
 		self.base.get_char_position_in_line()
 	}
 
-	fn get_input_stream(&mut self) -> &mut dyn CharStream {
+	fn get_input_stream(&mut self) -> Option<&mut dyn CharStream> {
 		self.base.get_input_stream()
 	}
 
@@ -151,7 +153,7 @@ impl TokenSource for CSVLexer {
 		self.base.get_source_name()
 	}
 
-	fn get_token_factory(&self) -> &dyn TokenFactory {
+	fn get_token_factory(&self) -> &dyn TokenFactory<Tok=dyn Token> {
 		self.base.get_token_factory()
 	}
 }
