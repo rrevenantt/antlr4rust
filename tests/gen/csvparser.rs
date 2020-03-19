@@ -222,7 +222,7 @@ impl CSVParser {
                 recog.err_handler.recover(&mut recog.base, re)?;
             }
         }
-		recog.base.exit_rule();
+        recog.base.exit_rule();
 
         Ok(_localctx)
     }
@@ -288,7 +288,7 @@ impl CSVParser {
                 recog.base.set_state(14);
                 recog.row()?;
             }
-		};
+        };
 		match result {
             Ok(_) => {},
             Err(e @ ANTLRError::FallThrough(_)) => return Err(e),
@@ -298,7 +298,7 @@ impl CSVParser {
                 recog.err_handler.recover(&mut recog.base, re)?;
             }
         }
-		recog.base.exit_rule();
+        recog.base.exit_rule();
 
         Ok(_localctx)
     }
@@ -411,7 +411,7 @@ impl CSVParser {
                 recog.err_handler.recover(&mut recog.base, re)?;
             }
         }
-		recog.base.exit_rule();
+        recog.base.exit_rule();
 
         Ok(_localctx)
     }

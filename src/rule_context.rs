@@ -40,14 +40,14 @@ pub trait CustomRuleContext: 'static {
     fn exit(_ctx: &BaseParserRuleContext<Self>, _listener: &mut dyn Any) where Self: Sized {}
 }
 
-pub struct BaseRuleContext<Ctx: CustomRuleContext> {
+pub struct BaseRuleContext<ExtCtx: CustomRuleContext> {
     pub(crate) parent_ctx: RefCell<Option<Weak<dyn ParserRuleContext>>>,
     invoking_state: Cell<isize>,
-    pub(crate) ext: Ctx,
+    pub(crate) ext: ExtCtx,
 }
 
-impl<Ctx: CustomRuleContext> BaseRuleContext<Ctx> {
-    pub(crate) fn new_ctx(parent_ctx: Option<ParserRuleContextType>, invoking_state: isize, ext: Ctx) -> Self {
+impl<ExtCtx: CustomRuleContext> BaseRuleContext<ExtCtx> {
+    pub(crate) fn new_ctx(parent_ctx: Option<ParserRuleContextType>, invoking_state: isize, ext: ExtCtx) -> Self {
         BaseRuleContext {
             parent_ctx: RefCell::new(parent_ctx.as_ref().map(Rc::downgrade)),
             invoking_state: Cell::new(invoking_state),
@@ -56,7 +56,7 @@ impl<Ctx: CustomRuleContext> BaseRuleContext<Ctx> {
     }
 }
 
-impl<Ctx: CustomRuleContext> RuleContext for BaseRuleContext<Ctx> {
+impl<ExtCtx: CustomRuleContext> RuleContext for BaseRuleContext<ExtCtx> {
     fn get_invoking_state(&self) -> isize {
         self.invoking_state.get()
     }

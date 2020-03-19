@@ -117,7 +117,7 @@ impl LabelsLexer {
                 Box::new(LabelsLexerActions {}),
             )
         }
-	}
+    }
 }
 
 pub struct LabelsLexerActions {}

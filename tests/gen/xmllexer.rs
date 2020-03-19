@@ -46,30 +46,30 @@ pub const PI: isize = 18;
 pub const INSIDE: usize = 1;
 pub const PROC_INSTR: usize = 2;
 pub const channelNames: [&'static str; 0 + 2] = [
-	"DEFAULT_TOKEN_CHANNEL", "HIDDEN"
+    "DEFAULT_TOKEN_CHANNEL", "HIDDEN"
 ];
 
 pub const modeNames: [&'static str; 3] = [
-	"DEFAULT_MODE", "INSIDE", "PROC_INSTR"
+    "DEFAULT_MODE", "INSIDE", "PROC_INSTR"
 ];
 
 pub const ruleNames: [&'static str; 24] = [
-	"COMMENT", "CDATA", "DTD", "EntityRef", "CharRef", "SEA_WS", "OPEN", "XMLDeclOpen",
-	"SPECIAL_OPEN", "TEXT", "CLOSE", "SPECIAL_CLOSE", "SLASH_CLOSE", "SLASH",
-	"EQUALS", "STRING", "Name", "S", "HEXDIGIT", "DIGIT", "NameChar", "NameStartChar",
-	"PI", "IGNORE"
+    "COMMENT", "CDATA", "DTD", "EntityRef", "CharRef", "SEA_WS", "OPEN", "XMLDeclOpen",
+    "SPECIAL_OPEN", "TEXT", "CLOSE", "SPECIAL_CLOSE", "SLASH_CLOSE", "SLASH",
+    "EQUALS", "STRING", "Name", "S", "HEXDIGIT", "DIGIT", "NameChar", "NameStartChar",
+    "PI", "IGNORE"
 ];
 
 
 pub const _LITERAL_NAMES: [Option<&'static str>; 15] = [
-	None, None, None, None, None, None, None, Some("'<'"), None, None, Some("'>'"),
-	None, Some("'/>'"), Some("'/'"), Some("'='")
+    None, None, None, None, None, None, None, Some("'<'"), None, None, Some("'>'"),
+    None, Some("'/>'"), Some("'/'"), Some("'='")
 ];
 pub const _SYMBOLIC_NAMES: [Option<&'static str>; 19] = [
-	None, Some("COMMENT"), Some("CDATA"), Some("DTD"), Some("EntityRef"),
-	Some("CharRef"), Some("SEA_WS"), Some("OPEN"), Some("XMLDeclOpen"), Some("TEXT"),
-	Some("CLOSE"), Some("SPECIAL_CLOSE"), Some("SLASH_CLOSE"), Some("SLASH"),
-	Some("EQUALS"), Some("STRING"), Some("Name"), Some("S"), Some("PI")
+    None, Some("COMMENT"), Some("CDATA"), Some("DTD"), Some("EntityRef"),
+    Some("CharRef"), Some("SEA_WS"), Some("OPEN"), Some("XMLDeclOpen"), Some("TEXT"),
+    Some("CLOSE"), Some("SPECIAL_CLOSE"), Some("SLASH_CLOSE"), Some("SLASH"),
+    Some("EQUALS"), Some("STRING"), Some("Name"), Some("S"), Some("PI")
 ];
 lazy_static! {
 	    static ref _shared_context_cache: Arc<PredictionContextCache> = Arc::new(PredictionContextCache::new());
@@ -78,22 +78,22 @@ lazy_static! {
 
 
 pub struct XMLLexer {
-	base: BaseLexer<XMLLexerActions>,
+    base: BaseLexer<XMLLexerActions>,
 //	static { RuntimeMetaData.checkVersion("4.8", RuntimeMetaData.VERSION); }
 }
 
 impl Deref for XMLLexer {
-	type Target = BaseLexer<XMLLexerActions>;
+    type Target = BaseLexer<XMLLexerActions>;
 
-	fn deref(&self) -> &Self::Target {
-		&self.base
-	}
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
 }
 
 impl DerefMut for XMLLexer {
-	fn deref_mut(&mut self) -> &mut Self::Target {
-		&mut self.base
-	}
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.base
+    }
 }
 
 
@@ -111,29 +111,29 @@ impl XMLLexer {
 
     fn add_error_listener(&mut self, _listener: Box<dyn ErrorListener>) {
         self.base.add_error_listener(_listener);
-	}
+    }
 
-	fn remove_error_listeners(&mut self) {
-		self.base.remove_error_listeners()
-	}
+    fn remove_error_listeners(&mut self) {
+        self.base.remove_error_listeners()
+    }
 
-	fn get_grammar_file_name(&self) -> &'static str {
-		"XMLLexer.g4"
-	}
+    fn get_grammar_file_name(&self) -> &'static str {
+        "XMLLexer.g4"
+    }
 
-	pub fn new(input: Box<dyn CharStream>) -> Self {
-		antlr_rust::recognizer::check_version("0", "2");
-		Self {
-			base: BaseLexer::new_base_lexer(
-				input,
-				LexerATNSimulator::new_lexer_atnsimulator(
-					_ATN.clone(),
-					_decision_to_DFA.clone(),
-					_shared_context_cache.clone(),
-				),
-				Box::new(XMLLexerActions {}),
-			)
-		}
+    pub fn new(input: Box<dyn CharStream>) -> Self {
+        antlr_rust::recognizer::check_version("0", "2");
+        Self {
+            base: BaseLexer::new_base_lexer(
+                input,
+                LexerATNSimulator::new_lexer_atnsimulator(
+                    _ATN.clone(),
+                    _decision_to_DFA.clone(),
+                    _shared_context_cache.clone(),
+                ),
+                Box::new(XMLLexerActions {}),
+            )
+        }
 	}
 }
 
@@ -146,79 +146,79 @@ impl LexerRecog for XMLLexerActions {}
 impl Recognizer for XMLLexerActions {}
 
 impl Actions for XMLLexerActions {
-	type Recog = BaseLexer<XMLLexerActions>;
+    type Recog = BaseLexer<XMLLexerActions>;
 
-	fn action(_localctx: &dyn ParserRuleContext, rule_index: isize, action_index: isize,
-			  recog: &mut <Self as Actions>::Recog,
-	) {
-		match rule_index {
-			10 =>
-				Self::CLOSE_action(cast::<_, LexerContext>(_localctx), action_index, recog),
-			_ => {}
-		}
-	}
-	fn sempred(_localctx: &dyn ParserRuleContext, rule_index: isize, pred_index: isize,
-			   recog: &mut <Self as Actions>::Recog,
-	) -> bool {
-		match rule_index {
-			0 =>
-				Self::COMMENT_sempred(cast::<_, LexerContext>(_localctx), pred_index, recog),
-			_ => true
-		}
-	}
+    fn action(_localctx: &dyn ParserRuleContext, rule_index: isize, action_index: isize,
+              recog: &mut <Self as Actions>::Recog,
+    ) {
+        match rule_index {
+            10 =>
+                Self::CLOSE_action(cast::<_, LexerContext>(_localctx), action_index, recog),
+            _ => {}
+        }
+    }
+    fn sempred(_localctx: &dyn ParserRuleContext, rule_index: isize, pred_index: isize,
+               recog: &mut <Self as Actions>::Recog,
+    ) -> bool {
+        match rule_index {
+            0 =>
+                Self::COMMENT_sempred(cast::<_, LexerContext>(_localctx), pred_index, recog),
+            _ => true
+        }
+    }
 }
 
 impl XMLLexerActions {
-	fn CLOSE_action(_localctx: &LexerContext, action_index: isize,
-					recog: &mut <Self as Actions>::Recog,
-	) {
-		match action_index {
-			0 => {
-				recog.pop_mode();
-			},
+    fn CLOSE_action(_localctx: &LexerContext, action_index: isize,
+                    recog: &mut <Self as Actions>::Recog,
+    ) {
+        match action_index {
+            0 => {
+                recog.pop_mode();
+            },
 
-			_ => {}
-		}
-	}
+            _ => {}
+        }
+    }
 
-	fn COMMENT_sempred(_localctx: &LexerContext, pred_index: isize,
-					   recog: &mut <Self as Actions>::Recog,
-	) -> bool {
-		match pred_index {
-			0 => {
-				true
-			}
-			_ => true
-		}
-	}
+    fn COMMENT_sempred(_localctx: &LexerContext, pred_index: isize,
+                       recog: &mut <Self as Actions>::Recog,
+    ) -> bool {
+        match pred_index {
+            0 => {
+                true
+            }
+            _ => true
+        }
+    }
 }
 
 impl TokenSource for XMLLexer {
-	type Tok = dyn Token;
+    type Tok = dyn Token;
 
-	fn next_token(&mut self) -> Box<dyn Token> {
-		self.base.next_token()
-	}
+    fn next_token(&mut self) -> Box<dyn Token> {
+        self.base.next_token()
+    }
 
-	fn get_line(&self) -> isize {
-		self.base.get_line()
-	}
+    fn get_line(&self) -> isize {
+        self.base.get_line()
+    }
 
-	fn get_char_position_in_line(&self) -> isize {
-		self.base.get_char_position_in_line()
-	}
+    fn get_char_position_in_line(&self) -> isize {
+        self.base.get_char_position_in_line()
+    }
 
-	fn get_input_stream(&mut self) -> Option<&mut dyn CharStream> {
-		self.base.get_input_stream()
-	}
+    fn get_input_stream(&mut self) -> Option<&mut dyn CharStream> {
+        self.base.get_input_stream()
+    }
 
-	fn get_source_name(&self) -> String {
-		self.base.get_source_name()
-	}
+    fn get_source_name(&self) -> String {
+        self.base.get_source_name()
+    }
 
-	fn get_token_factory(&self) -> &dyn TokenFactory<Tok=dyn Token> {
-		self.base.get_token_factory()
-	}
+    fn get_token_factory(&self) -> &dyn TokenFactory<Tok=dyn Token> {
+        self.base.get_token_factory()
+    }
 }
 
 
@@ -243,7 +243,7 @@ lazy_static! {
 
 
 const _serializedATN: &'static str =
-	"\x03\u{608b}\u{a72a}\u{8133}\u{b9ed}\u{417c}\u{3be7}\u{7786}\u{5964}\x02\
+    "\x03\u{608b}\u{a72a}\u{8133}\u{b9ed}\u{417c}\u{3be7}\u{7786}\u{5964}\x02\
 		\x14\u{e8}\x08\x01\x08\x01\x08\x01\x04\x02\x09\x02\x04\x03\x09\x03\x04\
 		\x04\x09\x04\x04\x05\x09\x05\x04\x06\x09\x06\x04\x07\x09\x07\x04\x08\x09\
 		\x08\x04\x09\x09\x09\x04\x0a\x09\x0a\x04\x0b\x09\x0b\x04\x0c\x09\x0c\x04\

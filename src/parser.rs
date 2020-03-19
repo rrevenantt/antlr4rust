@@ -229,6 +229,7 @@ impl<T, Ext> Parser for BaseParser<Ext, T>
         self.state
     }
 
+    #[inline(always)]
     fn set_state(&mut self, v: isize) {
         self.state = v;
     }
@@ -329,7 +330,7 @@ impl<T, Ext> BaseParser<Ext, T>
         listener_id.into_listener(self.parse_listeners.remove(index))
     }
 
-    /// Removes all added parse listeners wothout returning them
+    /// Removes all added parse listeners without returning them
     pub fn remove_parse_listeners(&mut self) { self.parse_listeners.clear() }
 
     pub fn trigger_enter_rule_event(&mut self) {

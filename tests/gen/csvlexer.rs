@@ -80,8 +80,8 @@ impl CSVLexer {
 	fn get_rule_names(&self) -> &'static [&'static str] {
 		&ruleNames
 	}
-    fn get_literal_names(&self) -> &[Option<&str>] {
-        &_LITERAL_NAMES
+	fn get_literal_names(&self) -> &[Option<&str>] {
+		&_LITERAL_NAMES
 	}
 
 	fn get_symbolic_names(&self) -> &[Option<&str>] {

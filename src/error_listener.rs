@@ -35,7 +35,7 @@ impl ErrorListener for ConsoleErrorListener {
     }
 }
 
-pub struct ProxyErrorListener<'a> {
+pub(crate) struct ProxyErrorListener<'a> {
     pub delegates: Ref<'a, Vec<Box<dyn ErrorListener>>>
 }
 

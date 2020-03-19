@@ -108,7 +108,7 @@ impl ReferenceToATNLexer {
                 Box::new(ReferenceToATNLexerActions {}),
             )
         }
-	}
+    }
 }
 
 pub struct ReferenceToATNLexerActions {}

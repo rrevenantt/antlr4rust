@@ -16,7 +16,7 @@ pub trait ParserRuleContext: RuleContext + CustomRuleContext + ParseTree + Any +
     fn set_exception(&self, e: ANTLRError);
 
     fn set_start(&self, t: Option<OwningToken>);
-    ///
+
     /// Get the initial token in this context.
     /// Note that the range from start to stop is inclusive, so for rules that do not consume anything
     /// (for example, zero length or error productions) this token may exceed stop.
@@ -30,7 +30,6 @@ pub trait ParserRuleContext: RuleContext + CustomRuleContext + ParseTree + Any +
     /// (for example, zero length or error productions) this token may precede start.
     ///
     fn get_stop(&self) -> Ref<'_, OwningToken>;
-
 
     fn add_token_node(&self, token: TerminalNode) -> Rc<dyn ParserRuleContext>;
     fn add_error_node(&self, bad_token: ErrorNode) -> Rc<dyn ParserRuleContext>;

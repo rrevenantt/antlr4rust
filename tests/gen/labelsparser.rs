@@ -157,7 +157,7 @@ impl LabelsParserExt {
             }
             _ => true
         }
-	}
+    }
 }
 //------------------- s ----------------
 pub type SContextAll = SContext;
@@ -224,7 +224,7 @@ impl LabelsParser {
                 let tmp = recog.e_rec(0)?;
                 cast_mut::<_, SContext>(&mut _localctx).q = Some(tmp.clone());
             }
-		};
+        };
 		match result {
             Ok(_) => {},
             Err(e @ ANTLRError::FallThrough(_)) => return Err(e),
@@ -482,7 +482,7 @@ impl MultContextExt {
                 })
             )
         )
-	}
+    }
 }
 
 pub type DecContext = BaseParserRuleContext<DecContextExt>;
