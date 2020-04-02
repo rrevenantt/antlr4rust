@@ -1,7 +1,9 @@
+use std::borrow::Borrow;
 use std::cmp::min;
 use std::convert::TryFrom;
 use std::iter::FromIterator;
 use std::result;
+use std::str::Chars;
 
 use crate::char_stream::CharStream;
 use crate::errors::ANTLRError;
@@ -9,18 +11,22 @@ use crate::int_stream::IntStream;
 use crate::interval_set::Interval;
 use crate::token::Token;
 
-pub struct InputStream {
+pub struct InputStream<'a> {
     name: String,
+    data_raw: Vec<&'a str>,
     index: isize,
+    iter: Chars<'a>,
     data: Vec<isize>,
 }
 
-impl InputStream {
-    pub fn new(data: String) -> InputStream {
-        let data = data.chars().map(|ch| ch as isize).collect();
+impl<'a> InputStream<'a> {
+    pub fn new(data_raw: &'a str) -> InputStream {
+        let data = data_raw.chars().map(|ch| ch as isize).collect();
         InputStream {
             name: "<empty>".to_string(),
+            data_raw: vec![data_raw],
             index: 0,
+            iter: data_raw.chars(),
             data,
         }
     }
@@ -41,27 +47,33 @@ impl InputStream {
     }
 }
 
-impl CharStream for InputStream {
-    fn get_text(&self, _start: isize, _stop: isize) -> String {
+impl<'a> CharStream<'a> for InputStream<'a> {
+    //todo make it return Cow if implementation can't return borrow
+    fn get_text(&self, _start: isize, _stop: isize) -> &'a str {
         let stop = min(self.data.len(), (_stop + 1) as usize);
-        String::from_iter(self.data[_start as usize..stop].iter().map(|x| char::try_from(*x as u32).unwrap()))
+        // String::from_iter(self.data[_start as usize..stop].iter().map(|x| char::try_from(*x as u32).unwrap()))
+        &self.data_raw[_start as usize][..stop - _start as usize]
     }
 
-    fn get_text_from_tokens(&self, _start: &dyn Token, _stop: &dyn Token) -> &str {
+    fn get_text_from_tokens(&self, _start: &dyn Token, _stop: &dyn Token) -> &'a str {
         unimplemented!()
     }
 
-    fn get_text_from_interval(&self, i: &Interval) -> String {
+    fn get_text_from_interval(&self, i: &Interval) -> &'a str {
         self.get_text(i.a, i.b)
     }
 }
 
-impl IntStream for InputStream {
+impl IntStream for InputStream<'_> {
     fn consume(&mut self) -> result::Result<(), ANTLRError> {
         if self.index >= self.size() {
             return Err(ANTLRError::IllegalStateError("cannot consume EOF".into()));
         }
         self.index += 1;
+        if self.data_raw.len() >= self.index as usize {
+            self.iter.next();
+            self.data_raw.push(self.iter.as_str())
+        }
         Ok(())
     }
 

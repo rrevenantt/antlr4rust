@@ -38,6 +38,8 @@ Can be done after merge:
    - [ ] Rustfmt fails to run currently
    - [ ] Clippy sanitation 
    - [ ] Not all warning are fixed
+ - cfg to not build potentially unnecessary parts 
+ (no Lexer if custom token stream, no ParserATNSimulator if LL(1) grammar)  
  - visitor
  - run rustfmt on generated parser
 ###### Long term improvements

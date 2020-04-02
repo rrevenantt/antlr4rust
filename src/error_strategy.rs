@@ -168,17 +168,18 @@ impl DefaultErrorStrategy {
             curr = recognizer.get_input_stream().run(|it| it.get((it.index() - 1).max(0)));
         }
         let (line, column) = (curr.get_line(), curr.get_column());
-        recognizer.get_token_factory()
+        *recognizer.get_token_factory()
             .create(
                 None,
                 expected_token_type,
+                Some(token_text),
                 TOKEN_DEFAULT_CHANNEL,
                 -1,
                 -1,
                 line,
                 column,
-            ).to_owned()
-            .modify_with(|it| it.text = token_text)
+            )
+        // .modify_with(|it| it.text = token_text)
     }
 
     fn get_expected_tokens(&self, recognizer: &dyn Parser) -> IntervalSet {

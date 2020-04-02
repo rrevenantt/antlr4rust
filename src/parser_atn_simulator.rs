@@ -3,6 +3,7 @@ use std::borrow::{Borrow, BorrowMut};
 use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hasher;
+use std::marker::PhantomData;
 use std::ops::Deref;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -75,19 +76,20 @@ pub struct ParserATNSimulator {
     base: BaseATNSimulator,
     prediction_mode: Cell<PredictionMode>,
     start_index: Cell<isize>,
+    // pd:PhantomData<P>
 }
 
 /// Just a local helper structure to spoil function parameters as little as possible
-struct Local<'a, 'arena> {
+struct Local<'a, 'text: 'a> {
     outer_context: Rc<dyn ParserRuleContext>,
     dfa: &'a DFA,
-    merge_cache: &'arena mut MergeCache,
+    merge_cache: &'a mut MergeCache,
     precedence: isize,
-    parser: &'a mut dyn Parser,
+    parser: &'a mut dyn Parser<'text>,
 }
 
-impl Local<'_, '_> {
-    fn input(&mut self) -> &mut dyn TokenStream<Tok=dyn Token> { self.parser.get_input_stream_mut() }
+impl<'text> Local<'_, 'text> {
+    fn input(&mut self) -> &mut dyn TokenStream<'text, Tok=dyn Token + 'text> { self.parser.get_input_stream_mut() }
     fn seek(&mut self, i: isize) { self.input().seek(i) }
     fn outer_context(&self) -> &dyn ParserRuleContext { self.outer_context.deref() }
 }
@@ -109,9 +111,9 @@ impl ParserATNSimulator {
 
     fn reset(&self) { unimplemented!() }
 
-    pub fn adaptive_predict(&self,
-                            decision: isize,
-                            parser: &mut dyn Parser,
+    pub fn adaptive_predict<'input>(&self,
+                                    decision: isize,
+                                    parser: &mut dyn Parser<'input>,
     ) -> Result<isize, ANTLRError> {
         self.start_index.set(parser.get_input_stream_mut().index());
         let mut merge_cache: MergeCache = HashMap::with_hasher(MurmurHasherBuilder {});

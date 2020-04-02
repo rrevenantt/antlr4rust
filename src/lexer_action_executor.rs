@@ -53,7 +53,7 @@ impl LexerActionExecutor {
         self
     }
 
-    pub fn execute(&self, lexer: &mut dyn Lexer, start_index: isize) {
+    pub fn execute<'input>(&self, lexer: &mut impl Lexer<'input>, start_index: isize) {
         let mut requires_seek = false;
         let stop_index = lexer.get_input_stream().unwrap().index();
         for action in self.lexer_actions.iter() {

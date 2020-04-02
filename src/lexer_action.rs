@@ -43,7 +43,7 @@ impl LexerAction {
             _ => false
         }
     }
-    pub(crate) fn execute(&self, lexer: &mut dyn Lexer) {
+    pub(crate) fn execute<'input>(&self, lexer: &mut impl Lexer<'input>) {
         match self {
             &LexerAction::LexerChannelAction(channel) => lexer.set_channel(channel),
             &LexerAction::LexerCustomAction { rule_index, action_index } => {

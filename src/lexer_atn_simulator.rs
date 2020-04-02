@@ -32,12 +32,13 @@ use crate::transition::{ActionTransition, PredicateTransition, RuleTransition, T
 pub const ERROR_DFA_STATE_REF: DFAStateRef = usize::MAX;
 
 pub trait ILexerATNSimulator: IATNSimulator {
+
     fn reset(&mut self);
-    fn match_token(
+    fn match_token<'input>(
         &mut self,
         mode: usize,
 //        input:&mut dyn CharStream,
-        lexer: &mut dyn Lexer,
+        lexer: &mut impl Lexer<'input>,
     ) -> Result<isize, ANTLRError>;
     fn get_char_position_in_line(&self) -> isize;
     fn set_char_position_in_line(&mut self, column: isize);
@@ -68,11 +69,11 @@ impl ILexerATNSimulator for LexerATNSimulator {
         self.prev_accept.reset()
     }
 
-    fn match_token(
+    fn match_token<'input>(
         &mut self,
         mode: usize,
 //        input:&mut dyn CharStream,
-        lexer: &mut dyn Lexer,
+        lexer: &mut impl Lexer<'input>,
     ) -> Result<isize, ANTLRError> {
         self.mode = mode;
         let mark = lexer.get_input_stream().unwrap().mark();
@@ -111,11 +112,11 @@ impl ILexerATNSimulator for LexerATNSimulator {
         self.current_pos.char_position_in_line.set(line)
     }
 
-    fn get_text(&self, _input: &dyn CharStream) -> String {
+    fn get_text(&self, _input: &dyn CharStream<'_>) -> String {
         unimplemented!()
     }
 
-    fn consume(&self, _input: &mut dyn CharStream) {
+    fn consume(&self, _input: &mut dyn CharStream<'_>) {
         let ch = _input.la(1);
         if char::try_from(ch as u32) == Ok('\n') {
             self.current_pos.line.update(|x| x + 1);
@@ -168,7 +169,7 @@ impl LexerATNSimulator {
 //        unimplemented!()
 //    }
 
-    fn match_atn(&mut self, lexer: &mut dyn Lexer) -> Result<isize, ANTLRError> {
+    fn match_atn<'input>(&mut self, lexer: &mut impl Lexer<'input>) -> Result<isize, ANTLRError> {
         //        let start_state = self.atn().mode_to_start_state.get(self.mode as usize).ok_or(ANTLRError::IllegalStateError("invalid mode".into()))?;
         let atn = self.atn();
         let start_state = *atn.mode_to_start_state
@@ -188,11 +189,11 @@ impl LexerATNSimulator {
         self.exec_atn(next_state, lexer)
     }
 
-    fn exec_atn(
+    fn exec_atn<'input>(
         &mut self,
 //        input: &'a mut dyn CharStream,
         ds0: DFAStateRef,
-        lexer: &mut dyn Lexer,
+        lexer: &mut impl Lexer<'input>,
     ) -> Result<isize, ANTLRError> {
         //        if self.get_dfa().states.read().unwrap().get(ds0).unwrap().is_accept_state{
         self.capture_sim_state(lexer.get_input_stream().unwrap(), ds0);
@@ -248,7 +249,7 @@ impl LexerATNSimulator {
             .copied()
     }
 
-    fn compute_target_state(&self, _s: DFAStateRef, _t: isize, lexer: &mut dyn Lexer) -> DFAStateRef {
+    fn compute_target_state<'input>(&self, _s: DFAStateRef, _t: isize, lexer: &mut impl Lexer<'input>) -> DFAStateRef {
         let states = self.get_dfa().states.read().unwrap();
 
         let mut reach = ATNConfigSet::new_ordered();
@@ -285,14 +286,14 @@ impl LexerATNSimulator {
         //        states.get(to).unwrap()
     }
 
-    fn get_reachable_config_set<V>(
+    fn get_reachable_config_set<'input, V>(
         &self,
         _states: &V,
 //        _input: &mut dyn CharStream,
         _closure: &ATNConfigSet,
         _reach: &mut ATNConfigSet,
         _t: isize,
-        lexer: &mut dyn Lexer,
+        lexer: &mut impl Lexer<'input>,
     ) where
         V: Deref<Target=Vec<DFAState>>,
     {
@@ -338,7 +339,7 @@ impl LexerATNSimulator {
 //        unimplemented!()
 //    }
 
-    fn fail_or_accept(&mut self, _t: isize, lexer: &mut dyn Lexer) -> Result<isize, ANTLRError> {
+    fn fail_or_accept<'input>(&mut self, _t: isize, lexer: &mut impl Lexer<'input>) -> Result<isize, ANTLRError> {
 //        println!("fail_or_accept");
         if let Some(state) = self.prev_accept.dfa_state {
 //            let lexer_action_executor;
@@ -369,13 +370,13 @@ impl LexerATNSimulator {
         }
     }
 
-    fn accept(&mut self, input: &mut dyn CharStream) {
+    fn accept<'input>(&mut self, input: &mut dyn CharStream<'input>) {
         input.seek(self.prev_accept.index);
         self.current_pos.line.set(self.prev_accept.line);
         self.current_pos.char_position_in_line.set(self.prev_accept.column);
     }
 
-    fn compute_start_state(&self, _p: &dyn ATNState, lexer: &mut dyn Lexer) -> Box<ATNConfigSet> {
+    fn compute_start_state<'input>(&self, _p: &dyn ATNState, lexer: &mut impl Lexer<'input>) -> Box<ATNConfigSet> {
         //        let initial_context = &EMPTY_PREDICTION_CONTEXT;
         let mut config_set = ATNConfigSet::new_ordered();
 
@@ -399,7 +400,7 @@ impl LexerATNSimulator {
         Box::new(config_set)
     }
 
-    fn closure(
+    fn closure<'input>(
         &self,
 //        _input: &mut dyn CharStream,
         mut config: ATNConfig,
@@ -407,7 +408,7 @@ impl LexerATNSimulator {
         mut _current_alt_reached_accept_state: bool,
         _speculative: bool,
         _treat_eofas_epsilon: bool,
-        lexer: &mut dyn Lexer,
+        lexer: &mut impl Lexer<'input>,
     ) -> bool {
         //        let config = &config;
         let atn = self.atn();
@@ -487,7 +488,7 @@ impl LexerATNSimulator {
     }
 
 
-    fn get_epsilon_target(
+    fn get_epsilon_target<'input>(
         &self,
 //        _input: &mut dyn CharStream,
         _config: &mut ATNConfig,
@@ -495,7 +496,7 @@ impl LexerATNSimulator {
         _configs: &mut ATNConfigSet,
         _speculative: bool,
         _treat_eofas_epsilon: bool,
-        lexer: &mut dyn Lexer,
+        lexer: &mut impl Lexer<'input>,
     ) -> Option<ATNConfig> {
         let mut result = None;
         let target = self.atn().states.get(_trans.get_target()).unwrap().as_ref();
@@ -553,13 +554,13 @@ impl LexerATNSimulator {
         result
     }
 
-    fn evaluate_predicate(
+    fn evaluate_predicate<'input>(
         &self,
 //        input: &mut dyn CharStream,
         rule_index: isize,
         pred_index: isize,
         speculative: bool,
-        lexer: &mut dyn Lexer,
+        lexer: &mut impl Lexer<'input>,
     ) -> bool {
         if !speculative {
             return lexer.sempred(&*empty_ctx(), rule_index, pred_index);

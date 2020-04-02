@@ -2,16 +2,16 @@ use std::ops::Deref;
 
 use crate::errors::ANTLRError;
 use crate::int_stream::{EOF, IntStream, IterWrapper};
-use crate::token::{Token, TOKEN_DEFAULT_CHANNEL, TOKEN_INVALID_TYPE};
+use crate::token::{OwningToken, Token, TOKEN_DEFAULT_CHANNEL, TOKEN_INVALID_TYPE};
 use crate::token_source::TokenSource;
 use crate::token_stream::{TokenStream, UnbufferedTokenStream};
 
-pub struct CommonTokenStream<T: TokenSource> {
-    base: UnbufferedTokenStream<T>,
+pub struct CommonTokenStream<'input, T: TokenSource<'input>> {
+    base: UnbufferedTokenStream<'input, T>,
     channel: isize,
 }
 
-impl<T: TokenSource> IntStream for CommonTokenStream<T> {
+impl<'input, T: TokenSource<'input>> IntStream for CommonTokenStream<'input, T> {
     fn consume(&mut self) -> Result<(), ANTLRError> {
         self.base.consume()?;
 //        self.base.p = self.next_token_on_channel(self.base.p,self.channel);
@@ -49,7 +49,7 @@ impl<T: TokenSource> IntStream for CommonTokenStream<T> {
     }
 }
 
-impl<T: TokenSource> TokenStream for CommonTokenStream<T> {
+impl<'input, T: TokenSource<'input>> TokenStream<'input> for CommonTokenStream<'input, T> {
     type Tok = T::Tok;
 
     fn lt(&mut self, k: isize) -> Option<&Self::Tok> {
@@ -73,7 +73,7 @@ impl<T: TokenSource> TokenStream for CommonTokenStream<T> {
         self.base.get(index)
     }
 
-    fn get_token_source(&self) -> &dyn TokenSource<Tok=T::Tok> {
+    fn get_token_source(&self) -> &dyn TokenSource<'input, Tok=Self::Tok> {
         self.base.get_token_source()
     }
 
@@ -90,12 +90,12 @@ impl<T: TokenSource> TokenStream for CommonTokenStream<T> {
     }
 }
 
-impl<T: TokenSource> CommonTokenStream<T> {
-    pub fn new(lexer: T) -> CommonTokenStream<T> {
+impl<'input, T: TokenSource<'input>> CommonTokenStream<'input, T> {
+    pub fn new(lexer: T) -> CommonTokenStream<'input, T> {
         Self::with_channel(lexer, TOKEN_DEFAULT_CHANNEL)
     }
 
-    pub fn with_channel(lexer: T, channel: isize) -> CommonTokenStream<T> {
+    pub fn with_channel(lexer: T, channel: isize) -> CommonTokenStream<'input, T> {
         let mut r = CommonTokenStream {
             base: UnbufferedTokenStream::new_buffered(lexer),
             channel,

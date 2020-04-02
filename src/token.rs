@@ -1,6 +1,7 @@
 use std::borrow::{Borrow, Cow};
 use std::fmt::{Debug, Display};
 use std::fmt::Formatter;
+use std::ops::{CoerceUnsized, Deref};
 
 use crate::char_stream::CharStream;
 use crate::int_stream::EOF;
@@ -36,8 +37,17 @@ pub trait Token: Debug {
     fn to_owned(&self) -> OwningToken;
 }
 
+// impl<T:Token> ToOwned for dyn Token{
+//     type Owned = ();
+//
+//     fn to_owned(&self) -> Self::Owned {
+//         unimplemented!()
+//     }
+// }
+
+
 pub type OwningToken = GenericToken<String>;
-pub type CommonToken<'a> = GenericToken<Cow<'a, String>>;
+pub type CommonToken<'a> = GenericToken<Cow<'a, str>>;
 
 #[derive(Debug, Clone)]
 pub struct GenericToken<T: Borrow<str> + Debug = String> {
@@ -52,7 +62,6 @@ pub struct GenericToken<T: Borrow<str> + Debug = String> {
     pub text: T,
     pub read_only: bool,
 }
-
 
 impl<T: Borrow<str> + Debug> Display for GenericToken<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
