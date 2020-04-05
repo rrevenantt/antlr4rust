@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::fmt;
@@ -6,6 +7,7 @@ use std::rc::Rc;
 
 use crate::atn_simulator::IATNSimulator;
 use crate::atn_state::*;
+use crate::common_token_factory::TokenFactory;
 use crate::dfa::ScopeExt;
 use crate::errors::{ANTLRError, FailedPredicateError, InputMisMatchError, NoViableAltError, RecognitionError};
 use crate::interval_set::IntervalSet;
@@ -165,7 +167,10 @@ impl DefaultErrorStrategy {
 //        let look_back =
         let mut curr = recognizer.get_current_token();
         if curr.get_token_type() == TOKEN_EOF {
-            curr = recognizer.get_input_stream().run(|it| it.get((it.index() - 1).max(0)));
+            curr = recognizer.get_input_stream()
+                .run(|it|
+                    it.get((it.index() - 1).max(0))
+                );
         }
         let (line, column) = (curr.get_line(), curr.get_column());
         *recognizer.get_token_factory()
@@ -179,6 +184,7 @@ impl DefaultErrorStrategy {
                 line,
                 column,
             )
+        // Token::to_owned(token.borrow())
         // .modify_with(|it| it.text = token_text)
     }
 

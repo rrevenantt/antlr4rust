@@ -9,6 +9,7 @@
 #![feature(specialization)]
 #![feature(coerce_unsized)]
 #![feature(unsize)]
+#![feature(associated_type_defaults)]
 #![warn(rust_2018_idioms)]
 #![warn(missing_docs)] // warn if there is missing docs
 #![warn(missing_debug_implementations)]

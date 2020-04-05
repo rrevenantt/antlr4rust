@@ -1,5 +1,7 @@
+use std::borrow::Borrow;
 use std::ops::Deref;
 
+use crate::common_token_factory::TokenFactory;
 use crate::errors::ANTLRError;
 use crate::int_stream::{EOF, IntStream, IterWrapper};
 use crate::token::{OwningToken, Token, TOKEN_DEFAULT_CHANNEL, TOKEN_INVALID_TYPE};
@@ -50,9 +52,9 @@ impl<'input, T: TokenSource<'input>> IntStream for CommonTokenStream<'input, T> 
 }
 
 impl<'input, T: TokenSource<'input>> TokenStream<'input> for CommonTokenStream<'input, T> {
-    type Tok = T::Tok;
+    type TF = T::TF;
 
-    fn lt(&mut self, k: isize) -> Option<&Self::Tok> {
+    fn lt(&mut self, k: isize) -> Option<&<Self::TF as TokenFactory<'input>>::Inner> {
         if k == 0 { panic!(); }
         if k < 0 { return self.lb(-k); }
         let mut i = self.base.p;
@@ -66,14 +68,18 @@ impl<'input, T: TokenSource<'input>> TokenStream<'input> for CommonTokenStream<'
             n += 1;
         }
 //		if ( i>range ) range = i;
-        return self.base.tokens.get(i as usize).map(Deref::deref)
+        return self.base.tokens.get(i as usize).map(Borrow::borrow)
     }
 
-    fn get(&self, index: isize) -> &Self::Tok {
+    fn get(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Inner {
         self.base.get(index)
     }
 
-    fn get_token_source(&self) -> &dyn TokenSource<'input, Tok=Self::Tok> {
+    fn get_cloned(&self, index: isize) -> <Self::TF as TokenFactory<'input>>::Tok {
+        self.base.get_cloned(index)
+    }
+
+    fn get_token_source(&self) -> &dyn TokenSource<'input, TF=Self::TF> {
         self.base.get_token_source()
     }
 
@@ -142,7 +148,7 @@ impl<'input, T: TokenSource<'input>> CommonTokenStream<'input, T> {
             return self.size() - 1;
         }
 
-        let mut token = self.base.tokens[i as usize].as_ref();
+        let mut token = self.base.tokens[i as usize].borrow();
         while token.get_channel() != channel {
             if token.get_token_type() == EOF || i < 0 {
                 return i;
@@ -150,7 +156,7 @@ impl<'input, T: TokenSource<'input>> CommonTokenStream<'input, T> {
 
             i += direction;
             self.sync(i);
-            token = self.base.tokens[i as usize].as_ref();
+            token = self.base.tokens[i as usize].borrow();
         }
 
         return i;
@@ -178,7 +184,7 @@ impl<'input, T: TokenSource<'input>> CommonTokenStream<'input, T> {
 //
 //    fn adjust_seek_index(&self, i: isize) -> int { unimplemented!() }
 
-    fn lb(&mut self, k: isize) -> Option<&T::Tok> {
+    fn lb(&mut self, k: isize) -> Option<&<<Self as TokenStream<'input>>::TF as TokenFactory<'input>>::Inner> {
         if k == 0 || (self.base.p - k) < 0 { return None }
 
         let mut i = self.base.p;
@@ -191,7 +197,7 @@ impl<'input, T: TokenSource<'input>> CommonTokenStream<'input, T> {
         }
         if i < 0 { return None }
 
-        return Some(self.get(i));
+        return Some(self.get(i).borrow());
     }
 
 //    fn get_number_of_on_channel_tokens(&self) -> int { unimplemented!() }

@@ -17,6 +17,7 @@ use crate::atn_config_set::ATNConfigSet;
 use crate::atn_simulator::{BaseATNSimulator, IATNSimulator};
 use crate::atn_state::{ATNDecisionState, ATNState, ATNSTATE_BLOCK_END, ATNStateRef, ATNStateType};
 use crate::atn_state::ATNStateType::RuleStopState;
+use crate::common_token_factory::CommonTokenFactory;
 use crate::dfa::{DFA, ScopeExt};
 use crate::dfa_state::{DFAState, DFAStateRef, PredPrediction};
 use crate::errors::{ANTLRError, NoViableAltError};
@@ -89,7 +90,7 @@ struct Local<'a, 'text: 'a> {
 }
 
 impl<'text> Local<'_, 'text> {
-    fn input(&mut self) -> &mut dyn TokenStream<'text, Tok=dyn Token + 'text> { self.parser.get_input_stream_mut() }
+    fn input(&mut self) -> &mut dyn TokenStream<'text, TF=CommonTokenFactory> { self.parser.get_input_stream_mut() }
     fn seek(&mut self, i: isize) { self.input().seek(i) }
     fn outer_context(&self) -> &dyn ParserRuleContext { self.outer_context.deref() }
 }
@@ -1107,8 +1108,10 @@ impl ParserATNSimulator {
 //
     fn no_viable_alt(&self, local: &mut Local, _configs: &ATNConfigSet, start_index: isize)
                      -> ANTLRError {
-        let start_token = local.parser.get_input_stream().get(start_index).to_owned();
-        let offending_token = local.input().lt(1).unwrap().to_owned();
+        let start_token = local.parser.get_input_stream().get(start_index);
+        let start_token = Token::to_owned(start_token);
+        let offending_token = local.input().lt(1).unwrap();
+        let offending_token = Token::to_owned(offending_token);
         ANTLRError::NoAltError(NoViableAltError::new_full(
             local.parser,
             start_token,

@@ -17,6 +17,7 @@ fn main() {
     }
 
     println!("cargo:rerun-if-changed=build.rs");
+
     println!("cargo:rerun-if-changed=/home/rrevenantt/dev/antlr4/tool/target/antlr4-4.8-2-SNAPSHOT-complete.jar");
 }
 

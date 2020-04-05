@@ -1,8 +1,9 @@
+use std::borrow::{Borrow, BorrowMut};
 use std::cmp::min;
 use std::marker::{PhantomData, Unsize};
 use std::ops::Deref;
 
-use crate::common_token_factory::CommonTokenFactory;
+use crate::common_token_factory::{CommonTokenFactory, TokenFactory};
 use crate::errors::ANTLRError;
 use crate::int_stream::{IntStream, IterWrapper};
 use crate::token::{OwningToken, Token, TOKEN_EOF, TOKEN_INVALID_TYPE};
@@ -15,10 +16,11 @@ use crate::token_source::TokenSource;
 /// `TokenSource`, not `TokenStream`
 pub trait TokenStream<'input>: IntStream {
     /// Output token type
-    type Tok: Token + ?Sized + Unsize<dyn Token + 'input> + 'input;
-    fn lt(&mut self, k: isize) -> Option<&Self::Tok>;
-    fn get(&self, index: isize) -> &Self::Tok;
-    fn get_token_source(&self) -> &dyn TokenSource<'input, Tok=Self::Tok>;
+    type TF: TokenFactory<'input>;
+    fn lt(&mut self, k: isize) -> Option<&<Self::TF as TokenFactory<'input>>::Inner>;
+    fn get(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Inner;
+    fn get_cloned(&self, index: isize) -> <Self::TF as TokenFactory<'input>>::Tok;
+    fn get_token_source(&self) -> &dyn TokenSource<'input, TF=Self::TF>;
     //    fn set_token_source(&self,source: Box<TokenSource>);
     fn get_all_text(&self) -> String;
     fn get_text_from_interval(&self, start: isize, stop: isize) -> String;
@@ -42,7 +44,7 @@ impl<'a, 'input: 'a, T: TokenStream<'input>> Iterator for TokenIter<'a, 'input, 
 
 pub struct UnbufferedTokenStream<'input, T: TokenSource<'input>> {
     token_source: T,
-    pub(crate) tokens: Vec<Box<T::Tok>>,
+    pub(crate) tokens: Vec<<T::TF as TokenFactory<'input>>::Tok>,
     //todo prev token for lt(-1)
     pub(crate) current_token_index: isize,
     markers_count: isize,
@@ -88,11 +90,11 @@ impl<'input, T: TokenSource<'input>> UnbufferedTokenStream<'input, T> {
 
     pub(crate) fn fill(&mut self, need: isize) -> isize {
         for i in 0..need {
-            if self.tokens.len() > 0 && self.tokens.last().unwrap().get_token_type() == TOKEN_EOF {
+            if self.tokens.len() > 0 && self.tokens.last().unwrap().borrow().get_token_type() == TOKEN_EOF {
                 return i;
             }
             let mut token = self.token_source.next_token();
-            token.set_token_index(self.get_buffer_start_index() + self.tokens.len() as isize);
+            token.borrow().set_token_index(self.get_buffer_start_index() + self.tokens.len() as isize);
             self.tokens.push(token);
         }
 
@@ -101,23 +103,27 @@ impl<'input, T: TokenSource<'input>> UnbufferedTokenStream<'input, T> {
 }
 
 impl<'input, T: TokenSource<'input>> TokenStream<'input> for UnbufferedTokenStream<'input, T> {
-    type Tok = T::Tok;
+    type TF = T::TF;
 
-    fn lt(&mut self, i: isize) -> Option<&T::Tok> {
+    fn lt(&mut self, i: isize) -> Option<&<Self::TF as TokenFactory<'input>>::Inner> {
         if i == -1 {
-            return self.tokens.get(self.p as usize - 1).map(Deref::deref)
+            return self.tokens.get(self.p as usize - 1).map(Borrow::borrow)
         }
 
         self.sync(i);
 
-        self.tokens.get((self.p + i - 1) as usize).map(Deref::deref)
+        self.tokens.get((self.p + i - 1) as usize).map(Borrow::borrow)
     }
 
-    fn get(&self, index: isize) -> &Self::Tok {
-        self.tokens[(index - self.get_buffer_start_index()) as usize].as_ref()
+    fn get(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Inner {
+        self.tokens[(index - self.get_buffer_start_index()) as usize].borrow()
     }
 
-    fn get_token_source(&self) -> &dyn TokenSource<'input, Tok=T::Tok> {
+    fn get_cloned(&self, index: isize) -> <Self::TF as TokenFactory<'input>>::Tok {
+        self.tokens[(index - self.get_buffer_start_index()) as usize].clone()
+    }
+
+    fn get_token_source(&self) -> &dyn TokenSource<'input, TF=Self::TF> {
         &self.token_source
     }
 
@@ -140,7 +146,7 @@ impl<'input, T: TokenSource<'input>> TokenStream<'input> for UnbufferedTokenStre
 
         let mut buf = String::new();
         for i in a..(b + 1) {
-            let t = &self.tokens[i as usize];
+            let t = self.tokens[i as usize].borrow();
             if t.get_token_type() == TOKEN_EOF { break }
             buf.push_str(t.get_text());
         }
@@ -187,15 +193,16 @@ impl<'input, T: TokenSource<'input>> IntStream for UnbufferedTokenStream<'input,
         if self.markers_count == 0 {
             if self.p > 0 {
                 //todo rewrite properly as safe code, this is completely wrong
-                unsafe {
-                    // might be UB if 2p > len?
-                    // copy_nonoverlapping(
-                    std::intrinsics::copy(
-                        &self.tokens[self.p as usize] as *const Box<T::Tok>,
-                        &mut self.tokens[0] as *mut Box<T::Tok>,
-                        self.tokens.len() - self.p as usize,
-                    )
-                }
+                // unsafe {
+                // might be UB if 2p > len?
+                // copy_nonoverlapping(
+                // std::intrinsics::copy(
+                //     &self.tokens[self.p as usize] as *const T::Tok,
+                //     &mut self.tokens[0] as *mut T::Tok,
+                //     self.tokens.len() - self.p as usize,
+                // )
+                // }
+                unimplemented!()
             }
         }
     }
@@ -231,7 +238,7 @@ impl<'input, T: TokenSource<'input>> IntStream for UnbufferedTokenStream<'input,
 // pub(crate) struct DynTokenStream<'input,T:TokenStream<'input>>(pub T);
 //
 // impl<'input,T:TokenStream<'input>> TokenStream<'input> for DynTokenStream<'input,T>{
-//     type Tok = dyn Token + 'input;
+//     type TF = Box<dyn Token + 'input>;
 //
 //     fn lt(&mut self, k: isize) -> Option<&Self::Tok> {
 //         match self.0.lt(k){

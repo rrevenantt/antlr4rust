@@ -42,13 +42,13 @@ pub trait Recognizer {
 pub trait Actions {
     type Recog: ?Sized;
     fn sempred(_localctx: &dyn ParserRuleContext, _rule_index: isize, _action_index: isize,
-               _recog: &mut Self::Recog,
+               _recog: &mut T,
     ) -> bool {
         true
     }
 
     fn action(_localctx: &dyn ParserRuleContext, _rule_index: isize, _action_index: isize,
-              _recog: &mut Self::Recog,
+              _recog: &mut T,
     ) {}
 }
 

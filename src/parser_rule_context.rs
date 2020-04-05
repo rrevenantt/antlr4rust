@@ -1,6 +1,7 @@
 use std::any::{Any, type_name, TypeId};
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::{Ref, RefCell};
+use std::convert::identity;
 use std::fmt::{Debug, Error, Formatter};
 use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
@@ -223,7 +224,7 @@ impl<Ctx: CustomRuleContext> ParserRuleContext for BaseParserRuleContext<Ctx> {
     }
 
     fn set_start(&self, t: Option<OwningToken>) {
-        *self.start.borrow_mut() = t.unwrap_or((**INVALID_TOKEN).clone());
+        *self.start.borrow_mut() = t.unwrap_or(INVALID_TOKEN.with(|x| (**x).clone()));
     }
 
     fn get_start(&self) -> Ref<'_, OwningToken> {
@@ -231,7 +232,7 @@ impl<Ctx: CustomRuleContext> ParserRuleContext for BaseParserRuleContext<Ctx> {
     }
 
     fn set_stop(&self, t: Option<OwningToken>) {
-        *self.stop.borrow_mut() = t.unwrap_or((**INVALID_TOKEN).clone());
+        *self.stop.borrow_mut() = t.unwrap_or(INVALID_TOKEN.with(|x| (**x).clone()));
     }
 
     fn get_stop(&self) -> Ref<'_, OwningToken> {
@@ -337,8 +338,8 @@ impl<Ctx: CustomRuleContext> BaseParserRuleContext<Ctx> {
     pub fn new_parser_ctx(parent_ctx: Option<ParserRuleContextType>, invoking_state: isize, ext: Ctx) -> Self {
         BaseParserRuleContext {
             base: BaseRuleContext::new_ctx(parent_ctx, invoking_state, ext),
-            start: RefCell::new((**INVALID_TOKEN).clone()),
-            stop: RefCell::new((**INVALID_TOKEN).clone()),
+            start: RefCell::new(INVALID_TOKEN.with(|x| (**x).clone())),
+            stop: RefCell::new(INVALID_TOKEN.with(|x| (**x).clone())),
             exception: None,
             children: RefCell::new(vec![]),
         }

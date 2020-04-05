@@ -1,7 +1,8 @@
-use std::borrow::{Borrow, Cow};
+use std::borrow::{Borrow, BorrowMut, Cow};
+use std::cell::Cell;
 use std::fmt::{Debug, Display};
 use std::fmt::Formatter;
-use std::ops::{CoerceUnsized, Deref};
+use std::ops::{CoerceUnsized, Deref, DerefMut};
 
 use crate::char_stream::CharStream;
 use crate::int_stream::EOF;
@@ -15,7 +16,12 @@ pub const TOKEN_DEFAULT_CHANNEL: isize = 0;
 pub const TOKEN_HIDDEN_CHANNEL: isize = 1;
 pub const HIDDEN: isize = TOKEN_HIDDEN_CHANNEL;
 
-
+/// Trait for custom token implementations
+///
+/// For proper parsing, implementations must have valid implementations
+/// for at least token type and token index.
+///
+/// Other members are mostly required for error reporting
 pub trait Token: Debug {
     // fn get_source(&self) -> Option<(Box<dyn TokenSource>, Box<dyn CharStream>)>;
     fn get_token_type(&self) -> isize;
@@ -29,7 +35,7 @@ pub trait Token: Debug {
     fn set_text(&self, text: String);
 
     fn get_token_index(&self) -> isize;
-    fn set_token_index(&mut self, v: isize);
+    fn set_token_index(&self, v: isize);
 
     // fn get_token_source(&self) -> &dyn TokenSource;
     // fn get_input_stream(&self) -> &dyn CharStream;
@@ -37,14 +43,46 @@ pub trait Token: Debug {
     fn to_owned(&self) -> OwningToken;
 }
 
-// impl<T:Token> ToOwned for dyn Token{
-//     type Owned = ();
+///automatically implemented interface for passing tokens behind different kinds of ownership
+// pub trait TokenWrapper<'ref>: BorrowMut<<Self as TokenWrapper>::Inner>{
+//     type Inner:Token + ?Sized + 'ref;
+// }
 //
-//     fn to_owned(&self) -> Self::Owned {
-//         unimplemented!()
-//     }
+// impl<'a,T:Token + ?Sized + 'a> TokenWrapper<'a> for Box<T> {
+//     type Inner = T;
+// }
+//
+// impl<'a,T:Token + ?Sized + 'a> TokenWrapper<'a> for Box<T> {
+//     type Inner = T;
+// }
+//
+// impl<'a,T:Token + ?Sized + 'a> TokenWrapper<'a> for &'a mut T {
+//     type Inner = ;
 // }
 
+// impl<T:DerefMut + Debug + BorrowMut<<T as Deref>::Target>> Token for T where <T as Deref>::Target:Token{
+//     fn get_token_type(&self) -> isize { self.deref().get_token_type() }
+//
+//     fn get_channel(&self) -> isize { self.deref().get_channel() }
+//
+//     fn get_start(&self) -> isize { self.deref().get_start() }
+//
+//     fn get_stop(&self) -> isize { self.deref().get_stop() }
+//
+//     fn get_line(&self) -> isize { self.deref().get_line() }
+//
+//     fn get_column(&self) -> isize { self.deref().get_column() }
+//
+//     fn get_text(&self) -> &str {self.deref().get_text()}
+//
+//     fn set_text(&self, text: String) {self.deref().set_text()}
+//
+//     fn get_token_index(&self) -> isize {self.deref().get_token_index()}
+//
+//     fn set_token_index(&mut self, v: isize) {self.deref().set_token_index()}
+//
+//     fn to_owned(&self) -> OwningToken {self.deref().to_owned()}
+// }
 
 pub type OwningToken = GenericToken<String>;
 pub type CommonToken<'a> = GenericToken<Cow<'a, str>>;
@@ -56,7 +94,7 @@ pub struct GenericToken<T: Borrow<str> + Debug = String> {
     pub channel: isize,
     pub start: isize,
     pub stop: isize,
-    pub token_index: isize,
+    pub token_index: Cell<isize>,
     pub line: isize,
     pub column: isize,
     pub text: T,
@@ -71,7 +109,7 @@ impl<T: Borrow<str> + Debug> Display for GenericToken<T> {
         let txt = txt.replace("\t", "\\t");
 //        let txt = escape_whitespaces(txt,false);
         f.write_fmt(format_args!("[@{},{}:{}='{}',<{}>{},{}:{}]",
-                                 self.token_index,
+                                 self.token_index.get(),
                                  self.start,
                                  self.stop,
                                  txt,
@@ -83,6 +121,7 @@ impl<T: Borrow<str> + Debug> Display for GenericToken<T> {
     }
 }
 
+// impl<T: Borrow<str> + Debug> TokenWrapper for GenericToken<T> { type Inner = Self; }
 
 impl<T: Borrow<str> + Debug> Token for GenericToken<T> {
     fn get_channel(&self) -> isize {
@@ -114,11 +153,11 @@ impl<T: Borrow<str> + Debug> Token for GenericToken<T> {
     // }
 
     fn get_token_index(&self) -> isize {
-        self.token_index
+        self.token_index.get()
     }
 
-    fn set_token_index(&mut self, _v: isize) {
-        self.token_index = _v
+    fn set_token_index(&self, _v: isize) {
+        self.token_index.set(_v)
     }
 
     // fn get_token_source(&self) -> &dyn TokenSource {
@@ -147,7 +186,7 @@ impl<T: Borrow<str> + Debug> Token for GenericToken<T> {
             channel: self.channel,
             start: self.start,
             stop: self.stop,
-            token_index: self.token_type,
+            token_index: self.token_index.clone(),
             line: self.line,
             column: self.column,
             text: self.text.borrow().to_owned(),

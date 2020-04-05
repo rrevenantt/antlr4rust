@@ -1,4 +1,5 @@
 use std::any::Any;
+use std::borrow::Borrow;
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::marker::{PhantomData, Unsize};
@@ -9,7 +10,7 @@ use std::sync::Arc;
 
 use crate::atn::ATN;
 use crate::atn_simulator::IATNSimulator;
-use crate::common_token_factory::TokenFactory;
+use crate::common_token_factory::{CommonTokenFactory, TokenFactory};
 use crate::error_listener::{ConsoleErrorListener, ErrorListener, ProxyErrorListener};
 use crate::error_strategy::ErrorStrategy;
 use crate::errors::ANTLRError;
@@ -29,7 +30,7 @@ pub trait Parser<'input>: Recognizer {
     // type Tok: Token + ?Sized + Unsize<dyn Token + 'input> + 'input;
     fn get_interpreter(&self) -> &ParserATNSimulator;
 
-    fn get_token_factory(&self) -> &'input dyn TokenFactory<'input, Tok=OwningToken>;
+    fn get_token_factory(&self) -> &'input CommonTokenFactory;
     fn get_parser_rule_context(&self) -> &ParserRuleContextType;
     //    fn set_parser_rule_context(&self, v: ParserRuleContext);
     fn consume(&mut self, err_handler: &mut dyn ErrorStrategy);
@@ -40,8 +41,8 @@ pub trait Parser<'input>: Recognizer {
 
     //    fn get_error_handler(&self) -> ErrorStrategy;
 //    fn set_error_handler(&self, e: ErrorStrategy);
-    fn get_input_stream_mut(&mut self) -> &mut dyn TokenStream<'input, Tok=dyn Token + 'input>;
-    fn get_input_stream(&self) -> &dyn TokenStream<'input, Tok=dyn Token + 'input>;
+    fn get_input_stream_mut(&mut self) -> &mut dyn TokenStream<'input, TF=CommonTokenFactory>;
+    fn get_input_stream(&self) -> &dyn TokenStream<'input, TF=CommonTokenFactory>;
     fn get_current_token(&self) -> &(dyn Token + 'input);
     fn get_expected_tokens(&self) -> IntervalSet;
 
@@ -64,8 +65,8 @@ pub trait Parser<'input>: Recognizer {
 /// Generated parser hides complexity of this struct and expose required flexibility via generics
 ///
 pub struct BaseParser<'input,
-    Ext: ParserRecog<Recog=Self> + 'static,
-    I: TokenStream<'input, Tok=dyn Token + 'input>,
+    Ext: ParserRecog<Self> + 'static,
+    I: TokenStream<'input> + ?Sized = dyn TokenStream<'input, TF=CommonTokenFactory>,
     T: ParseTreeListener + ?Sized + 'static = dyn ParseTreeListener> {
     interp: Arc<ParserATNSimulator>,
     pub ctx: Option<ParserRuleContextType>,
@@ -98,13 +99,14 @@ pub struct BaseParser<'input,
     _syntax_errors: Cell<isize>,
     error_listeners: RefCell<Vec<Box<dyn ErrorListener>>>,
 
-    ext: Ext
+    ext: Ext,
+    pd: PhantomData<fn() -> &'input str>
 }
 
 impl<'input, I, T, Ext> Deref for BaseParser<'input, Ext, I, T>
     where T: ParseTreeListener + ?Sized + 'static,
-          I: TokenStream<'input, Tok=dyn Token + 'input>,
-          Ext: ParserRecog<Recog=Self> + 'static
+          I: TokenStream<'input> + ?Sized,
+          Ext: ParserRecog<Self> + 'static
 {
     type Target = Ext;
 
@@ -115,8 +117,8 @@ impl<'input, I, T, Ext> Deref for BaseParser<'input, Ext, I, T>
 
 impl<'input, I, T, Ext> DerefMut for BaseParser<'input, Ext, I, T>
     where T: ParseTreeListener + ?Sized + 'static,
-          I: TokenStream<'input, Tok=dyn Token + 'input>,
-          Ext: ParserRecog<Recog=Self> + 'static
+          I: TokenStream<'input> + ?Sized,
+          Ext: ParserRecog<Self> + 'static
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.ext
@@ -124,15 +126,15 @@ impl<'input, I, T, Ext> DerefMut for BaseParser<'input, Ext, I, T>
 }
 
 ///
-pub trait ParserRecog: Recognizer + Actions {}
+pub trait ParserRecog<T>: Recognizer + Actions<T> {}
 
 impl<'input, I, T, Ext> Recognizer for BaseParser<'input, Ext, I, T>
     where T: ParseTreeListener + ?Sized + 'static,
-          I: TokenStream<'input, Tok=dyn Token + 'input>,
-          Ext: ParserRecog<Recog=Self> + 'static
+          I: TokenStream<'input> + ?Sized,
+          Ext: ParserRecog<Self> + 'static
 {
     fn sempred(&mut self, localctx: &dyn ParserRuleContext, rule_index: isize, action_index: isize) -> bool {
-        <Ext as Actions>::sempred(localctx, rule_index, action_index, self)
+        <Ext as Actions<Self>>::sempred(localctx, rule_index, action_index, self)
     }
 
     fn get_rule_names(&self) -> &[&str] {
@@ -154,8 +156,8 @@ impl<'input, I, T, Ext> Recognizer for BaseParser<'input, Ext, I, T>
 
 impl<'input, I, T, Ext> Parser<'input> for BaseParser<'input, Ext, I, T>
     where T: ParseTreeListener + ?Sized + 'static,
-          I: TokenStream<'input, Tok=dyn Token + 'input>,
-          Ext: ParserRecog<Recog=Self> + 'static
+          I: TokenStream<'input> + ?Sized,
+          Ext: ParserRecog<Self> + 'static
 {
     // type Tok = I::Tok;
 
@@ -163,7 +165,7 @@ impl<'input, I, T, Ext> Parser<'input> for BaseParser<'input, Ext, I, T>
         self.interp.as_ref()
     }
 
-    fn get_token_factory(&self) -> &'input dyn TokenFactory<'input, Tok=OwningToken> {
+    fn get_token_factory(&self) -> &'input CommonTokenFactory {
         &**crate::common_token_factory::CommonTokenFactoryDEFAULT
         // self.input.get_token_source().get_token_factory()
     }
@@ -201,16 +203,18 @@ impl<'input, I, T, Ext> Parser<'input> for BaseParser<'input, Ext, I, T>
         precedence >= self.get_precedence()
     }
 
-    fn get_input_stream_mut(&mut self) -> &mut dyn TokenStream<'input, Tok=dyn Token + 'input> {
-        self.input.as_mut()
+    fn get_input_stream_mut(&mut self) -> &mut dyn TokenStream<'input, TF=CommonTokenFactory> {
+        unimplemented!()
+        // self.input.as_mut()
     }
 
-    fn get_input_stream(&self) -> &dyn TokenStream<'input, Tok=dyn Token + 'input> {
-        self.input.as_ref()
+    fn get_input_stream(&self) -> &dyn TokenStream<'input, TF=CommonTokenFactory> {
+        unimplemented!()
+        // self.input.as_ref()
     }
 
     fn get_current_token(&self) -> &(dyn Token + 'input) {
-        self.input.get(self.input.index())
+        self.input.get(self.input.index()).borrow()
     }
 
     fn get_expected_tokens(&self) -> IntervalSet {
@@ -225,7 +229,7 @@ impl<'input, I, T, Ext> Parser<'input> for BaseParser<'input, Ext, I, T>
         self._syntax_errors.update(|it| it + 1);
         let offending_token = match offending_token {
             None => Some(self.get_current_token()),
-            Some(x) => Some(self.input.get(x)),
+            Some(x) => Some(self.input.get(x) as &dyn Token),
         };
         let line = offending_token.map(|x| x.get_line()).unwrap_or(-1);
         let column = offending_token.map(|x| x.get_column()).unwrap_or(-1);
@@ -279,8 +283,8 @@ impl<'input, I, T, Ext> Parser<'input> for BaseParser<'input, Ext, I, T>
 
 impl<'input, I, T, Ext> BaseParser<'input, Ext, I, T>
     where T: ParseTreeListener + ?Sized + 'static,
-          I: TokenStream<'input, Tok=dyn Token + 'input>,
-          Ext: ParserRecog<Recog=Self> + 'static
+          I: TokenStream<'input> + ?Sized,
+          Ext: ParserRecog<Self> + 'static
 {
     pub fn new_base_parser(
         input: Box<I>,
@@ -298,7 +302,8 @@ impl<'input, I, T, Ext> BaseParser<'input, Ext, I, T>
             parse_listeners: vec![],
             _syntax_errors: Cell::new(0),
             error_listeners: RefCell::new(vec![Box::new(ConsoleErrorListener {})]),
-            ext
+            ext,
+            pd: PhantomData
         }
     }
 

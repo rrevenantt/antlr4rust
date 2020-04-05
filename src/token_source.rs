@@ -1,4 +1,6 @@
+use std::fmt::Debug;
 use std::marker::Unsize;
+use std::ops::Deref;
 
 use crate::char_stream::CharStream;
 use crate::common_token_factory::TokenFactory;
@@ -8,8 +10,8 @@ use crate::token::{Token, TOKEN_DEFAULT_CHANNEL};
 /// Provides tokens for parser via `TokenStream`
 pub trait TokenSource<'input> {
     ///Type of tokens, produced by this source
-    type Tok: Token + ?Sized + Unsize<dyn Token + 'input> + 'input;
-    fn next_token(&mut self) -> Box<Self::Tok>;
+    type TF: TokenFactory<'input>;
+    fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok;
     /**
      * Get the line number for the current position in the input stream. The
      * first line in the input is line 1.
@@ -35,15 +37,15 @@ pub trait TokenSource<'input> {
     /// Required by `Parser` for creating missing tokens.
     ///
     /// @return The {@link TokenFactory} currently used by this token source.
-    fn get_token_factory(&self) -> &'input dyn TokenFactory<'input, Tok=Self::Tok>;
+    fn get_token_factory(&self) -> &'input Self::TF;
 }
 
 // allows user to call parser with &mut reference to Lexer
 impl<'input, T> TokenSource<'input> for &mut T where T: TokenSource<'input> {
-    type Tok = T::Tok;
+    type TF = T::TF;
 
     #[inline(always)]
-    fn next_token(&mut self) -> Box<Self::Tok> {
+    fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok {
         (**self).next_token()
     }
 
@@ -68,7 +70,7 @@ impl<'input, T> TokenSource<'input> for &mut T where T: TokenSource<'input> {
     }
 
     #[inline(always)]
-    fn get_token_factory(&self) -> &'input dyn TokenFactory<'input, Tok=T::Tok> {
+    fn get_token_factory(&self) -> &'input Self::TF {
         (**self).get_token_factory()
     }
 }
