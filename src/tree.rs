@@ -2,12 +2,14 @@ use std::any::{Any, TypeId};
 use std::cell::{Ref, RefCell};
 use std::fmt::{Debug, Error, Formatter};
 use std::ops::Deref;
+use std::rc::Rc;
 
 use crate::atn::INVALID_ALT;
 use crate::int_stream::EOF;
 use crate::interval_set::Interval;
 use crate::parser::Parser;
 use crate::parser_rule_context::{BaseParserRuleContext, cast, ParserRuleContext, ParserRuleContextType};
+use crate::recognizer::Recognizer;
 use crate::rule_context::CustomRuleContext;
 use crate::token::{OwningToken, Token};
 use crate::trees;
@@ -39,7 +41,7 @@ pub trait ParseTree: Tree {
     /// Print out a whole tree, not just a node, in LISP format
     /// (root child1 .. childN). Print just a node if this is a leaf.
     /// We have to know the recognizer so we can get rule names.
-    fn to_string_tree(&self, r: &dyn Parser) -> String {
+    fn to_string_tree(&self, r: &dyn Recognizer) -> String {
         trees::string_tree(self, r.get_rule_names())
     }
 }

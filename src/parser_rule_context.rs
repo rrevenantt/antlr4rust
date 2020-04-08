@@ -131,18 +131,21 @@ pub(crate) fn empty_ctx() -> Box<dyn ParserRuleContext> {
 }
 
 #[inline]
+#[doc(hidden)]
 fn cast_rc<T: ParserRuleContext>(ctx: Rc<dyn ParserRuleContext>) -> Rc<T> {
     // not sure how safe it is
     unsafe { Rc::from_raw(Rc::into_raw(ctx) as *const T) }
 }
 
 #[inline]
+#[doc(hidden)]
 pub fn cast<T: ParserRuleContext + ?Sized, Result>(ctx: &T) -> &Result {
     unsafe { &*(ctx as *const T as *const Result) }
 }
 
 /// should be called from generated parser only
 #[inline]
+#[doc(hidden)]
 pub fn cast_mut<T: ParserRuleContext + ?Sized, Result>(ctx: &mut Rc<T>) -> &mut Result {
 //    if Rc::strong_count(ctx) != 1 { panic!("cant mutate Rc with multiple strong ref count"); }
 // is it safe because parser does not save/move mutable references anywhere.

@@ -30,14 +30,14 @@ use crate::utils::escape_whitespaces;
 /// Implementations of this interface report syntax errors by calling [`Parser.notifyErrorListeners`]
 ///
 /// [`Parser.notifyErrorListeners`]: todo
-pub trait ErrorStrategy {
-    fn reset(&mut self, recognizer: &mut dyn Parser);
-    fn recover_inline(&mut self, recognizer: &mut dyn Parser) -> Result<OwningToken, ANTLRError>;
-    fn recover(&mut self, recognizer: &mut dyn Parser, e: &ANTLRError) -> Result<(), ANTLRError>;
-    fn sync(&mut self, recognizer: &mut dyn Parser) -> Result<(), ANTLRError>;
-    fn in_error_recovery_mode(&mut self, recognizer: &mut dyn Parser) -> bool;
-    fn report_error(&mut self, recognizer: &mut dyn Parser, e: &ANTLRError);
-    fn report_match(&mut self, recognizer: &mut dyn Parser);
+pub trait ErrorStrategy<T> {
+    fn reset(&mut self, recognizer: &mut T);
+    fn recover_inline(&mut self, recognizer: &mut T) -> Result<OwningToken, ANTLRError>;
+    fn recover(&mut self, recognizer: &mut T, e: &ANTLRError) -> Result<(), ANTLRError>;
+    fn sync(&mut self, recognizer: &mut T) -> Result<(), ANTLRError>;
+    fn in_error_recovery_mode(&mut self, recognizer: &mut T) -> bool;
+    fn report_error(&mut self, recognizer: &mut T, e: &ANTLRError);
+    fn report_match(&mut self, recognizer: &mut T);
 }
 
 pub struct DefaultErrorStrategy {
@@ -60,17 +60,17 @@ impl DefaultErrorStrategy {
         }
     }
 
-    fn begin_error_condition(&mut self, _recognizer: &dyn Parser) {
+    fn begin_error_condition<'a, T: Parser<'a>>(&mut self, _recognizer: &T) {
         self.error_recovery_mode = true;
     }
 
-    fn end_error_condition(&mut self, _recognizer: &dyn Parser) {
+    fn end_error_condition<'a, T: Parser<'a>>(&mut self, _recognizer: &T) {
         self.error_recovery_mode = false;
         self.last_error_index = -1;
         self.last_error_states = None;
     }
 
-    fn report_no_viable_alternative(&self, recognizer: &mut dyn Parser, e: &NoViableAltError) -> String {
+    fn report_no_viable_alternative<'a, T: Parser<'a>>(&self, recognizer: &mut T, e: &NoViableAltError) -> String {
         let input = if e.start_token.token_type == TOKEN_EOF {
             "<EOF>".to_owned()
         } else {
@@ -80,19 +80,19 @@ impl DefaultErrorStrategy {
         format!("no viable alternative at input '{}'", input)
     }
 
-    fn report_input_mismatch(&self, recognizer: &dyn Parser, e: &InputMisMatchError) -> String {
+    fn report_input_mismatch<'a, T: Parser<'a>>(&self, recognizer: &T, e: &InputMisMatchError) -> String {
         format!("mismatched input {} expecting {}",
                 self.get_token_error_display(&e.base.offending_token),
                 e.base.get_expected_tokens(recognizer).to_token_string(recognizer.get_vocabulary()))
     }
 
-    fn report_failed_predicate(&self, recognizer: &dyn Parser, e: &FailedPredicateError) -> String {
+    fn report_failed_predicate<'a, T: Parser<'a>>(&self, recognizer: &T, e: &FailedPredicateError) -> String {
         format!("rule {} {}",
                 recognizer.get_rule_names()[recognizer.get_parser_rule_context().get_rule_index()],
                 e.base.message)
     }
 
-    fn report_unwanted_token(&mut self, recognizer: &mut dyn Parser) {
+    fn report_unwanted_token<'a, T: Parser<'a>>(&mut self, recognizer: &mut T) {
         if self.in_error_recovery_mode(recognizer) {
             return;
         }
@@ -107,7 +107,7 @@ impl DefaultErrorStrategy {
         recognizer.notify_error_listeners(msg, Some(t), None);
     }
 
-    fn report_missing_token(&mut self, recognizer: &mut dyn Parser) {
+    fn report_missing_token<'a, T: Parser<'a>>(&mut self, recognizer: &mut T) {
         if self.in_error_recovery_mode(recognizer) {
             return;
         }
@@ -125,7 +125,7 @@ impl DefaultErrorStrategy {
         recognizer.notify_error_listeners(msg, Some(t), None);
     }
 
-    fn single_token_insertion(&mut self, recognizer: &mut dyn Parser) -> bool {
+    fn single_token_insertion<'a, T: Parser<'a>>(&mut self, recognizer: &mut T) -> bool {
         let current_token = recognizer.get_input_stream_mut().la(1);
 
         let atn = recognizer.get_interpreter().atn();
@@ -142,7 +142,7 @@ impl DefaultErrorStrategy {
         false
     }
 
-    fn single_token_deletion<'a>(&mut self, recognizer: &'a mut dyn Parser) -> Option<&'a dyn Token> {
+    fn single_token_deletion<'a, 'b, T: Parser<'b>>(&mut self, recognizer: &'a mut T) -> Option<&'a (dyn Token + 'b)> {
         let next_token_type = recognizer.get_input_stream_mut().la(2);
         let expecting = self.get_expected_tokens(recognizer);
 //        println!("expecting {}", expecting.to_token_string(recognizer.get_vocabulary()));
@@ -156,7 +156,7 @@ impl DefaultErrorStrategy {
         None
     }
 
-    fn get_missing_symbol(&self, recognizer: &mut dyn Parser) -> OwningToken {
+    fn get_missing_symbol<'a, T: Parser<'a>>(&self, recognizer: &mut T) -> OwningToken {
         let expected = self.get_expected_tokens(recognizer);
         let expected_token_type = expected.get_min().unwrap_or(TOKEN_INVALID_TYPE);
         let token_text = if expected_token_type == TOKEN_EOF {
@@ -188,7 +188,7 @@ impl DefaultErrorStrategy {
         // .modify_with(|it| it.text = token_text)
     }
 
-    fn get_expected_tokens(&self, recognizer: &dyn Parser) -> IntervalSet {
+    fn get_expected_tokens<'a, T: Parser<'a>>(&self, recognizer: &T) -> IntervalSet {
         recognizer.get_expected_tokens()
     }
 
@@ -201,7 +201,7 @@ impl DefaultErrorStrategy {
         format!("'{}'", escape_whitespaces(s, false))
     }
 
-    fn get_error_recovery_set(&self, recognizer: &dyn Parser) -> IntervalSet {
+    fn get_error_recovery_set<'a, T: Parser<'a>>(&self, recognizer: &T) -> IntervalSet {
         let atn = recognizer.get_interpreter().atn();
         let mut ctx = Some(recognizer.get_parser_rule_context().clone());
         let mut recover_set = IntervalSet::new();
@@ -219,7 +219,7 @@ impl DefaultErrorStrategy {
         return recover_set;
     }
 
-    fn consume_until(&mut self, recognizer: &mut dyn Parser, set: &IntervalSet) {
+    fn consume_until<'a, T: Parser<'a>>(&mut self, recognizer: &mut T, set: &IntervalSet) {
         let mut ttype = recognizer.get_input_stream_mut().la(1);
         while ttype != TOKEN_EOF && !set.contains(ttype) {
             recognizer.consume(self);
@@ -228,12 +228,12 @@ impl DefaultErrorStrategy {
     }
 }
 
-impl ErrorStrategy for DefaultErrorStrategy {
-    fn reset(&mut self, _recognizer: &mut dyn Parser) {
+impl<'a, T: Parser<'a>> ErrorStrategy<T> for DefaultErrorStrategy {
+    fn reset(&mut self, _recognizer: &mut T) {
         unimplemented!()
     }
 
-    fn recover_inline(&mut self, recognizer: &mut dyn Parser) -> Result<OwningToken, ANTLRError> {
+    fn recover_inline(&mut self, recognizer: &mut T) -> Result<OwningToken, ANTLRError> {
         let t = self.single_token_deletion(recognizer).map(|it| it.to_owned());
         if let Some(t) = t {
             recognizer.consume(self);
@@ -252,7 +252,7 @@ impl ErrorStrategy for DefaultErrorStrategy {
 //        Err(ANTLRError::IllegalStateError("aaa".to_string()))
     }
 
-    fn recover(&mut self, recognizer: &mut dyn Parser, _e: &ANTLRError) -> Result<(), ANTLRError> {
+    fn recover(&mut self, recognizer: &mut T, _e: &ANTLRError) -> Result<(), ANTLRError> {
         if self.last_error_index == recognizer.get_input_stream_mut().index()
             && self.last_error_states.is_some()
             && self.last_error_states.as_ref().unwrap().contains(recognizer.get_state()) {
@@ -268,7 +268,7 @@ impl ErrorStrategy for DefaultErrorStrategy {
         Ok(())
     }
 
-    fn sync(&mut self, recognizer: &mut dyn Parser) -> Result<(), ANTLRError> {
+    fn sync(&mut self, recognizer: &mut T) -> Result<(), ANTLRError> {
         if self.in_error_recovery_mode(recognizer) { return Ok(()); }
         let next = recognizer.get_input_stream_mut().la(1);
         let state = recognizer.get_interpreter().atn().states[recognizer.get_state() as usize].as_ref();
@@ -312,11 +312,11 @@ impl ErrorStrategy for DefaultErrorStrategy {
         Ok(())
     }
 
-    fn in_error_recovery_mode(&mut self, _recognizer: &mut dyn Parser) -> bool {
+    fn in_error_recovery_mode(&mut self, _recognizer: &mut T) -> bool {
         self.error_recovery_mode
     }
 
-    fn report_error(&mut self, recognizer: &mut dyn Parser, e: &ANTLRError) {
+    fn report_error(&mut self, recognizer: &mut T, e: &ANTLRError) {
         if self.in_error_recovery_mode(recognizer) { return; }
 
         self.begin_error_condition(recognizer);
@@ -330,7 +330,7 @@ impl ErrorStrategy for DefaultErrorStrategy {
         recognizer.notify_error_listeners(msg, offending_token_index, Some(&e))
     }
 
-    fn report_match(&mut self, recognizer: &mut dyn Parser) {
+    fn report_match(&mut self, recognizer: &mut T) {
         self.end_error_condition(recognizer);
         //println!("matched token succesfully {}", recognizer.get_input_stream().la(1))
     }
@@ -371,7 +371,7 @@ pub struct BailErrorStrategy(DefaultErrorStrategy);
 impl BailErrorStrategy {
     pub fn new() -> BailErrorStrategy { Self(DefaultErrorStrategy::new()) }
 
-    fn process_error(&self, recognizer: &mut dyn Parser, e: &ANTLRError) -> ANTLRError {
+    fn process_error<'a, T: Parser<'a>>(&self, recognizer: &mut T, e: &ANTLRError) -> ANTLRError {
         let mut ctx = recognizer.get_parser_rule_context().clone();
         let _: Option<()> = try {
             loop {
@@ -400,25 +400,25 @@ impl Display for ParseCancelledError {
     }
 }
 
-impl ErrorStrategy for BailErrorStrategy {
-    fn reset(&mut self, recognizer: &mut dyn Parser) { self.0.reset(recognizer) }
+impl<'a, T: Parser<'a>> ErrorStrategy<T> for BailErrorStrategy {
+    fn reset(&mut self, recognizer: &mut T) { self.0.reset(recognizer) }
 
-    fn recover_inline(&mut self, recognizer: &mut dyn Parser) -> Result<OwningToken, ANTLRError> {
+    fn recover_inline(&mut self, recognizer: &mut T) -> Result<OwningToken, ANTLRError> {
         let err = ANTLRError::InputMismatchError(InputMisMatchError::new(recognizer));
 
         Err(self.process_error(recognizer, &err))
     }
 
-    fn recover(&mut self, recognizer: &mut dyn Parser, e: &ANTLRError) -> Result<(), ANTLRError> {
+    fn recover(&mut self, recognizer: &mut T, e: &ANTLRError) -> Result<(), ANTLRError> {
         Err(self.process_error(recognizer, &e))
     }
 
-    fn sync(&mut self, _recognizer: &mut dyn Parser) -> Result<(), ANTLRError> { /* empty */ Ok(()) }
+    fn sync(&mut self, _recognizer: &mut T) -> Result<(), ANTLRError> { /* empty */ Ok(()) }
 
-    fn in_error_recovery_mode(&mut self, recognizer: &mut dyn Parser) -> bool { self.0.in_error_recovery_mode(recognizer) }
+    fn in_error_recovery_mode(&mut self, recognizer: &mut T) -> bool { self.0.in_error_recovery_mode(recognizer) }
 
-    fn report_error(&mut self, recognizer: &mut dyn Parser, e: &ANTLRError) { self.0.report_error(recognizer, e) }
+    fn report_error(&mut self, recognizer: &mut T, e: &ANTLRError) { self.0.report_error(recognizer, e) }
 
-    fn report_match(&mut self, recognizer: &mut dyn Parser) { self.0.report_match(recognizer) }
+    fn report_match(&mut self, recognizer: &mut T) { self.0.report_match(recognizer) }
 }
  

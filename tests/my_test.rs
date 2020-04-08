@@ -56,7 +56,7 @@ if (x < x && a > 0) then duh
 }
 ]]>
 </script>"#.to_owned();
-        let mut _lexer = XMLLexer::new(Box::new(InputStream::new(data.clone())));
+        let mut _lexer = XMLLexer::new(Box::new(InputStream::new(&data)));
         //        _lexer.base.add_error_listener();
         let _a = "a".to_owned() + "";
         let mut string = String::new();
@@ -161,6 +161,7 @@ if (x < x && a > 0) then duh
 
     #[test]
     fn lr_test() {
+        let mut
         let mut _lexer = SimpleLRLexer::new(Box::new(InputStream::new("x y z".into())));
         let token_source = CommonTokenStream::new(_lexer);
         let mut parser = SimpleLRParser::new(Box::new(token_source));

@@ -116,17 +116,17 @@ pub struct BaseRecognitionError {
 }
 
 impl BaseRecognitionError {
-    pub fn get_expected_tokens(&self, recognizer: &dyn Parser) -> IntervalSet {
+    pub fn get_expected_tokens<'a, T: Parser<'a>>(&self, recognizer: &T) -> IntervalSet {
         recognizer.get_interpreter().atn()
             .get_expected_tokens(self.offending_state, &self.ctx)
     }
 
-    fn new(recog: &mut dyn Parser) -> BaseRecognitionError {
+    fn new<'a, T: Parser<'a>>(recog: &mut T) -> BaseRecognitionError {
         BaseRecognitionError {
             message: "".to_string(),
             offending_token: recog.get_current_token().to_owned(),
             offending_state: recog.get_state(),
-            ctx: recog.get_parser_rule_context().clone()
+            ctx: recog.get_parser_rule_context().clone(),
         }
     }
 }
@@ -147,7 +147,7 @@ pub struct NoViableAltError {
 }
 
 impl NoViableAltError {
-    pub fn new(recog: &mut dyn Parser) -> NoViableAltError {
+    pub fn new<'a, T: Parser<'a>>(recog: &mut T) -> NoViableAltError {
         Self {
             base: BaseRecognitionError {
                 message: "".to_string(),
@@ -159,7 +159,7 @@ impl NoViableAltError {
 //            ctx: recog.get_parser_rule_context().clone()
         }
     }
-    pub fn new_full(recog: &mut dyn Parser, start_token: OwningToken, offending_token: OwningToken) -> NoViableAltError {
+    pub fn new_full<'a, T: Parser<'a>>(recog: &mut T, start_token: OwningToken, offending_token: OwningToken) -> NoViableAltError {
         Self {
             base: BaseRecognitionError {
                 message: "".to_string(),
@@ -180,13 +180,13 @@ pub struct InputMisMatchError {
 }
 
 impl InputMisMatchError {
-    pub fn new(recognizer: &mut dyn Parser) -> InputMisMatchError {
+    pub fn new<'a, T: Parser<'a>>(recognizer: &mut T) -> InputMisMatchError {
         InputMisMatchError {
             base: BaseRecognitionError::new(recognizer),
         }
     }
 
-    pub fn with_state(recognizer: &mut dyn Parser, offending_state: isize, ctx: Rc<dyn ParserRuleContext>) -> InputMisMatchError {
+    pub fn with_state<'a, T: Parser<'a>>(recognizer: &mut T, offending_state: isize, ctx: Rc<dyn ParserRuleContext>) -> InputMisMatchError {
         let mut a = Self::new(recognizer);
         a.base.ctx = ctx;
         a.base.offending_state = offending_state;
@@ -205,8 +205,7 @@ pub struct FailedPredicateError {
 }
 
 impl FailedPredicateError {
-    pub fn new(recog: &mut dyn Parser, predicate: Option<String>, msg: Option<String>) -> ANTLRError {
-
+    pub fn new<'a, T: Parser<'a>>(recog: &mut T, predicate: Option<String>, msg: Option<String>) -> ANTLRError {
         let tr = recog.get_interpreter().atn()
             .states[recog.get_state() as usize]
             .get_transitions().first().unwrap();

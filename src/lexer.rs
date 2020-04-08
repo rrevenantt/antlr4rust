@@ -60,12 +60,12 @@ pub struct BaseLexer<'input,
     TF: TokenFactory<'input> = CommonTokenFactory
 > {
     pub interpreter: Option<LexerATNSimulator>,
-    pub input: Option<Box<dyn CharStream<'input>>>,
+    pub input: Option<Box<dyn CharStream<'input> + 'input>>,
     recog: T,
 
     factory: &'input TF,
 
-    error_listeners: RefCell<Vec<Box<dyn ErrorListener>>>,
+    error_listeners: RefCell<Vec<Box<dyn ErrorListener<Self>>>>,
 
     pub token_start_char_index: isize,
     pub token_start_line: isize,
@@ -175,7 +175,7 @@ impl<'input, 'tokens, T, TF> BaseLexer<'input, T, TF>
     }
 
     /// Add error listener
-    pub fn add_error_listener(&mut self, listener: Box<dyn ErrorListener>) {
+    pub fn add_error_listener(&mut self, listener: Box<dyn ErrorListener<Self>>) {
         self.error_listeners.borrow_mut().push(listener);
     }
 
@@ -184,7 +184,7 @@ impl<'input, 'tokens, T, TF> BaseLexer<'input, T, TF>
     }
 
     pub fn new_base_lexer(
-        input: Box<dyn CharStream<'input>>,
+        input: Box<dyn CharStream<'input> + 'input>,
         interpreter: LexerATNSimulator,
         recog: T,
         factory: &'input TF,
@@ -297,7 +297,7 @@ impl<'input, T, TF> TokenSource<'input> for BaseLexer<'input, T, TF>
         self.current_pos.char_position_in_line.get()
     }
 
-    fn get_input_stream(&mut self) -> Option<&mut dyn CharStream<'input>> {
+    fn get_input_stream(&mut self) -> Option<&mut (dyn CharStream<'input> + 'input)> {
         match self.input {
             None => None,
             Some(ref mut x) => { Some(x.deref_mut()) },
@@ -317,7 +317,7 @@ impl<'input, T, TF> TokenSource<'input> for BaseLexer<'input, T, TF>
     }
 }
 
-fn notify_listeners<'input, T, TF>(_liseners: &mut Vec<Box<dyn ErrorListener>>, e: &ANTLRError, lexer: &BaseLexer<'input, T, TF>)
+fn notify_listeners<'input, T, TF>(_liseners: &mut Vec<Box<dyn ErrorListener<BaseLexer<'input, T, TF>>>>, e: &ANTLRError, lexer: &BaseLexer<'input, T, TF>)
     where T: LexerRecog<BaseLexer<'input, T, TF>> + 'static,
           TF: TokenFactory<'input>
 {
