@@ -1,10 +1,13 @@
 use std::borrow::{Borrow, BorrowMut, Cow};
 use std::cell::Cell;
+use std::convert::identity;
 use std::fmt::{Debug, Display};
 use std::fmt::Formatter;
 use std::ops::{CoerceUnsized, Deref, DerefMut};
+use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
 
 use crate::char_stream::CharStream;
+use crate::common_token_factory::{INVALID_COMMON, INVALID_OWNING};
 use crate::int_stream::EOF;
 use crate::token_source::TokenSource;
 
@@ -41,6 +44,7 @@ pub trait Token: Debug {
     // fn get_input_stream(&self) -> &dyn CharStream;
 
     fn to_owned(&self) -> OwningToken;
+
 }
 
 ///automatically implemented interface for passing tokens behind different kinds of ownership
@@ -87,18 +91,34 @@ pub trait Token: Debug {
 pub type OwningToken = GenericToken<String>;
 pub type CommonToken<'a> = GenericToken<Cow<'a, str>>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct GenericToken<T: Borrow<str> + Debug = String> {
     //    source: Option<(Box<TokenSource>,Box<CharStream>)>,
     pub token_type: isize,
     pub channel: isize,
     pub start: isize,
     pub stop: isize,
-    pub token_index: Cell<isize>,
+    pub token_index: AtomicIsize,
     pub line: isize,
     pub column: isize,
     pub text: T,
     pub read_only: bool,
+}
+
+impl<T: Borrow<str> + Debug + Clone> Clone for GenericToken<T> {
+    fn clone(&self) -> Self {
+        Self {
+            token_type: self.token_type,
+            channel: self.channel,
+            start: self.start,
+            stop: self.stop,
+            token_index: AtomicIsize::new(self.get_token_index()),
+            line: self.line,
+            column: self.column,
+            text: self.text.clone(),
+            read_only: false,
+        }
+    }
 }
 
 impl<T: Borrow<str> + Debug> Display for GenericToken<T> {
@@ -109,7 +129,7 @@ impl<T: Borrow<str> + Debug> Display for GenericToken<T> {
         let txt = txt.replace("\t", "\\t");
 //        let txt = escape_whitespaces(txt,false);
         f.write_fmt(format_args!("[@{},{}:{}='{}',<{}>{},{}:{}]",
-                                 self.token_index.get(),
+                                 self.get_token_index(),
                                  self.start,
                                  self.stop,
                                  txt,
@@ -153,11 +173,11 @@ impl<T: Borrow<str> + Debug> Token for GenericToken<T> {
     // }
 
     fn get_token_index(&self) -> isize {
-        self.token_index.get()
+        self.token_index.load(Ordering::Relaxed)
     }
 
     fn set_token_index(&self, _v: isize) {
-        self.token_index.set(_v)
+        self.token_index.store(_v, Ordering::Relaxed)
     }
 
     // fn get_token_source(&self) -> &dyn TokenSource {
@@ -186,12 +206,24 @@ impl<T: Borrow<str> + Debug> Token for GenericToken<T> {
             channel: self.channel,
             start: self.start,
             stop: self.stop,
-            token_index: self.token_index.clone(),
+            token_index: AtomicIsize::new(self.get_token_index()),
             line: self.line,
             column: self.column,
             text: self.text.borrow().to_owned(),
             read_only: self.read_only,
         }
+    }
+}
+
+impl Default for &'_ OwningToken {
+    fn default() -> Self {
+        &**INVALID_OWNING
+    }
+}
+
+impl Default for &'_ CommonToken<'_> {
+    fn default() -> Self {
+        &**INVALID_COMMON
     }
 }
 

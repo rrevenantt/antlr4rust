@@ -5,6 +5,7 @@
 #![allow(unused_imports)]
 
 use std::cell::RefCell;
+use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 use std::sync::Arc;
@@ -12,15 +13,15 @@ use std::sync::Arc;
 use antlr_rust::atn::ATN;
 use antlr_rust::atn_deserializer::ATNDeserializer;
 use antlr_rust::char_stream::CharStream;
-use antlr_rust::common_token_factory::TokenFactory;
+use antlr_rust::common_token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use antlr_rust::dfa::DFA;
 use antlr_rust::error_listener::ErrorListener;
 use antlr_rust::lexer::{BaseLexer, Lexer, LexerRecog};
 use antlr_rust::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
-use antlr_rust::parser_rule_context::{cast, LexerContext, ParserRuleContext};
+use antlr_rust::parser_rule_context::{BaseParserRuleContext, cast, ParserRuleContext};
 use antlr_rust::PredictionContextCache;
 use antlr_rust::recognizer::{Actions, Recognizer};
-use antlr_rust::rule_context::BaseRuleContext;
+use antlr_rust::rule_context::{BaseRuleContext, EmptyCustomRuleContext};
 use antlr_rust::token::*;
 use antlr_rust::token_source::TokenSource;
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
@@ -60,27 +61,30 @@ lazy_static! {
 	}
 
 
-pub struct LabelsLexer {
-    base: BaseLexer<LabelsLexerActions>,
+pub type LexerContext<'input> = BaseParserRuleContext<'input, EmptyCustomRuleContext<'input, LocalTokenFactory<'input>>>;
+pub type LocalTokenFactory<'input> = CommonTokenFactory;
+
+pub struct LabelsLexer<'input> {
+    base: BaseLexer<'input, LabelsLexerActions, LocalTokenFactory<'input>>,
 //	static { RuntimeMetaData.checkVersion("4.8", RuntimeMetaData.VERSION); }
 }
 
-impl Deref for LabelsLexer {
-    type Target = BaseLexer<LabelsLexerActions>;
+impl<'input> Deref for LabelsLexer<'input> {
+    type Target = BaseLexer<'input, LabelsLexerActions, LocalTokenFactory<'input>>;
 
     fn deref(&self) -> &Self::Target {
         &self.base
     }
 }
 
-impl DerefMut for LabelsLexer {
+impl<'input> DerefMut for LabelsLexer<'input> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.base
     }
 }
 
 
-impl LabelsLexer {
+impl<'input> LabelsLexer<'input> {
     fn get_rule_names(&self) -> &'static [&'static str] {
         &ruleNames
     }
@@ -92,7 +96,7 @@ impl LabelsLexer {
         &_SYMBOLIC_NAMES
     }
 
-    fn add_error_listener(&mut self, _listener: Box<dyn ErrorListener>) {
+    fn add_error_listener(&mut self, _listener: Box<dyn ErrorListener<BaseLexer<'input, LabelsLexerActions, LocalTokenFactory<'input>>>>) {
         self.base.add_error_listener(_listener);
     }
 
@@ -104,7 +108,7 @@ impl LabelsLexer {
         "LabelsLexer.g4"
     }
 
-    pub fn new(input: Box<dyn CharStream>) -> Self {
+    pub fn new_with_token_factory(input: Box<dyn CharStream<'input> + 'input>, tf: &'input LocalTokenFactory<'input>) -> Self {
         antlr_rust::recognizer::check_version("0", "2");
         Self {
             base: BaseLexer::new_base_lexer(
@@ -114,9 +118,16 @@ impl LabelsLexer {
                     _decision_to_DFA.clone(),
                     _shared_context_cache.clone(),
                 ),
-                Box::new(LabelsLexerActions {}),
+                LabelsLexerActions {},
+                tf,
             )
         }
+    }
+}
+
+impl<'input> LabelsLexer<'input> where &'input LocalTokenFactory<'input>: Default {
+    pub fn new(input: Box<dyn CharStream<'input> + 'input>) -> Self {
+        LabelsLexer::new_with_token_factory(input, <&LocalTokenFactory<'input> as Default>::default())
     }
 }
 
@@ -124,20 +135,33 @@ pub struct LabelsLexerActions {}
 
 impl LabelsLexerActions {}
 
-impl LexerRecog for LabelsLexerActions {}
+impl<'input> LexerRecog<'input, BaseLexer<'input, LabelsLexerActions, LocalTokenFactory<'input>>> for LabelsLexerActions {}
 
-impl Recognizer for LabelsLexerActions {}
-
-impl Actions for LabelsLexerActions {
-    type Recog = BaseLexer<LabelsLexerActions>;
+trait Trait {
+    type Ty;
 }
 
-impl LabelsLexerActions {}
+impl<'input> Trait for LabelsLexer<'input> {
+    type Ty = BaseLexer<'input, LabelsLexerActions, LocalTokenFactory<'input>>;
+}
 
-impl TokenSource for LabelsLexer {
-    type Tok = dyn Token;
 
-    fn next_token(&mut self) -> Box<dyn Token> {
+impl<'input> LabelsLexer<'input> {}
+
+impl<'input> TokenAware<'input> for LabelsLexerActions {
+    type TF = LocalTokenFactory<'input>;
+}
+
+impl<'input> Recognizer<'input> for LabelsLexerActions {}
+
+//impl<'input,TFX:TokenFactory<'input>> Actions<BaseLexer<'input,LabelsLexerActions,TFX>> for LabelsLexerActions{
+//}
+impl<'input> TokenAware<'input> for LabelsLexer<'input> {
+    type TF = LocalTokenFactory<'input>;
+}
+
+impl<'input> TokenSource<'input> for LabelsLexer<'input> {
+    fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok {
         self.base.next_token()
     }
 
@@ -149,7 +173,7 @@ impl TokenSource for LabelsLexer {
         self.base.get_char_position_in_line()
     }
 
-    fn get_input_stream(&mut self) -> Option<&mut dyn CharStream> {
+    fn get_input_stream(&mut self) -> Option<&mut (dyn CharStream<'input> + 'input)> {
         self.base.get_input_stream()
     }
 
@@ -157,7 +181,7 @@ impl TokenSource for LabelsLexer {
         self.base.get_source_name()
     }
 
-    fn get_token_factory(&self) -> &dyn TokenFactory<Tok=dyn Token> {
+    fn get_token_factory(&self) -> &'input Self::TF {
         self.base.get_token_factory()
     }
 }

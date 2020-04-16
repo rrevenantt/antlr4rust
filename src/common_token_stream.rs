@@ -24,7 +24,7 @@ impl<'input, T: TokenSource<'input>> IntStream for CommonTokenStream<'input, T> 
     }
 
     fn la(&mut self, i: isize) -> isize {
-        self.lt(i).map(Token::get_token_type).unwrap_or(TOKEN_INVALID_TYPE)
+        self.lt(i).map(|t| t.borrow().get_token_type()).unwrap_or(TOKEN_INVALID_TYPE)
     }
 
     fn mark(&mut self) -> isize {
@@ -54,7 +54,7 @@ impl<'input, T: TokenSource<'input>> IntStream for CommonTokenStream<'input, T> 
 impl<'input, T: TokenSource<'input>> TokenStream<'input> for CommonTokenStream<'input, T> {
     type TF = T::TF;
 
-    fn lt(&mut self, k: isize) -> Option<&<Self::TF as TokenFactory<'input>>::Inner> {
+    fn lt(&mut self, k: isize) -> Option<&<Self::TF as TokenFactory<'input>>::Tok> {
         if k == 0 { panic!(); }
         if k < 0 { return self.lb(-k); }
         let mut i = self.base.p;
@@ -68,15 +68,15 @@ impl<'input, T: TokenSource<'input>> TokenStream<'input> for CommonTokenStream<'
             n += 1;
         }
 //		if ( i>range ) range = i;
-        return self.base.tokens.get(i as usize).map(Borrow::borrow)
+        return self.base.tokens.get(i as usize)
     }
 
-    fn get(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Inner {
+    fn get(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Tok {
         self.base.get(index)
     }
 
-    fn get_cloned(&self, index: isize) -> <Self::TF as TokenFactory<'input>>::Tok {
-        self.base.get_cloned(index)
+    fn get_inner(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Inner {
+        self.base.get_inner(index)
     }
 
     fn get_token_source(&self) -> &dyn TokenSource<'input, TF=Self::TF> {
@@ -184,7 +184,7 @@ impl<'input, T: TokenSource<'input>> CommonTokenStream<'input, T> {
 //
 //    fn adjust_seek_index(&self, i: isize) -> int { unimplemented!() }
 
-    fn lb(&mut self, k: isize) -> Option<&<<Self as TokenStream<'input>>::TF as TokenFactory<'input>>::Inner> {
+    fn lb(&mut self, k: isize) -> Option<&<<Self as TokenStream<'input>>::TF as TokenFactory<'input>>::Tok> {
         if k == 0 || (self.base.p - k) < 0 { return None }
 
         let mut i = self.base.p;
@@ -197,7 +197,7 @@ impl<'input, T: TokenSource<'input>> CommonTokenStream<'input, T> {
         }
         if i < 0 { return None }
 
-        return Some(self.get(i).borrow());
+        return self.base.tokens.get(i as usize);
     }
 
 //    fn get_number_of_on_channel_tokens(&self) -> int { unimplemented!() }

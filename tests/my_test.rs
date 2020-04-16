@@ -10,6 +10,7 @@ mod gen {
     use std::io::Read;
     use std::iter::FromIterator;
 
+    use antlr_rust::common_token_factory::{ArenaCowFactory, CommonTokenFactory};
     use antlr_rust::common_token_stream::CommonTokenStream;
     use antlr_rust::input_stream::InputStream;
     use antlr_rust::int_stream::IntStream;
@@ -17,7 +18,7 @@ mod gen {
     use antlr_rust::parser_rule_context::{BaseParserRuleContext, ParserRuleContext};
     use antlr_rust::token::{Token, TOKEN_EOF};
     use antlr_rust::token_stream::{TokenStream, UnbufferedTokenStream};
-    use antlr_rust::tree::{ParseTree, ParseTreeListener, TerminalNodeCtx};
+    use antlr_rust::tree::{ParseTree, ParseTreeListener, TerminalNode, TerminalNodeCtx};
     use csvlexer::*;
     use csvlistener::*;
     use csvparser::CSVParser;
@@ -85,7 +86,11 @@ if (x < x && a > 0) then duh
     #[test]
     fn lexer_test_csv() {
         println!("test started lexer_test_csv");
-        let mut _lexer = CSVLexer::new(Box::new(InputStream::new("V123,V2\nd1,d2".into())));
+        let tf = ArenaCowFactory::default();
+        let mut _lexer = CSVLexer::new_with_token_factory(
+            Box::new(InputStream::new("V123,V2\nd1,d2".into())),
+            &tf,
+        );
         let mut token_source = CommonTokenStream::new(_lexer);
         let mut token_source_iter = token_source.iter();
         assert_eq!(token_source_iter.next().unwrap(), 5);
@@ -100,18 +105,22 @@ if (x < x && a > 0) then duh
 
     struct Listener {}
 
-    impl ParseTreeListener for Listener {
-        fn enter_every_rule(&mut self, ctx: &dyn ParserRuleContext) {
+    impl<'input> ParseTreeListener<'input, ArenaCowFactory<'input>> for Listener {
+        fn enter_every_rule(&mut self, ctx: &dyn ParserRuleContext<'input, TF=ArenaCowFactory<'input>>) {
             println!("rule entered {}", csvparser::ruleNames.get(ctx.get_rule_index()).unwrap_or(&"error"))
         }
     }
 
-    impl CSVListener for Listener {}
+    impl<'input> CSVListener<'input> for Listener {}
 
     #[test]
     fn parser_test_csv() {
         println!("test started");
-        let mut _lexer = CSVLexer::new(Box::new(InputStream::new("V123, V2\nd1,d2\n".into())));
+        let tf = ArenaCowFactory::default();
+        let mut _lexer = CSVLexer::new_with_token_factory(
+            Box::new(InputStream::new("V123,V2\nd1,d2".into())),
+            &tf,
+        );
         let token_source = CommonTokenStream::new(_lexer);
         let mut parser = CSVParser::new(Box::new(token_source));
         parser.add_parse_listener(Box::new(Listener {}));
@@ -122,13 +131,13 @@ if (x < x && a > 0) then duh
 
     struct Listener2 {}
 
-    impl ParseTreeListener for Listener2 {
-        fn enter_every_rule(&mut self, ctx: &dyn ParserRuleContext) {
+    impl<'input> ParseTreeListener<'input, CommonTokenFactory> for Listener2 {
+        fn enter_every_rule(&mut self, ctx: &dyn ParserRuleContext<'input, TF=CommonTokenFactory>) {
             println!("rule entered {}", referencetoatnparser::ruleNames.get(ctx.get_rule_index()).unwrap_or(&"error"))
         }
     }
 
-    impl ReferenceToATNListener for Listener2 {}
+    impl<'input> ReferenceToATNListener<'input> for Listener2 {}
 
     #[test]
     fn adaptive_predict_test() {
@@ -143,25 +152,25 @@ if (x < x && a > 0) then duh
 
     struct Listener3;
 
-    impl ParseTreeListener for Listener3 {
-        fn visit_terminal(&mut self, node: &BaseParserRuleContext<TerminalNodeCtx>) {
+    impl<'input> ParseTreeListener<'input, CommonTokenFactory> for Listener3 {
+        fn visit_terminal(&mut self, node: &TerminalNode<'input, CommonTokenFactory>) {
             println!("terminal node {}", node.symbol.get_text());
         }
 
-        fn enter_every_rule(&mut self, ctx: &dyn ParserRuleContext) {
+        fn enter_every_rule(&mut self, ctx: &dyn ParserRuleContext<'input, TF=CommonTokenFactory>) {
             println!("rule entered {}", simplelrparser::ruleNames.get(ctx.get_rule_index()).unwrap_or(&"error"))
         }
 
-        fn exit_every_rule(&mut self, ctx: &dyn ParserRuleContext) {
+        fn exit_every_rule(&mut self, ctx: &dyn ParserRuleContext<'input, TF=CommonTokenFactory>) {
             println!("rule exited {}", simplelrparser::ruleNames.get(ctx.get_rule_index()).unwrap_or(&"error"))
         }
     }
 
-    impl SimpleLRListener for Listener3 {}
+    impl<'input> SimpleLRListener<'input> for Listener3 {}
 
     #[test]
     fn lr_test() {
-        let mut
+        // let mut
         let mut _lexer = SimpleLRLexer::new(Box::new(InputStream::new("x y z".into())));
         let token_source = CommonTokenStream::new(_lexer);
         let mut parser = SimpleLRParser::new(Box::new(token_source));
@@ -173,13 +182,13 @@ if (x < x && a > 0) then duh
 
     struct Listener4 { data: String }
 
-    impl ParseTreeListener for Listener4 {
-        fn visit_terminal(&mut self, node: &BaseParserRuleContext<TerminalNodeCtx>) {
+    impl<'input> ParseTreeListener<'input, CommonTokenFactory> for Listener4 {
+        fn visit_terminal(&mut self, node: &TerminalNode<'input, CommonTokenFactory>) {
             writeln!(&mut self.data, "terminal node {}", node.symbol.get_text());
         }
     }
 
-    impl SimpleLRListener for Listener4 {}
+    impl<'input> SimpleLRListener<'input> for Listener4 {}
 
     #[test]
     fn test_remove_listener() {

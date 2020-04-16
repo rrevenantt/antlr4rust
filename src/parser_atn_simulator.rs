@@ -25,7 +25,7 @@ use crate::int_stream::EOF;
 use crate::interval_set::IntervalSet;
 use crate::lexer_atn_simulator::ERROR_DFA_STATE_REF;
 use crate::parser::Parser;
-use crate::parser_rule_context::{empty_ctx, ParserRuleContext};
+use crate::parser_rule_context::{empty_ctx, ParserRuleContext, ParserRuleContextType};
 use crate::prediction_context::{EMPTY_PREDICTION_CONTEXT, MurmurHasherBuilder, PREDICTION_CONTEXT_EMPTY_RETURN_STATE, PredictionContext, PredictionContextCache};
 use crate::prediction_mode::{all_subsets_conflict, all_subsets_equal, get_alts, get_conflicting_alt_subsets, get_single_viable_alt, has_sll_conflict_terminating_prediction, PredictionMode, resolves_to_just_one_viable_alt};
 use crate::rule_context::RuleContext;
@@ -82,7 +82,7 @@ pub struct ParserATNSimulator {
 
 /// Just a local helper structure to spoil function parameters as little as possible
 struct Local<'a, 'input, T: Parser<'input> + 'a> {
-    outer_context: Rc<dyn ParserRuleContext>,
+    outer_context: ParserRuleContextType<'input, T::TF>,
     dfa: &'a DFA,
     merge_cache: &'a mut MergeCache,
     precedence: isize,
@@ -93,7 +93,7 @@ struct Local<'a, 'input, T: Parser<'input> + 'a> {
 impl<'a, 'input, T: Parser<'input> + 'a> Local<'a, 'input, T> {
     fn input(&mut self) -> &mut dyn TokenStream<'input, TF=T::TF> { self.parser.get_input_stream_mut() }
     fn seek(&mut self, i: isize) { self.input().seek(i) }
-    fn outer_context(&self) -> &dyn ParserRuleContext { self.outer_context.deref() }
+    fn outer_context(&self) -> &(dyn ParserRuleContext<'input, TF=T::TF> + 'input) { self.outer_context.deref() }
 }
 
 pub type MergeCache = HashMap<(Arc<PredictionContext>, Arc<PredictionContext>), Arc<PredictionContext>, MurmurHasherBuilder>;
@@ -141,7 +141,7 @@ impl ParserATNSimulator {
             let s0 = s0.unwrap_or_else(|| {
                 let s0_closure = self.compute_start_state(
                     local.dfa.atn_start_state,
-                    PredictionContext::from_rule_context(self.atn(), empty_ctx().as_ref()),
+                    PredictionContext::from_rule_context(self.atn(), empty_ctx::<T::TF>().as_ref()),
                     false,
                     &mut local,
                 );
@@ -1110,9 +1110,9 @@ impl ParserATNSimulator {
 //
     fn no_viable_alt<'a, T: Parser<'a>>(&self, local: &mut Local<'_, 'a, T>, _configs: &ATNConfigSet, start_index: isize)
                                         -> ANTLRError {
-        let start_token = local.parser.get_input_stream().get(start_index);
+        let start_token = local.parser.get_input_stream().get(start_index).borrow();
         let start_token = Token::to_owned(start_token);
-        let offending_token = local.input().lt(1).unwrap();
+        let offending_token = local.input().lt(1).unwrap().borrow();
         let offending_token = Token::to_owned(offending_token);
         ANTLRError::NoAltError(NoViableAltError::new_full(
             local.parser,

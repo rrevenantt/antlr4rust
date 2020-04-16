@@ -8,7 +8,7 @@ use std::ops::Deref;
 use crate::tree::Tree;
 use crate::utils;
 
-pub fn string_tree<T: Tree + ?Sized>(tree: &T, rule_names: &[&str]) -> String {
+pub fn string_tree<'a, T: Tree<'a> + ?Sized>(tree: &T, rule_names: &[&str]) -> String {
     let s = utils::escape_whitespaces(get_node_text(tree, rule_names), false);
     if tree.get_child_count() == 0 { return s }
     let mut result = String::new();
@@ -27,7 +27,7 @@ pub fn string_tree<T: Tree + ?Sized>(tree: &T, rule_names: &[&str]) -> String {
 }
 
 
-pub fn get_node_text(t: &(impl Tree + ?Sized), rule_names: &[&str]) -> String {
+pub fn get_node_text<'a>(t: &(impl Tree<'a> + ?Sized), rule_names: &[&str]) -> String {
     t.get_node_text(rule_names)
 }
 

@@ -5,6 +5,7 @@
 #![allow(unused_imports)]
 
 use std::cell::RefCell;
+use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 use std::sync::Arc;
@@ -12,15 +13,15 @@ use std::sync::Arc;
 use antlr_rust::atn::ATN;
 use antlr_rust::atn_deserializer::ATNDeserializer;
 use antlr_rust::char_stream::CharStream;
-use antlr_rust::common_token_factory::TokenFactory;
+use antlr_rust::common_token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use antlr_rust::dfa::DFA;
 use antlr_rust::error_listener::ErrorListener;
 use antlr_rust::lexer::{BaseLexer, Lexer, LexerRecog};
 use antlr_rust::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
-use antlr_rust::parser_rule_context::{cast, LexerContext, ParserRuleContext};
+use antlr_rust::parser_rule_context::{BaseParserRuleContext, cast, ParserRuleContext};
 use antlr_rust::PredictionContextCache;
 use antlr_rust::recognizer::{Actions, Recognizer};
-use antlr_rust::rule_context::BaseRuleContext;
+use antlr_rust::rule_context::{BaseRuleContext, EmptyCustomRuleContext};
 use antlr_rust::token::*;
 use antlr_rust::token_source::TokenSource;
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
@@ -77,27 +78,30 @@ lazy_static! {
 	}
 
 
-pub struct XMLLexer {
-    base: BaseLexer<XMLLexerActions>,
+pub type LexerContext<'input> = BaseParserRuleContext<'input, EmptyCustomRuleContext<'input, LocalTokenFactory<'input>>>;
+pub type LocalTokenFactory<'input> = CommonTokenFactory;
+
+pub struct XMLLexer<'input> {
+    base: BaseLexer<'input, XMLLexerActions, LocalTokenFactory<'input>>,
 //	static { RuntimeMetaData.checkVersion("4.8", RuntimeMetaData.VERSION); }
 }
 
-impl Deref for XMLLexer {
-    type Target = BaseLexer<XMLLexerActions>;
+impl<'input> Deref for XMLLexer<'input> {
+    type Target = BaseLexer<'input, XMLLexerActions, LocalTokenFactory<'input>>;
 
     fn deref(&self) -> &Self::Target {
         &self.base
     }
 }
 
-impl DerefMut for XMLLexer {
+impl<'input> DerefMut for XMLLexer<'input> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.base
     }
 }
 
 
-impl XMLLexer {
+impl<'input> XMLLexer<'input> {
     fn get_rule_names(&self) -> &'static [&'static str] {
         &ruleNames
     }
@@ -109,7 +113,7 @@ impl XMLLexer {
         &_SYMBOLIC_NAMES
     }
 
-    fn add_error_listener(&mut self, _listener: Box<dyn ErrorListener>) {
+    fn add_error_listener(&mut self, _listener: Box<dyn ErrorListener<BaseLexer<'input, XMLLexerActions, LocalTokenFactory<'input>>>>) {
         self.base.add_error_listener(_listener);
     }
 
@@ -121,7 +125,7 @@ impl XMLLexer {
         "XMLLexer.g4"
     }
 
-    pub fn new(input: Box<dyn CharStream>) -> Self {
+    pub fn new_with_token_factory(input: Box<dyn CharStream<'input> + 'input>, tf: &'input LocalTokenFactory<'input>) -> Self {
         antlr_rust::recognizer::check_version("0", "2");
         Self {
             base: BaseLexer::new_base_lexer(
@@ -131,46 +135,56 @@ impl XMLLexer {
                     _decision_to_DFA.clone(),
                     _shared_context_cache.clone(),
                 ),
-                Box::new(XMLLexerActions {}),
+                XMLLexerActions {},
+                tf,
             )
         }
-	}
+    }
+}
+
+impl<'input> XMLLexer<'input> where &'input LocalTokenFactory<'input>: Default {
+    pub fn new(input: Box<dyn CharStream<'input> + 'input>) -> Self {
+        XMLLexer::new_with_token_factory(input, <&LocalTokenFactory<'input> as Default>::default())
+    }
 }
 
 pub struct XMLLexerActions {}
 
 impl XMLLexerActions {}
 
-impl LexerRecog for XMLLexerActions {}
-
-impl Recognizer for XMLLexerActions {}
-
-impl Actions for XMLLexerActions {
-    type Recog = BaseLexer<XMLLexerActions>;
-
-    fn action(_localctx: &dyn ParserRuleContext, rule_index: isize, action_index: isize,
-              recog: &mut <Self as Actions>::Recog,
+impl<'input> LexerRecog<'input, BaseLexer<'input, XMLLexerActions, LocalTokenFactory<'input>>> for XMLLexerActions {
+    fn action(_localctx: &(dyn ParserRuleContext<'input, TF=LocalTokenFactory<'input>> + 'input), rule_index: isize, action_index: isize,
+              recog: &mut BaseLexer<'input, XMLLexerActions, LocalTokenFactory<'input>>,
     ) {
         match rule_index {
             10 =>
-                Self::CLOSE_action(cast::<_, LexerContext>(_localctx), action_index, recog),
+                XMLLexer::<'input>::CLOSE_action(cast::<_, LexerContext<'input>>(_localctx), action_index, recog),
             _ => {}
         }
     }
-    fn sempred(_localctx: &dyn ParserRuleContext, rule_index: isize, pred_index: isize,
-               recog: &mut <Self as Actions>::Recog,
+    fn sempred(_localctx: &(dyn ParserRuleContext<'input, TF=LocalTokenFactory<'input>> + 'input), rule_index: isize, pred_index: isize,
+               recog: &mut BaseLexer<'input, XMLLexerActions, LocalTokenFactory<'input>>,
     ) -> bool {
         match rule_index {
             0 =>
-                Self::COMMENT_sempred(cast::<_, LexerContext>(_localctx), pred_index, recog),
+                XMLLexer::<'input>::COMMENT_sempred(cast::<_, LexerContext<'input>>(_localctx), pred_index, recog),
             _ => true
         }
     }
 }
 
-impl XMLLexerActions {
-    fn CLOSE_action(_localctx: &LexerContext, action_index: isize,
-                    recog: &mut <Self as Actions>::Recog,
+trait Trait {
+    type Ty;
+}
+
+impl<'input> Trait for XMLLexer<'input> {
+    type Ty = BaseLexer<'input, XMLLexerActions, LocalTokenFactory<'input>>;
+}
+
+
+impl<'input> XMLLexer<'input> {
+    fn CLOSE_action(_localctx: &LexerContext<'input>, action_index: isize,
+                    recog: &mut <Self as Trait>::Ty,
     ) {
         match action_index {
             0 => {
@@ -180,9 +194,8 @@ impl XMLLexerActions {
             _ => {}
         }
     }
-
-    fn COMMENT_sempred(_localctx: &LexerContext, pred_index: isize,
-                       recog: &mut <Self as Actions>::Recog,
+    fn COMMENT_sempred(_localctx: &LexerContext<'input>, pred_index: isize,
+                       recog: &mut <Self as Trait>::Ty,
     ) -> bool {
         match pred_index {
             0 => {
@@ -193,10 +206,20 @@ impl XMLLexerActions {
     }
 }
 
-impl TokenSource for XMLLexer {
-    type Tok = dyn Token;
+impl<'input> TokenAware<'input> for XMLLexerActions {
+    type TF = LocalTokenFactory<'input>;
+}
 
-    fn next_token(&mut self) -> Box<dyn Token> {
+impl<'input> Recognizer<'input> for XMLLexerActions {}
+
+//impl<'input,TFX:TokenFactory<'input>> Actions<BaseLexer<'input,XMLLexerActions,TFX>> for XMLLexerActions{
+//}
+impl<'input> TokenAware<'input> for XMLLexer<'input> {
+    type TF = LocalTokenFactory<'input>;
+}
+
+impl<'input> TokenSource<'input> for XMLLexer<'input> {
+    fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok {
         self.base.next_token()
     }
 
@@ -208,7 +231,7 @@ impl TokenSource for XMLLexer {
         self.base.get_char_position_in_line()
     }
 
-    fn get_input_stream(&mut self) -> Option<&mut dyn CharStream> {
+    fn get_input_stream(&mut self) -> Option<&mut (dyn CharStream<'input> + 'input)> {
         self.base.get_input_stream()
     }
 
@@ -216,7 +239,7 @@ impl TokenSource for XMLLexer {
         self.base.get_source_name()
     }
 
-    fn get_token_factory(&self) -> &dyn TokenFactory<Tok=dyn Token> {
+    fn get_token_factory(&self) -> &'input Self::TF {
         self.base.get_token_factory()
     }
 }

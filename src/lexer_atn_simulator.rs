@@ -554,16 +554,16 @@ impl LexerATNSimulator {
         result
     }
 
-    fn evaluate_predicate<'input>(
+    fn evaluate_predicate<'input, T: Lexer<'input>>(
         &self,
 //        input: &mut dyn CharStream,
         rule_index: isize,
         pred_index: isize,
         speculative: bool,
-        lexer: &mut impl Lexer<'input>,
+        lexer: &mut T,
     ) -> bool {
         if !speculative {
-            return lexer.sempred(&*empty_ctx(), rule_index, pred_index);
+            return lexer.sempred(&*empty_ctx::<T::TF>(), rule_index, pred_index);
         }
 
         let saved_column = self.current_pos.char_position_in_line.get();
@@ -572,7 +572,7 @@ impl LexerATNSimulator {
         let marker = lexer.get_input_stream().unwrap().mark();
         self.consume(lexer.get_input_stream().unwrap());
 
-        let result = lexer.sempred(&*empty_ctx(), rule_index, pred_index);
+        let result = lexer.sempred(&*empty_ctx::<T::TF>(), rule_index, pred_index);
 
         self.current_pos.char_position_in_line.set(saved_column);
         self.current_pos.line.set(saved_line);

@@ -3,14 +3,12 @@ use std::marker::Unsize;
 use std::ops::Deref;
 
 use crate::char_stream::CharStream;
-use crate::common_token_factory::TokenFactory;
+use crate::common_token_factory::{TokenAware, TokenFactory};
 use crate::int_stream::EOF;
 use crate::token::{Token, TOKEN_DEFAULT_CHANNEL};
 
 /// Provides tokens for parser via `TokenStream`
-pub trait TokenSource<'input> {
-    ///Type of tokens, produced by this source
-    type TF: TokenFactory<'input>;
+pub trait TokenSource<'input>: TokenAware<'input> {
     fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok;
     /**
      * Get the line number for the current position in the input stream. The
@@ -40,10 +38,12 @@ pub trait TokenSource<'input> {
     fn get_token_factory(&self) -> &'input Self::TF;
 }
 
+impl<'input, T> TokenAware<'input> for &mut T where T: TokenSource<'input> {
+    type TF = T::TF;
+}
+
 // allows user to call parser with &mut reference to Lexer
 impl<'input, T> TokenSource<'input> for &mut T where T: TokenSource<'input> {
-    type TF = T::TF;
-
     #[inline(always)]
     fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok {
         (**self).next_token()

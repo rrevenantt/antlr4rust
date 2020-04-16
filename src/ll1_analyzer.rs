@@ -7,6 +7,7 @@ use bit_set::BitSet;
 use crate::atn::ATN;
 use crate::atn_config::ATNConfig;
 use crate::atn_state::{ATNState, ATNStateType};
+use crate::common_token_factory::TokenFactory;
 use crate::interval_set::IntervalSet;
 use crate::parser_rule_context::ParserRuleContext;
 use crate::prediction_context::EMPTY_PREDICTION_CONTEXT;
@@ -24,10 +25,10 @@ impl LL1Analyzer<'_> {
 
 //    fn get_decision_lookahead(&self, _s: &dyn ATNState) -> &Vec<IntervalSet> { unimplemented!() }
 
-    pub fn look(&self,
-                s: &dyn ATNState,
-                stop_state: Option<&dyn ATNState>,
-                ctx: Option<&dyn ParserRuleContext>,
+    pub fn look<'input, TF: TokenFactory<'input> + 'input>(&self,
+                                                           s: &dyn ATNState,
+                                                           stop_state: Option<&dyn ATNState>,
+                                                           ctx: Option<&(dyn ParserRuleContext<'input, TF=TF> + 'input)>,
     ) -> IntervalSet {
         let mut r = IntervalSet::new();
         let look_ctx = ctx.map(|x|

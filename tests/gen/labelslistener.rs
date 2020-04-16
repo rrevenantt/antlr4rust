@@ -2,111 +2,112 @@
 
 use std::any::Any;
 
+use antlr_rust::common_token_factory::CommonTokenFactory;
 // Generated from Labels.g4 by ANTLR 4.8
 use antlr_rust::tree::ParseTreeListener;
 
 use super::labelsparser::*;
 
-pub trait LabelsListener: ParseTreeListener {
+pub trait LabelsListener<'input>: ParseTreeListener<'input, LocalTokenFactory<'input>> {
     /**
      * Enter a parse tree produced by {@link LabelsParser#s}.
      * @param ctx the parse tree
      */
-    fn enter_s(&mut self, _ctx: &SContext) {}
+    fn enter_s(&mut self, _ctx: &SContext<'input>) {}
     /**
      * Exit a parse tree produced by {@link LabelsParser#s}.
      * @param ctx the parse tree
      */
-    fn exit_s(&mut self, _ctx: &SContext) {}
+    fn exit_s(&mut self, _ctx: &SContext<'input>) {}
 
     /**
      * Enter a parse tree produced by the {@code add}
      * labeled alternative in {@link LabelsParser#e}.
      * @param ctx the parse tree
      */
-    fn enter_add(&mut self, _ctx: &AddContext) {}
+    fn enter_add(&mut self, _ctx: &AddContext<'input>) {}
     /**
      * Exit a parse tree produced by the {@code add}
      * labeled alternative in {@link LabelsParser#e}.
      * @param ctx the parse tree
      */
-    fn exit_add(&mut self, _ctx: &AddContext) {}
+    fn exit_add(&mut self, _ctx: &AddContext<'input>) {}
 
     /**
      * Enter a parse tree produced by the {@code parens}
      * labeled alternative in {@link LabelsParser#e}.
      * @param ctx the parse tree
      */
-    fn enter_parens(&mut self, _ctx: &ParensContext) {}
+    fn enter_parens(&mut self, _ctx: &ParensContext<'input>) {}
     /**
      * Exit a parse tree produced by the {@code parens}
      * labeled alternative in {@link LabelsParser#e}.
      * @param ctx the parse tree
      */
-    fn exit_parens(&mut self, _ctx: &ParensContext) {}
+    fn exit_parens(&mut self, _ctx: &ParensContext<'input>) {}
 
     /**
      * Enter a parse tree produced by the {@code mult}
      * labeled alternative in {@link LabelsParser#e}.
      * @param ctx the parse tree
      */
-    fn enter_mult(&mut self, _ctx: &MultContext) {}
+    fn enter_mult(&mut self, _ctx: &MultContext<'input>) {}
     /**
      * Exit a parse tree produced by the {@code mult}
      * labeled alternative in {@link LabelsParser#e}.
      * @param ctx the parse tree
      */
-    fn exit_mult(&mut self, _ctx: &MultContext) {}
+    fn exit_mult(&mut self, _ctx: &MultContext<'input>) {}
 
     /**
      * Enter a parse tree produced by the {@code dec}
      * labeled alternative in {@link LabelsParser#e}.
      * @param ctx the parse tree
      */
-    fn enter_dec(&mut self, _ctx: &DecContext) {}
+    fn enter_dec(&mut self, _ctx: &DecContext<'input>) {}
     /**
      * Exit a parse tree produced by the {@code dec}
      * labeled alternative in {@link LabelsParser#e}.
      * @param ctx the parse tree
      */
-    fn exit_dec(&mut self, _ctx: &DecContext) {}
+    fn exit_dec(&mut self, _ctx: &DecContext<'input>) {}
 
     /**
      * Enter a parse tree produced by the {@code anID}
      * labeled alternative in {@link LabelsParser#e}.
      * @param ctx the parse tree
      */
-    fn enter_anID(&mut self, _ctx: &AnIDContext) {}
+    fn enter_anID(&mut self, _ctx: &AnIDContext<'input>) {}
     /**
      * Exit a parse tree produced by the {@code anID}
      * labeled alternative in {@link LabelsParser#e}.
      * @param ctx the parse tree
      */
-    fn exit_anID(&mut self, _ctx: &AnIDContext) {}
+    fn exit_anID(&mut self, _ctx: &AnIDContext<'input>) {}
 
     /**
      * Enter a parse tree produced by the {@code anInt}
      * labeled alternative in {@link LabelsParser#e}.
      * @param ctx the parse tree
      */
-    fn enter_anInt(&mut self, _ctx: &AnIntContext) {}
+    fn enter_anInt(&mut self, _ctx: &AnIntContext<'input>) {}
     /**
      * Exit a parse tree produced by the {@code anInt}
      * labeled alternative in {@link LabelsParser#e}.
      * @param ctx the parse tree
      */
-    fn exit_anInt(&mut self, _ctx: &AnIntContext) {}
+    fn exit_anInt(&mut self, _ctx: &AnIntContext<'input>) {}
 
     /**
      * Enter a parse tree produced by the {@code inc}
      * labeled alternative in {@link LabelsParser#e}.
      * @param ctx the parse tree
      */
-    fn enter_inc(&mut self, _ctx: &IncContext) {}
+    fn enter_inc(&mut self, _ctx: &IncContext<'input>) {}
     /**
      * Exit a parse tree produced by the {@code inc}
      * labeled alternative in {@link LabelsParser#e}.
      * @param ctx the parse tree
      */
-    fn exit_inc(&mut self, _ctx: &IncContext) {}
+    fn exit_inc(&mut self, _ctx: &IncContext<'input>) {}
 }

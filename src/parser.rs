@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use crate::atn::ATN;
 use crate::atn_simulator::IATNSimulator;
-use crate::common_token_factory::{CommonTokenFactory, TokenFactory};
+use crate::common_token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use crate::error_listener::{ConsoleErrorListener, ErrorListener, ProxyErrorListener};
 use crate::error_strategy::ErrorStrategy;
 use crate::errors::ANTLRError;
@@ -26,24 +26,23 @@ use crate::token_stream::TokenStream;
 use crate::tree::{ErrorNode, ErrorNodeCtx, ParseTreeListener, TerminalNode, TerminalNodeCtx};
 use crate::vocabulary::Vocabulary;
 
-pub trait Parser<'input>: Recognizer {
-    type TF: TokenFactory<'input>;
+pub trait Parser<'input>: Recognizer<'input> {
     fn get_interpreter(&self) -> &ParserATNSimulator;
 
-    fn get_token_factory(&self) -> &'input CommonTokenFactory;
-    fn get_parser_rule_context(&self) -> &ParserRuleContextType;
+    fn get_token_factory(&self) -> &'input Self::TF;
+    fn get_parser_rule_context(&self) -> &ParserRuleContextType<'input, Self::TF>;
     //    fn set_parser_rule_context(&self, v: ParserRuleContext);
-    fn consume(&mut self, err_handler: &mut dyn ErrorStrategy<Self>) where Self: Sized;
+    fn consume(&mut self, err_handler: &mut dyn ErrorStrategy<'input, Self>) where Self: Sized;
     //    fn get_parse_listeners(&self) -> Vec<ParseTreeListener>;
     //fn sempred(&mut self, _localctx: Option<&dyn ParserRuleContext>, rule_index: isize, action_index: isize) -> bool { true }
 
-    fn precpred(&self, localctx: Option<&dyn ParserRuleContext>, precedence: isize) -> bool;
+    fn precpred(&self, localctx: Option<&(dyn ParserRuleContext<'input, TF=Self::TF> + 'input)>, precedence: isize) -> bool;
 
     //    fn get_error_handler(&self) -> ErrorStrategy;
 //    fn set_error_handler(&self, e: ErrorStrategy);
     fn get_input_stream_mut(&mut self) -> &mut dyn TokenStream<'input, TF=Self::TF>;
     fn get_input_stream(&self) -> &dyn TokenStream<'input, TF=Self::TF>;
-    fn get_current_token(&self) -> &(dyn Token + 'input);
+    fn get_current_token(&self) -> &<Self::TF as TokenFactory<'input>>::Tok;
     fn get_expected_tokens(&self) -> IntervalSet;
 
     fn add_error_listener(&mut self, listener: Box<dyn ErrorListener<Self>>) where Self: Sized;
@@ -65,11 +64,11 @@ pub trait Parser<'input>: Recognizer {
 /// Generated parser hides complexity of this struct and expose required flexibility via generic parameters
 ///
 pub struct BaseParser<'input,
-    Ext: ParserRecog<Self> + 'static,
+    Ext: ParserRecog<'input, Self, TF=I::TF> + 'static,
     I: TokenStream<'input>,// = dyn TokenStream<'input, TF=CommonTokenFactory>,
-    T: ParseTreeListener + ?Sized + 'static = dyn ParseTreeListener> {
+    T: ParseTreeListener<'input, I::TF> + ?Sized + 'static = dyn ParseTreeListener<'input, <I as TokenStream<'input>>::TF>> {
     interp: Arc<ParserATNSimulator>,
-    pub ctx: Option<ParserRuleContextType>,
+    pub ctx: Option<ParserRuleContextType<'input, I::TF>>,
 
     /// Track the {@link ParserRuleContext} objects during the parse and hook
     /// them up using the {@link ParserRuleContext#children} list so that it
@@ -104,9 +103,9 @@ pub struct BaseParser<'input,
 }
 
 impl<'input, I, T, Ext> Deref for BaseParser<'input, Ext, I, T>
-    where T: ParseTreeListener + ?Sized + 'static,
+    where T: ParseTreeListener<'input, I::TF> + ?Sized + 'static,
           I: TokenStream<'input>,
-          Ext: ParserRecog<Self> + 'static,
+          Ext: ParserRecog<'input, Self, TF=I::TF> + 'static,
 {
     type Target = Ext;
 
@@ -116,9 +115,9 @@ impl<'input, I, T, Ext> Deref for BaseParser<'input, Ext, I, T>
 }
 
 impl<'input, I, T, Ext> DerefMut for BaseParser<'input, Ext, I, T>
-    where T: ParseTreeListener + ?Sized + 'static,
+    where T: ParseTreeListener<'input, I::TF> + ?Sized + 'static,
           I: TokenStream<'input>,
-          Ext: ParserRecog<Self> + 'static
+          Ext: ParserRecog<'input, Self, TF=I::TF> + 'static
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.ext
@@ -126,15 +125,21 @@ impl<'input, I, T, Ext> DerefMut for BaseParser<'input, Ext, I, T>
 }
 
 ///
-pub trait ParserRecog<T>: Recognizer + Actions<T> {}
+pub trait ParserRecog<'a, T>: Recognizer<'a> {
+    fn sempred(_localctx: &(dyn ParserRuleContext<'a, TF=Self::TF> + 'a), _rule_index: isize, _action_index: isize,
+               _recog: &mut T,
+    ) -> bool {
+        true
+    }
+}
 
-impl<'input, I, T, Ext> Recognizer for BaseParser<'input, Ext, I, T>
-    where T: ParseTreeListener + ?Sized + 'static,
+impl<'input, I, T, Ext> Recognizer<'input> for BaseParser<'input, Ext, I, T>
+    where T: ParseTreeListener<'input, I::TF> + ?Sized + 'static,
           I: TokenStream<'input>,
-          Ext: ParserRecog<Self> + 'static
+          Ext: ParserRecog<'input, Self, TF=I::TF> + 'static
 {
-    fn sempred(&mut self, localctx: &dyn ParserRuleContext, rule_index: isize, action_index: isize) -> bool {
-        <Ext as Actions<Self>>::sempred(localctx, rule_index, action_index, self)
+    fn sempred(&mut self, localctx: &(dyn ParserRuleContext<'input, TF=I::TF> + 'input), rule_index: isize, action_index: isize) -> bool {
+        <Ext as ParserRecog<'input, Self>>::sempred(localctx, rule_index, action_index, self)
     }
 
     fn get_rule_names(&self) -> &[&str] {
@@ -154,43 +159,55 @@ impl<'input, I, T, Ext> Recognizer for BaseParser<'input, Ext, I, T>
     }
 }
 
-impl<'input, I, T, Ext> Parser<'input> for BaseParser<'input, Ext, I, T>
-    where T: ParseTreeListener + ?Sized + 'static,
+impl<'input, I, T, Ext> TokenAware<'input> for BaseParser<'input, Ext, I, T>
+    where T: ParseTreeListener<'input, I::TF> + ?Sized + 'static,
           I: TokenStream<'input>,
-          Ext: ParserRecog<Self> + 'static
+          Ext: ParserRecog<'input, Self, TF=I::TF> + 'static
 {
     type TF = I::TF;
+}
 
+impl<'input, I, T, Ext> Parser<'input> for BaseParser<'input, Ext, I, T>
+    where T: ParseTreeListener<'input, I::TF> + ?Sized + 'static,
+          I: TokenStream<'input>,
+          Ext: ParserRecog<'input, Self, TF=I::TF> + 'static
+{
     fn get_interpreter(&self) -> &ParserATNSimulator {
         self.interp.as_ref()
     }
 
-    fn get_token_factory(&self) -> &'input CommonTokenFactory {
-        &**crate::common_token_factory::CommonTokenFactoryDEFAULT
-        // self.input.get_token_source().get_token_factory()
+    fn get_token_factory(&self) -> &'input Self::TF {
+        // &**crate::common_token_factory::CommonTokenFactoryDEFAULT
+        self.input.get_token_source().get_token_factory()
     }
 
-    #[inline]
-    fn get_parser_rule_context(&self) -> &Rc<dyn ParserRuleContext> {
+    #[inline(always)]
+    fn get_parser_rule_context(&self) -> &ParserRuleContextType<'input, I::TF> {
         self.ctx.as_ref().unwrap()
     }
 
 
-    fn consume(&mut self, err_handler: &mut dyn ErrorStrategy<Self>) {
-        let o = self.get_current_token().to_owned();
-        if o.get_token_type() != TOKEN_EOF {
+    fn consume(&mut self, err_handler: &mut dyn ErrorStrategy<'input, Self>) {
+        let o = self.get_current_token().clone();
+        if o.borrow().get_token_type() != TOKEN_EOF {
             self.input.consume();
         }
         if self.build_parse_trees || !self.parse_listeners.is_empty() {
             if err_handler.in_error_recovery_mode(self) {
-                let node = self.ctx.as_deref().unwrap().add_error_node(self.create_error_node(o));
-                let node = unsafe { &*(node.deref() as *const dyn ParserRuleContext as *const ErrorNode) };
+                let node = self.ctx
+                    .as_deref()
+                    .unwrap()
+                    .add_error_node(self.create_error_node(o.clone()));
+                let node = unsafe { &*(node.deref() as *const dyn ParserRuleContext<'input, TF=I::TF> as *const ErrorNode<'input, I::TF>) };
                 for listener in &mut self.parse_listeners {
                     listener.visit_error_node(node)
                 }
             } else {
-                let node = self.ctx.as_deref().unwrap().add_token_node(self.create_token_node(o));
-                let node = unsafe { &*(node.deref() as *const dyn ParserRuleContext as *const TerminalNode) };
+                let node = self.ctx
+                    .as_deref()
+                    .unwrap()
+                    .add_token_node(self.create_token_node(o.clone()));
+                let node = unsafe { &*(node.deref() as *const dyn ParserRuleContext<'input, TF=I::TF> as *const TerminalNode<'input, I::TF>) };
                 for listener in &mut self.parse_listeners {
                     listener.visit_terminal(node)
                 }
@@ -198,7 +215,7 @@ impl<'input, I, T, Ext> Parser<'input> for BaseParser<'input, Ext, I, T>
         }
     }
 
-    fn precpred(&self, _localctx: Option<&dyn ParserRuleContext>, precedence: isize) -> bool {
+    fn precpred(&self, _localctx: Option<&dyn ParserRuleContext<'input, TF=I::TF>>, precedence: isize) -> bool {
 //        localctx.map(|it|println!("check at{}",it.to_string_tree(self)));
 //        println!("{}",self.get_precedence());
         precedence >= self.get_precedence()
@@ -213,8 +230,8 @@ impl<'input, I, T, Ext> Parser<'input> for BaseParser<'input, Ext, I, T>
     }
 
     #[inline]
-    fn get_current_token(&self) -> &(dyn Token + 'input) {
-        self.input.get(self.input.index()).borrow()
+    fn get_current_token(&self) -> &<Self::TF as TokenFactory<'input>>::Tok {
+        self.input.get(self.input.index())
     }
 
     fn get_expected_tokens(&self) -> IntervalSet {
@@ -227,9 +244,9 @@ impl<'input, I, T, Ext> Parser<'input> for BaseParser<'input, Ext, I, T>
 
     fn notify_error_listeners(&self, msg: String, offending_token: Option<isize>, err: Option<&ANTLRError>) {
         self._syntax_errors.update(|it| it + 1);
-        let offending_token = match offending_token {
-            None => Some(self.get_current_token()),
-            Some(x) => Some(self.input.get(x) as &dyn Token),
+        let offending_token: Option<&dyn Token> = match offending_token {
+            None => Some(self.get_current_token().borrow()),
+            Some(x) => Some(self.input.get_inner(x)),
         };
         let line = offending_token.map(|x| x.get_line()).unwrap_or(-1);
         let column = offending_token.map(|x| x.get_column()).unwrap_or(-1);
@@ -283,9 +300,9 @@ impl<'input, I, T, Ext> Parser<'input> for BaseParser<'input, Ext, I, T>
 }
 
 impl<'input, I, T, Ext> BaseParser<'input, Ext, I, T>
-    where T: ParseTreeListener + ?Sized + 'static,
+    where T: ParseTreeListener<'input, I::TF> + ?Sized + 'static,
           I: TokenStream<'input>,
-          Ext: ParserRecog<Self> + 'static
+          Ext: ParserRecog<'input, Self, TF=I::TF> + 'static
 {
     pub fn new_base_parser(
         input: Box<I>,
@@ -312,30 +329,30 @@ impl<'input, I, T, Ext> BaseParser<'input, Ext, I, T>
 //    fn reset(&self) { unimplemented!() }
 
     #[inline]
-    pub fn match_token(&mut self, ttype: isize, err_handler: &mut dyn ErrorStrategy<Self>) -> Result<OwningToken, ANTLRError> {
-        let mut token = self.get_current_token().to_owned();
-        if token.get_token_type() == ttype {
+    pub fn match_token(&mut self, ttype: isize, err_handler: &mut dyn ErrorStrategy<'input, Self>) -> Result<<I::TF as TokenFactory<'input>>::Tok, ANTLRError> {
+        let mut token = self.get_current_token().clone();
+        if token.borrow().get_token_type() == ttype {
             if ttype == TOKEN_EOF { self.matched_eof = true; }
 
             err_handler.report_match(self);
             self.consume(err_handler);
         } else {
             token = err_handler.recover_inline(self)?;
-            if self.build_parse_trees && token.get_token_index() == -1 {
+            if self.build_parse_trees && token.borrow().get_token_index() == -1 {
                 self.ctx.as_ref().unwrap().add_error_node(self.create_error_node(token.clone()));
             }
         }
         return Ok(token);
     }
 
-    pub fn match_wildcard(&mut self, err_handler: &mut dyn ErrorStrategy<Self>) -> Result<OwningToken, ANTLRError> {
-        let mut t = self.get_current_token().to_owned();
-        if t.get_token_type() > 0 {
+    pub fn match_wildcard(&mut self, err_handler: &mut dyn ErrorStrategy<'input, Self>) -> Result<<I::TF as TokenFactory<'input>>::Tok, ANTLRError> {
+        let mut t = self.get_current_token().clone();
+        if t.borrow().get_token_type() > 0 {
             err_handler.report_match(self);
             self.consume(err_handler);
         } else {
             t = err_handler.recover_inline(self)?;
-            if self.build_parse_trees && t.get_token_index() == -1 {
+            if self.build_parse_trees && t.borrow().get_token_index() == -1 {
                 self.ctx.as_ref().unwrap().add_error_node(self.create_error_node(t.clone()));
             }
         }
@@ -402,9 +419,9 @@ impl<'input, I, T, Ext> BaseParser<'input, Ext, I, T>
     }
 
     #[inline]
-    pub fn enter_rule(&mut self, localctx: Rc<dyn ParserRuleContext>, state: isize, _rule_index: usize) {
+    pub fn enter_rule(&mut self, localctx: ParserRuleContextType<'input, I::TF>, state: isize, _rule_index: usize) {
         self.set_state(state);
-        localctx.set_start(self.input.lt(1).map(Token::to_owned));
+        localctx.set_start(self.input.lt(1).cloned());
         self.ctx = Some(localctx);
 //        let mut localctx = Rc::get_mut(self.ctx.as_mut().unwrap()).unwrap();
         if self.build_parse_trees {
@@ -416,9 +433,9 @@ impl<'input, I, T, Ext> BaseParser<'input, Ext, I, T>
     #[inline]
     pub fn exit_rule(&mut self) {
         if self.matched_eof {
-            self.ctx.as_ref().unwrap().set_stop(self.input.lt(1).map(Token::to_owned))
+            self.ctx.as_ref().unwrap().set_stop(self.input.lt(1).cloned())
         } else {
-            self.ctx.as_ref().unwrap().set_stop(self.input.lt(-1).map(Token::to_owned))
+            self.ctx.as_ref().unwrap().set_stop(self.input.lt(-1).cloned())
         }
         self.trigger_exit_rule_event();
         self.set_state(self.get_parser_rule_context().get_invoking_state());
@@ -427,7 +444,7 @@ impl<'input, I, T, Ext> BaseParser<'input, Ext, I, T>
     }
 
     // todo make new_ctx not option
-    pub fn enter_outer_alt(&mut self, new_ctx: Option<Rc<dyn ParserRuleContext>>, alt_num: isize) {
+    pub fn enter_outer_alt(&mut self, new_ctx: Option<ParserRuleContextType<'input, I::TF>>, alt_num: isize) {
         if let Some(new_ctx) = new_ctx {
             new_ctx.set_alt_number(alt_num);
 
@@ -444,23 +461,23 @@ impl<'input, I, T, Ext> BaseParser<'input, Ext, I, T>
     }
 
 
-    pub fn enter_recursion_rule(&mut self, localctx: Rc<dyn ParserRuleContext>, state: isize, _rule_index: usize, precedence: isize) {
+    pub fn enter_recursion_rule(&mut self, localctx: ParserRuleContextType<'input, I::TF>, state: isize, _rule_index: usize, precedence: isize) {
         self.set_state(state);
         self.precedence_stack.push(precedence);
-        localctx.set_start(self.input.lt(1).map(Token::to_owned));
+        localctx.set_start(self.input.lt(1).cloned());
         //println!("{}",self.input.lt(1).map(Token::to_owned).unwrap());
         self.ctx = Some(localctx);
         self.trigger_enter_rule_event()
     }
 
-    pub fn push_new_recursion_context(&mut self, localctx: Rc<dyn ParserRuleContext>, state: isize, _rule_index: usize) {
+    pub fn push_new_recursion_context(&mut self, localctx: ParserRuleContextType<'input, I::TF>, state: isize, _rule_index: usize) {
         let prev = self.ctx.take().unwrap();
         prev.set_parent(&Some(localctx.clone()));
         prev.set_invoking_state(state);
-        prev.set_stop(self.input.lt(-1).map(Token::to_owned));
+        prev.set_stop(self.input.lt(-1).cloned());
 
 //        println!("{}",prev.get_start().unwrap());
-        localctx.set_start(Some(prev.get_start().clone()));
+        localctx.set_start(Some(prev.start_mut().clone()));
         self.ctx = Some(localctx);
 
         if self.build_parse_trees {
@@ -469,10 +486,10 @@ impl<'input, I, T, Ext> BaseParser<'input, Ext, I, T>
         self.trigger_enter_rule_event();
     }
 
-    pub fn unroll_recursion_context(&mut self, parent_ctx: Option<Rc<dyn ParserRuleContext>>) {
+    pub fn unroll_recursion_context(&mut self, parent_ctx: Option<ParserRuleContextType<'input, I::TF>>) {
         self.precedence_stack.pop();
         let retctx = self.ctx.clone().unwrap();
-        retctx.set_stop(self.input.lt(-1).map(Token::to_owned));
+        retctx.set_stop(self.input.lt(-1).cloned());
         if !self.parse_listeners.is_empty() {
             while !Rc::ptr_eq(self.ctx.as_ref().unwrap(), parent_ctx.as_ref().unwrap()) {
 //                println!("{:p} {:p}",self.ctx.as_deref().unwrap(),parent_ctx.as_ref().unwrap());
@@ -492,11 +509,11 @@ impl<'input, I, T, Ext> BaseParser<'input, Ext, I, T>
         }
     }
 
-    fn create_token_node(&self, token: OwningToken) -> TerminalNode {
+    fn create_token_node(&self, token: <I::TF as TokenFactory<'input>>::Tok) -> TerminalNode<'input, I::TF> {
         BaseParserRuleContext::new_parser_ctx(None, -1, TerminalNodeCtx { symbol: token })
     }
 
-    fn create_error_node(&self, token: OwningToken) -> ErrorNode {
+    fn create_error_node(&self, token: <I::TF as TokenFactory<'input>>::Tok) -> ErrorNode<'input, I::TF> {
         BaseParserRuleContext::new_parser_ctx(None, -1, ErrorNodeCtx(TerminalNodeCtx { symbol: token }))
     }
 

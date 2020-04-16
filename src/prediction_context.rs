@@ -9,6 +9,7 @@ use std::sync::{Arc, RwLock};
 use murmur3::murmur3_32::MurmurHasher;
 
 use crate::atn::ATN;
+use crate::common_token_factory::TokenFactory;
 use crate::dfa::ScopeExt;
 use crate::parser_atn_simulator::MergeCache;
 use crate::parser_rule_context::{empty_ctx, ParserRuleContext};
@@ -463,7 +464,7 @@ impl PredictionContext {
         return m;
     }
 
-    pub fn from_rule_context(atn: &ATN, outer_context: &dyn ParserRuleContext) -> Arc<PredictionContext> {
+    pub fn from_rule_context<'input, TF: TokenFactory<'input> + 'input>(atn: &ATN, outer_context: &(dyn ParserRuleContext<'input, TF=TF> + 'input)) -> Arc<PredictionContext> {
         if outer_context.get_parent_ctx().is_none() || ptr::eq(outer_context, empty_ctx().as_ref()) {
             return EMPTY_PREDICTION_CONTEXT.clone()
         }

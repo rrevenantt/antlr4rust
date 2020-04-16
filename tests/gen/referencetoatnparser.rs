@@ -9,12 +9,14 @@ use std::any::Any;
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::RefCell;
 use std::convert::TryFrom;
+use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 use std::sync::Arc;
 
 use antlr_rust::atn::{ATN, INVALID_ALT};
 use antlr_rust::atn_deserializer::ATNDeserializer;
+use antlr_rust::common_token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use antlr_rust::dfa::DFA;
 use antlr_rust::error_strategy::{DefaultErrorStrategy, ErrorStrategy};
 use antlr_rust::errors::*;
@@ -52,23 +54,26 @@ lazy_static! {
 	}
 
 
-type BaseParserType = BaseParser<ReferenceToATNParserExt, dyn ReferenceToATNListener>;
+type BaseParserType<'input, I> = BaseParser<'input, ReferenceToATNParserExt, I, dyn for<'x> ReferenceToATNListener<'x>>;
 
-pub struct ReferenceToATNParser {
-    base: BaseParserType,
+type TokenType<'input> = <LocalTokenFactory<'input> as TokenFactory<'input>>::Tok;
+pub type LocalTokenFactory<'input> = CommonTokenFactory;
+
+pub struct ReferenceToATNParser<'input, I: TokenStream<'input, TF=LocalTokenFactory<'input>>> {
+    base: BaseParserType<'input, I>,
     interpreter: Arc<ParserATNSimulator>,
     _shared_context_cache: Box<PredictionContextCache>,
-    pub err_handler: Box<dyn ErrorStrategy>,
+    pub err_handler: Box<dyn ErrorStrategy<'input, BaseParserType<'input, I>> + 'input>,
 }
 
-impl ReferenceToATNParser {
+impl<'input, I: TokenStream<'input, TF=LocalTokenFactory<'input>>> ReferenceToATNParser<'input, I> {
     pub fn get_serialized_atn() -> &'static str { unimplemented!() }
 
-    pub fn set_error_strategy(&mut self, strategy: Box<dyn ErrorStrategy>) {
+    pub fn set_error_strategy(&mut self, strategy: Box<dyn ErrorStrategy<'input, BaseParserType<'input, I>>>) {
         self.err_handler = strategy
     }
 
-    pub fn new(input: Box<dyn TokenStream<Tok=dyn Token>>) -> Self {
+    pub fn new(input: Box<I>) -> Self {
         antlr_rust::recognizer::check_version("0", "2");
         let interpreter = Arc::new(ParserATNSimulator::new(
             _ATN.clone(),
@@ -83,20 +88,20 @@ impl ReferenceToATNParser {
             ),
             interpreter,
             _shared_context_cache: Box::new(PredictionContextCache::new()),
-            err_handler: Box::new(DefaultErrorStrategy::new()),
+            err_handler: Box::new(DefaultErrorStrategy::<'input, LocalTokenFactory<'input>>::new()),
         }
     }
 }
 
-impl Deref for ReferenceToATNParser {
-    type Target = BaseParserType;
+impl<'input, I: TokenStream<'input, TF=LocalTokenFactory<'input>>> Deref for ReferenceToATNParser<'input, I> {
+    type Target = BaseParserType<'input, I>;
 
     fn deref(&self) -> &Self::Target {
         &self.base
     }
 }
 
-impl DerefMut for ReferenceToATNParser {
+impl<'input, I: TokenStream<'input, TF=LocalTokenFactory<'input>>> DerefMut for ReferenceToATNParser<'input, I> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.base
     }
@@ -106,9 +111,13 @@ pub struct ReferenceToATNParserExt {}
 
 impl ReferenceToATNParserExt {}
 
-impl ParserRecog for ReferenceToATNParserExt {}
+//impl<'input,I: TokenStream<'input, TF=LocalTokenFactory<'input> > > ParserRecog<BaseParserType<'input,I>> for ReferenceToATNParserExt{}
 
-impl Recognizer for ReferenceToATNParserExt {
+impl<'input> TokenAware<'input> for ReferenceToATNParserExt {
+    type TF = LocalTokenFactory<'input>;
+}
+
+impl<'input> Recognizer<'input> for ReferenceToATNParserExt {
     fn get_grammar_file_name(&self) -> &str { "ReferenceToATN.g4" }
 
     fn get_rule_names(&self) -> &[&str] { &ruleNames }
@@ -116,71 +125,83 @@ impl Recognizer for ReferenceToATNParserExt {
     fn get_vocabulary(&self) -> &dyn Vocabulary { &**VOCABULARY }
 }
 
-impl Actions for ReferenceToATNParserExt {
-    type Recog = BaseParserType;
+trait Trait {
+    type Ty;
 }
 
+impl<'input, I: TokenStream<'input, TF=LocalTokenFactory<'input>>> Trait for ReferenceToATNParser<'input, I> {
+    type Ty = BaseParserType<'input, I>;
+}
+
+
+impl<'input, I: TokenStream<'input, TF=LocalTokenFactory<'input>>> ParserRecog<'input, BaseParserType<'input, I>> for ReferenceToATNParserExt {}
+
 //------------------- a ----------------
-pub type AContextAll = AContext;
+pub type AContextAll<'input> = AContext<'input>;
 
 
-pub type AContext = BaseParserRuleContext<AContextExt>;
+pub type AContext<'input> = BaseParserRuleContext<'input, AContextExt<'input>>;
 
 #[derive(Clone)]
-pub struct AContextExt {}
+pub struct AContextExt<'input> {
+    ph: PhantomData<&'input str>
+}
 
-impl CustomRuleContext for AContextExt {
+impl<'input> CustomRuleContext<'input> for AContextExt<'input> {
+    type TF = LocalTokenFactory<'input>;
     fn get_rule_index(&self) -> usize {
         RULE_a
     }
-    fn enter(ctx: &BaseParserRuleContext<Self>, listener: &mut dyn Any) where Self: Sized {
-        listener.downcast_mut::<Box<dyn ReferenceToATNListener>>()
+    fn enter(ctx: &BaseParserRuleContext<'input, Self>, listener: &mut dyn Any) where Self: Sized {
+        listener.downcast_mut::<Box<dyn for<'x> ReferenceToATNListener<'x>>>()
             .map(|it| it.enter_a(ctx));
     }
-    fn exit(ctx: &BaseParserRuleContext<Self>, listener: &mut dyn Any) where Self: Sized {
-        listener.downcast_mut::<Box<dyn ReferenceToATNListener>>()
+    fn exit(ctx: &BaseParserRuleContext<'input, Self>, listener: &mut dyn Any) where Self: Sized {
+        listener.downcast_mut::<Box<dyn for<'x> ReferenceToATNListener<'x>>>()
             .map(|it| it.exit_a(ctx));
     }
 }
 
-impl AContextExt {
-    fn new(parent: Option<ParserRuleContextType>, invoking_state: isize) -> Rc<AContextAll> {
+impl<'input> AContextExt<'input> {
+    fn new(parent: Option<ParserRuleContextType<'input, LocalTokenFactory<'input>>>, invoking_state: isize) -> Rc<AContextAll<'input>> {
         Rc::new(
-            BaseParserRuleContext::new_parser_ctx(parent, invoking_state, AContextExt {}),
+            BaseParserRuleContext::new_parser_ctx(parent, invoking_state, AContextExt {
+                ph: PhantomData
+            }),
         )
     }
 }
 
-pub trait AContextAttrs: ParserRuleContext + BorrowMut<AContextExt> {
+pub trait AContextAttrs<'input>: ParserRuleContext<'input, TF=LocalTokenFactory<'input>> + BorrowMut<AContextExt<'input>> {
     /// Retrieves all `TerminalNode`s corresponding to token ATN in current rule
-    fn ATN_all(&self) -> Vec<Rc<TerminalNode>> where Self: Sized {
+    fn ATN_all(&self) -> Vec<Rc<TerminalNode<'input, LocalTokenFactory<'input>>>> where Self: Sized {
         self.children_of_type()
     }
     /// Retrieves 'i's TerminalNode corresponding to token ATN, starting from 0.
     /// Returns `None` if number of children corresponding to token ATN is less or equal than `i`.
-    fn ATN(&self, i: usize) -> Option<Rc<TerminalNode>> where Self: Sized {
+    fn ATN(&self, i: usize) -> Option<Rc<TerminalNode<'input, LocalTokenFactory<'input>>>> where Self: Sized {
         self.get_token(ATN, i)
     }
     /// Retrieves all `TerminalNode`s corresponding to token ID in current rule
-    fn ID_all(&self) -> Vec<Rc<TerminalNode>> where Self: Sized {
+    fn ID_all(&self) -> Vec<Rc<TerminalNode<'input, LocalTokenFactory<'input>>>> where Self: Sized {
         self.children_of_type()
     }
     /// Retrieves 'i's TerminalNode corresponding to token ID, starting from 0.
     /// Returns `None` if number of children corresponding to token ID is less or equal than `i`.
-    fn ID(&self, i: usize) -> Option<Rc<TerminalNode>> where Self: Sized {
+    fn ID(&self, i: usize) -> Option<Rc<TerminalNode<'input, LocalTokenFactory<'input>>>> where Self: Sized {
         self.get_token(ID, i)
     }
 }
 
-impl AContextAttrs for AContext {}
+impl<'input> AContextAttrs<'input> for AContext<'input> {}
 
 //impl AContext{
 
 //}
 
-impl ReferenceToATNParser {
+impl<'input, I: TokenStream<'input, TF=LocalTokenFactory<'input>>> ReferenceToATNParser<'input, I> {
     pub fn a(&mut self)
-             -> Result<Rc<AContextAll>, ANTLRError> {
+             -> Result<Rc<AContextAll<'input>>, ANTLRError> {
         let mut recog = self;
         let _parentctx = recog.ctx.take();
         let mut _localctx = AContextExt::new(_parentctx.clone(), recog.base.get_state());
@@ -227,7 +248,7 @@ impl ReferenceToATNParser {
 
                 println!("{}", {
                     let temp = recog.base.input.lt(-1).map(|it| it.get_token_index()).unwrap_or(-1);
-                    recog.input.get_text_from_interval(recog.get_parser_rule_context().get_start().get_token_index(), temp)
+                    recog.input.get_text_from_interval(recog.get_parser_rule_context().start().get_token_index(), temp)
                 });
             }
         };

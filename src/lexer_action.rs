@@ -43,11 +43,11 @@ impl LexerAction {
             _ => false
         }
     }
-    pub(crate) fn execute<'input>(&self, lexer: &mut impl Lexer<'input>) {
+    pub(crate) fn execute<'input, T: Lexer<'input>>(&self, lexer: &mut T) {
         match self {
             &LexerAction::LexerChannelAction(channel) => lexer.set_channel(channel),
             &LexerAction::LexerCustomAction { rule_index, action_index } => {
-                lexer.action(&*empty_ctx(), rule_index, action_index);
+                lexer.action(&*empty_ctx::<T::TF>(), rule_index, action_index);
             },
             &LexerAction::LexerModeAction(mode) => lexer.set_mode(mode as usize),
             &LexerAction::LexerMoreAction => lexer.more(),

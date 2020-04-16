@@ -16,10 +16,10 @@ use crate::token_source::TokenSource;
 /// `TokenSource`, not `TokenStream`
 pub trait TokenStream<'input>: IntStream {
     /// Output token type
-    type TF: TokenFactory<'input>;
-    fn lt(&mut self, k: isize) -> Option<&<Self::TF as TokenFactory<'input>>::Inner>;
-    fn get(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Inner;
-    fn get_cloned(&self, index: isize) -> <Self::TF as TokenFactory<'input>>::Tok;
+    type TF: TokenFactory<'input> + 'input;
+    fn lt(&mut self, k: isize) -> Option<&<Self::TF as TokenFactory<'input>>::Tok>;
+    fn get(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Tok;
+    fn get_inner(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Inner;
     fn get_token_source(&self) -> &dyn TokenSource<'input, TF=Self::TF>;
     //    fn set_token_source(&self,source: Box<TokenSource>);
     fn get_all_text(&self) -> String;
@@ -35,7 +35,7 @@ impl<'a, 'input: 'a, T: TokenStream<'input>> Iterator for TokenIter<'a, 'input, 
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.1 { return None }
-        let result = self.0.lt(1).unwrap().to_owned();
+        let result = self.0.lt(1).unwrap().borrow().to_owned();
         self.0.consume();
         if result.get_token_type() == TOKEN_EOF { self.1 = true; }
         Some(result)
@@ -105,22 +105,22 @@ impl<'input, T: TokenSource<'input>> UnbufferedTokenStream<'input, T> {
 impl<'input, T: TokenSource<'input>> TokenStream<'input> for UnbufferedTokenStream<'input, T> {
     type TF = T::TF;
 
-    fn lt(&mut self, i: isize) -> Option<&<Self::TF as TokenFactory<'input>>::Inner> {
+    fn lt(&mut self, i: isize) -> Option<&<Self::TF as TokenFactory<'input>>::Tok> {
         if i == -1 {
-            return self.tokens.get(self.p as usize - 1).map(Borrow::borrow)
+            return self.tokens.get(self.p as usize - 1);
         }
 
         self.sync(i);
 
-        self.tokens.get((self.p + i - 1) as usize).map(Borrow::borrow)
+        self.tokens.get((self.p + i - 1) as usize)
     }
 
-    fn get(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Inner {
+    fn get(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Tok {
+        &self.tokens[(index - self.get_buffer_start_index()) as usize]
+    }
+
+    fn get_inner(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Inner {
         self.tokens[(index - self.get_buffer_start_index()) as usize].borrow()
-    }
-
-    fn get_cloned(&self, index: isize) -> <Self::TF as TokenFactory<'input>>::Tok {
-        self.tokens[(index - self.get_buffer_start_index()) as usize].clone()
     }
 
     fn get_token_source(&self) -> &dyn TokenSource<'input, TF=Self::TF> {
@@ -178,7 +178,7 @@ impl<'input, T: TokenSource<'input>> IntStream for UnbufferedTokenStream<'input,
     }
 
     fn la(&mut self, i: isize) -> isize {
-        self.lt(i).map(Token::get_token_type).unwrap_or(TOKEN_INVALID_TYPE)
+        self.lt(i).map(|t| t.borrow().get_token_type()).unwrap_or(TOKEN_INVALID_TYPE)
     }
 
     fn mark(&mut self) -> isize {

@@ -31,6 +31,11 @@
 //!
 //! [ANTLR4]: https://github.com/antlr/antlr4
 
+// To anyone going to change this code in the future:
+// Architecture notes:
+// todo
+//
+
 #[macro_use]
 extern crate lazy_static;
 //extern crate uuid;

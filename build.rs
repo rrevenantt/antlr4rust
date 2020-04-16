@@ -16,6 +16,7 @@ fn main() {
         let _ = gen_for_grammar(grammar, antlr_path);
     }
 
+
     println!("cargo:rerun-if-changed=build.rs");
 
     println!("cargo:rerun-if-changed=/home/rrevenantt/dev/antlr4/tool/target/antlr4-4.8-2-SNAPSHOT-complete.jar");
@@ -45,6 +46,7 @@ fn gen_for_grammar(grammar_file_name: &str, antlr_path: &str) -> Result<(), Box<
     // .unwrap()
     // .stdout;
     // eprintln!("xx{}",String::from_utf8(x).unwrap());
+
 
     println!("cargo:rerun-if-changed=grammars/{}", file_name);
     Ok(())

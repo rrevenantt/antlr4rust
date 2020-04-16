@@ -5,6 +5,7 @@
 #![allow(unused_imports)]
 
 use std::cell::RefCell;
+use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 use std::sync::Arc;
@@ -12,15 +13,15 @@ use std::sync::Arc;
 use antlr_rust::atn::ATN;
 use antlr_rust::atn_deserializer::ATNDeserializer;
 use antlr_rust::char_stream::CharStream;
-use antlr_rust::common_token_factory::TokenFactory;
+use antlr_rust::common_token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use antlr_rust::dfa::DFA;
 use antlr_rust::error_listener::ErrorListener;
 use antlr_rust::lexer::{BaseLexer, Lexer, LexerRecog};
 use antlr_rust::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
-use antlr_rust::parser_rule_context::{cast, LexerContext, ParserRuleContext};
+use antlr_rust::parser_rule_context::{BaseParserRuleContext, cast, ParserRuleContext};
 use antlr_rust::PredictionContextCache;
 use antlr_rust::recognizer::{Actions, Recognizer};
-use antlr_rust::rule_context::BaseRuleContext;
+use antlr_rust::rule_context::{BaseRuleContext, EmptyCustomRuleContext};
 use antlr_rust::token::*;
 use antlr_rust::token_source::TokenSource;
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
@@ -56,27 +57,31 @@ lazy_static! {
 	}
 
 
-pub struct CSVLexer {
-	base: BaseLexer<CSVLexerActions>,
+pub type LexerContext<'input> = BaseParserRuleContext<'input, EmptyCustomRuleContext<'input, LocalTokenFactory<'input>>>;
+
+pub type LocalTokenFactory<'input> = antlr_rust::common_token_factory::ArenaCowFactory<'input>;
+
+pub struct CSVLexer<'input> {
+	base: BaseLexer<'input, CSVLexerActions, LocalTokenFactory<'input>>,
 //	static { RuntimeMetaData.checkVersion("4.8", RuntimeMetaData.VERSION); }
 }
 
-impl Deref for CSVLexer {
-	type Target = BaseLexer<CSVLexerActions>;
+impl<'input> Deref for CSVLexer<'input> {
+	type Target = BaseLexer<'input, CSVLexerActions, LocalTokenFactory<'input>>;
 
 	fn deref(&self) -> &Self::Target {
 		&self.base
 	}
 }
 
-impl DerefMut for CSVLexer {
+impl<'input> DerefMut for CSVLexer<'input> {
 	fn deref_mut(&mut self) -> &mut Self::Target {
 		&mut self.base
 	}
 }
 
 
-impl CSVLexer {
+impl<'input> CSVLexer<'input> {
 	fn get_rule_names(&self) -> &'static [&'static str] {
 		&ruleNames
 	}
@@ -88,7 +93,7 @@ impl CSVLexer {
 		&_SYMBOLIC_NAMES
 	}
 
-	fn add_error_listener(&mut self, _listener: Box<dyn ErrorListener>) {
+	fn add_error_listener(&mut self, _listener: Box<dyn ErrorListener<BaseLexer<'input, CSVLexerActions, LocalTokenFactory<'input>>>>) {
 		self.base.add_error_listener(_listener);
 	}
 
@@ -100,7 +105,7 @@ impl CSVLexer {
 		"CSVLexer.g4"
 	}
 
-	pub fn new(input: Box<dyn CharStream>) -> Self {
+	pub fn new_with_token_factory(input: Box<dyn CharStream<'input> + 'input>, tf: &'input LocalTokenFactory<'input>) -> Self {
 		antlr_rust::recognizer::check_version("0", "2");
 		Self {
 			base: BaseLexer::new_base_lexer(
@@ -110,9 +115,16 @@ impl CSVLexer {
 					_decision_to_DFA.clone(),
 					_shared_context_cache.clone(),
 				),
-				Box::new(CSVLexerActions {}),
+				CSVLexerActions {},
+				tf,
 			)
 		}
+	}
+}
+
+impl<'input> CSVLexer<'input> where &'input LocalTokenFactory<'input>: Default {
+	pub fn new(input: Box<dyn CharStream<'input> + 'input>) -> Self {
+		CSVLexer::new_with_token_factory(input, <&LocalTokenFactory<'input> as Default>::default())
 	}
 }
 
@@ -120,20 +132,33 @@ pub struct CSVLexerActions {}
 
 impl CSVLexerActions {}
 
-impl LexerRecog for CSVLexerActions {}
+impl<'input> LexerRecog<'input, BaseLexer<'input, CSVLexerActions, LocalTokenFactory<'input>>> for CSVLexerActions {}
 
-impl Recognizer for CSVLexerActions {}
-
-impl Actions for CSVLexerActions {
-	type Recog = BaseLexer<CSVLexerActions>;
+trait Trait {
+	type Ty;
 }
 
-impl CSVLexerActions {}
+impl<'input> Trait for CSVLexer<'input> {
+	type Ty = BaseLexer<'input, CSVLexerActions, LocalTokenFactory<'input>>;
+}
 
-impl TokenSource for CSVLexer {
-	type Tok = dyn Token;
 
-	fn next_token(&mut self) -> Box<dyn Token> {
+impl<'input> CSVLexer<'input> {}
+
+impl<'input> TokenAware<'input> for CSVLexerActions {
+	type TF = LocalTokenFactory<'input>;
+}
+
+impl<'input> Recognizer<'input> for CSVLexerActions {}
+
+//impl<'input,TFX:TokenFactory<'input>> Actions<BaseLexer<'input,CSVLexerActions,TFX>> for CSVLexerActions{
+//}
+impl<'input> TokenAware<'input> for CSVLexer<'input> {
+	type TF = LocalTokenFactory<'input>;
+}
+
+impl<'input> TokenSource<'input> for CSVLexer<'input> {
+	fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok {
 		self.base.next_token()
 	}
 
@@ -145,7 +170,7 @@ impl TokenSource for CSVLexer {
 		self.base.get_char_position_in_line()
 	}
 
-	fn get_input_stream(&mut self) -> Option<&mut dyn CharStream> {
+	fn get_input_stream(&mut self) -> Option<&mut (dyn CharStream<'input> + 'input)> {
 		self.base.get_input_stream()
 	}
 
@@ -153,7 +178,7 @@ impl TokenSource for CSVLexer {
 		self.base.get_source_name()
 	}
 
-	fn get_token_factory(&self) -> &dyn TokenFactory<Tok=dyn Token> {
+	fn get_token_factory(&self) -> &'input Self::TF {
 		self.base.get_token_factory()
 	}
 }
