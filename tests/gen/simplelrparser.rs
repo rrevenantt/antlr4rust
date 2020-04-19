@@ -125,15 +125,6 @@ impl<'input> Recognizer<'input> for SimpleLRParserExt {
     fn get_vocabulary(&self) -> &dyn Vocabulary { &**VOCABULARY }
 }
 
-trait Trait {
-    type Ty;
-}
-
-impl<'input, I: TokenStream<'input, TF=LocalTokenFactory<'input>>> Trait for SimpleLRParser<'input, I> {
-    type Ty = BaseParserType<'input, I>;
-}
-
-
 impl<'input, I: TokenStream<'input, TF=LocalTokenFactory<'input>>> ParserRecog<'input, BaseParserType<'input, I>> for SimpleLRParserExt {
     fn sempred(_localctx: &(dyn ParserRuleContext<'input, TF=LocalTokenFactory<'input>> + 'input), rule_index: isize, pred_index: isize,
                recog: &mut BaseParserType<'input, I>,
@@ -147,7 +138,7 @@ impl<'input, I: TokenStream<'input, TF=LocalTokenFactory<'input>>> ParserRecog<'
 
 impl<'input, I: TokenStream<'input, TF=LocalTokenFactory<'input>>> SimpleLRParser<'input, I> {
     fn a_sempred(_localctx: &AContext<'input>, pred_index: isize,
-                 recog: &mut <Self as Trait>::Ty,
+                 recog: &mut <Self as Deref>::Target,
     ) -> bool {
         match pred_index {
             0 => {
@@ -157,7 +148,6 @@ impl<'input, I: TokenStream<'input, TF=LocalTokenFactory<'input>>> SimpleLRParse
         }
     }
 }
-
 //------------------- s ----------------
 pub type SContextAll<'input> = SContext<'input>;
 
@@ -241,7 +231,6 @@ impl<'input, I: TokenStream<'input, TF=LocalTokenFactory<'input>>> SimpleLRParse
         Ok(_localctx)
     }
 }
-
 //------------------- a ----------------
 pub type AContextAll<'input> = AContext<'input>;
 

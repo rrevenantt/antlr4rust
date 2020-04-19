@@ -125,17 +125,7 @@ impl<'input> Recognizer<'input> for ReferenceToATNParserExt {
     fn get_vocabulary(&self) -> &dyn Vocabulary { &**VOCABULARY }
 }
 
-trait Trait {
-    type Ty;
-}
-
-impl<'input, I: TokenStream<'input, TF=LocalTokenFactory<'input>>> Trait for ReferenceToATNParser<'input, I> {
-    type Ty = BaseParserType<'input, I>;
-}
-
-
 impl<'input, I: TokenStream<'input, TF=LocalTokenFactory<'input>>> ParserRecog<'input, BaseParserType<'input, I>> for ReferenceToATNParserExt {}
-
 //------------------- a ----------------
 pub type AContextAll<'input> = AContext<'input>;
 

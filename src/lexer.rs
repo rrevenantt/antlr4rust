@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::borrow::{Borrow, Cow};
 use std::borrow::Cow::Owned;
 use std::cell::{Cell, RefCell};
 use std::ops::DerefMut;
@@ -8,6 +8,7 @@ use crate::char_stream::CharStream;
 use crate::common_token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use crate::error_listener::{ConsoleErrorListener, ErrorListener};
 use crate::errors::ANTLRError;
+use crate::int_stream::IntStream;
 use crate::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
 use crate::parser_rule_context::ParserRuleContext;
 use crate::recognizer::{Actions, Recognizer};
@@ -67,10 +68,11 @@ pub trait LexerRecog<'a, T>: Recognizer<'a> + Sized + 'static {
 
 pub struct BaseLexer<'input,
     T: LexerRecog<'input, Self, TF=TF> + 'static,
-    TF: TokenFactory<'input> = CommonTokenFactory
+    Input: CharStream<'input>,
+    TF: TokenFactory<'input> = CommonTokenFactory,
 > {
     pub interpreter: Option<LexerATNSimulator>,
-    pub input: Option<Box<dyn CharStream<'input> + 'input>>,
+    pub input: Option<Box<Input>>,
     recog: T,
 
     factory: &'input TF,
@@ -87,6 +89,7 @@ pub struct BaseLexer<'input,
     pub channel: isize,
     mode_stack: Vec<usize>,
     pub mode: usize,
+    /// text of token if overridden by use action
     pub text: Option<String>,
 }
 
@@ -95,8 +98,9 @@ pub(crate) struct LexerPosition {
     pub(crate) char_position_in_line: Cell<isize>,
 }
 
-impl<'input, T, TF> Recognizer<'input> for BaseLexer<'input, T, TF>
+impl<'input, T, Input, TF> Recognizer<'input> for BaseLexer<'input, T, Input, TF>
     where T: LexerRecog<'input, Self, TF=TF> + 'static,
+          Input: CharStream<'input>,
           TF: TokenFactory<'input>
 {
     fn sempred(&mut self, _localctx: &(dyn ParserRuleContext<'input, TF=TF> + 'input), rule_index: isize, action_index: isize) -> bool {
@@ -117,8 +121,9 @@ pub const LEXER_HIDDEN: isize = super::token::TOKEN_HIDDEN_CHANNEL;
 pub const LEXER_MIN_CHAR_VALUE: isize = 0x0000;
 pub const LEXER_MAX_CHAR_VALUE: isize = 0x10FFFF;
 
-impl<'input, 'tokens, T, TF> BaseLexer<'input, T, TF>
+impl<'input, T, Input, TF> BaseLexer<'input, T, Input, TF>
     where T: LexerRecog<'input, Self, TF=TF> + 'static,
+          Input: CharStream<'input>,
           TF: TokenFactory<'input>
 {
     fn emit_token(&mut self, token: TF::Tok) {
@@ -143,7 +148,7 @@ impl<'input, 'tokens, T, TF> BaseLexer<'input, T, TF>
 
     fn emit_eof(&mut self) {
         let token = self.factory.create(
-            None,
+            None::<&mut Input>,
             super::int_stream::EOF,
             None,
             LEXER_DEFAULT_TOKEN_CHANNEL,
@@ -163,8 +168,8 @@ impl<'input, 'tokens, T, TF> BaseLexer<'input, T, TF>
         self.input.as_ref().unwrap().index()
     }
 
-    pub fn get_text(&self) -> &'input str {
-        self.input.as_ref().unwrap().get_text(self.token_start_char_index, self.get_char_index() - 1)
+    pub fn get_text(&self) -> Cow<'input, str> {
+        self.input.as_ref().unwrap().get_text(self.token_start_char_index, self.get_char_index() - 1).into()
     }
 
     /// Used from lexer actions to override token text
@@ -173,10 +178,6 @@ impl<'input, 'tokens, T, TF> BaseLexer<'input, T, TF>
     }
 
     fn get_all_tokens(&self) -> Vec<Box<dyn Token>> {
-        unimplemented!()
-    }
-
-    fn get_error_display_for_char(&self, _c: char) -> String {
         unimplemented!()
     }
 
@@ -194,7 +195,7 @@ impl<'input, 'tokens, T, TF> BaseLexer<'input, T, TF>
     }
 
     pub fn new_base_lexer(
-        input: Box<dyn CharStream<'input> + 'input>,
+        input: Box<Input>,
         interpreter: LexerATNSimulator,
         recog: T,
         factory: &'input TF,
@@ -224,17 +225,20 @@ impl<'input, 'tokens, T, TF> BaseLexer<'input, T, TF>
     }
 }
 
-impl<'input, T, TF> TokenAware<'input> for BaseLexer<'input, T, TF>
+impl<'input, T, Input, TF> TokenAware<'input> for BaseLexer<'input, T, Input, TF>
     where T: LexerRecog<'input, Self, TF=TF> + 'static,
+          Input: CharStream<'input>,
           TF: TokenFactory<'input>
 {
     type TF = TF;
 }
 
-impl<'input, T, TF> TokenSource<'input> for BaseLexer<'input, T, TF>
+impl<'input, T, Input, TF> TokenSource<'input> for BaseLexer<'input, T, Input, TF>
     where T: LexerRecog<'input, Self, TF=TF> + 'static,
+          Input: CharStream<'input>,
           TF: TokenFactory<'input>
 {
+    #[inline]
     #[allow(unused_labels)]
     fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok {
         assert!(self.input.is_some());
@@ -312,7 +316,7 @@ impl<'input, T, TF> TokenSource<'input> for BaseLexer<'input, T, TF>
         self.current_pos.char_position_in_line.get()
     }
 
-    fn get_input_stream(&mut self) -> Option<&mut (dyn CharStream<'input> + 'input)> {
+    fn get_input_stream(&mut self) -> Option<&mut dyn IntStream> {
         match self.input {
             None => None,
             Some(ref mut x) => { Some(x.deref_mut()) },
@@ -332,19 +336,21 @@ impl<'input, T, TF> TokenSource<'input> for BaseLexer<'input, T, TF>
     }
 }
 
-fn notify_listeners<'input, T, TF>(_liseners: &mut Vec<Box<dyn ErrorListener<BaseLexer<'input, T, TF>>>>, e: &ANTLRError, lexer: &BaseLexer<'input, T, TF>)
-    where T: LexerRecog<'input, BaseLexer<'input, T, TF>, TF=TF> + 'static,
+fn notify_listeners<'input, T, Input, TF>(_liseners: &mut Vec<Box<dyn ErrorListener<BaseLexer<'input, T, Input, TF>>>>, e: &ANTLRError, lexer: &BaseLexer<'input, T, Input, TF>)
+    where T: LexerRecog<'input, BaseLexer<'input, T, Input, TF>, TF=TF> + 'static,
+          Input: CharStream<'input>,
           TF: TokenFactory<'input>
 {
-    let text = format!("token recognition error at: '{}'", lexer.input.as_ref().unwrap().get_text(lexer.token_start_char_index, lexer.get_char_index()));
+    let text = format!("token recognition error at: '{}'", lexer.input.as_ref().unwrap().get_text(lexer.token_start_char_index, lexer.get_char_index()).borrow());
     for listener in _liseners.iter_mut() {
         listener.syntax_error(None, lexer.token_start_line, lexer.token_start_column, &text, Some(e))
     }
 }
 
 
-impl<'input, T, TF> Lexer<'input> for BaseLexer<'input, T, TF>
+impl<'input, T, Input, TF> Lexer<'input> for BaseLexer<'input, T, Input, TF>
     where T: LexerRecog<'input, Self, TF=TF> + 'static,
+          Input: CharStream<'input>,
           TF: TokenFactory<'input>
 {
     fn set_channel(&mut self, v: isize) {

@@ -1,7 +1,7 @@
 grammar CSV;
 
 @tokenfactory{
-pub type LocalTokenFactory<'input> = antlr_rust::common_token_factory::ArenaCowFactory<'input>;
+pub type LocalTokenFactory<'input> = antlr_rust::common_token_factory::ArenaCommonFactory<'input>;
 }
 
 csvFile: hdr row+ ;

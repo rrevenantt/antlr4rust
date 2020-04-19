@@ -4,7 +4,7 @@ use std::ops::Deref;
 
 use crate::char_stream::CharStream;
 use crate::common_token_factory::{TokenAware, TokenFactory};
-use crate::int_stream::EOF;
+use crate::int_stream::{EOF, IntStream};
 use crate::token::{Token, TOKEN_DEFAULT_CHANNEL};
 
 /// Provides tokens for parser via `TokenStream`
@@ -26,7 +26,7 @@ pub trait TokenSource<'input>: TokenAware<'input> {
      * -1 if the current token source does not track character positions.
      */
     fn get_char_position_in_line(&self) -> isize;
-    fn get_input_stream(&mut self) -> Option<&mut (dyn CharStream<'input> + 'input)>;
+    fn get_input_stream(&mut self) -> Option<&mut dyn IntStream>;
     fn get_source_name(&self) -> String;
     //    fn set_token_factory<'c: 'b>(&mut self, f: &'c TokenFactory);
     /// Gets the {@link TokenFactory} this token source is currently using for
@@ -60,7 +60,7 @@ impl<'input, T> TokenSource<'input> for &mut T where T: TokenSource<'input> {
     }
 
     #[inline(always)]
-    fn get_input_stream(&mut self) -> Option<&mut (dyn CharStream<'input> + 'input)> {
+    fn get_input_stream(&mut self) -> Option<&mut dyn IntStream> {
         (**self).get_input_stream()
     }
 

@@ -38,52 +38,72 @@
 
 #[macro_use]
 extern crate lazy_static;
-//extern crate uuid;
 
+#[doc(inline)]
+pub use error_strategy::{BailErrorStrategy, DefaultErrorStrategy, ErrorStrategy};
+#[doc(inline)]
+pub use input_stream::InputStream;
+#[doc(inline)]
+pub use lexer::{BaseLexer, Lexer};
+#[doc(inline)]
+pub use parser::{BaseParser, ListenerId, Parser};
+//extern crate uuid;
+#[doc(inline)]
 pub use prediction_context::PredictionContextCache;
 
 mod ll1_analyzer;
 pub mod common_token_factory;
 pub mod recognizer;
 pub mod int_stream;
-pub mod lexer_action;
+mod lexer_action;
 pub mod atn_simulator;
 pub mod atn_config;
 //pub mod tokenstream_rewriter;
+#[doc(hidden)]
 pub mod semantic_context;
+#[doc(hidden)]
 pub mod dfa_state;
+#[doc(hidden)]
 pub mod atn_state;
 pub mod parser_rule_context;
 mod prediction_context;
 pub mod interval_set;
 pub mod token_source;
+#[doc(hidden)]
 pub mod atn_deserialization_options;
 pub mod token_stream;
 pub mod char_stream;
 //pub mod trace_listener;
+#[doc(hidden)]
 pub mod transition;
 pub mod tree;
+#[doc(hidden)]
 pub mod dfa;
 //pub mod file_stream;
+#[doc(hidden)]
 pub mod atn_deserializer;
 pub mod token;
 mod utils;
 pub mod trees;
+#[doc(hidden)]
 pub mod atn_config_set;
 pub mod error_listener;
 pub mod prediction_mode;
-pub mod input_stream;
+mod input_stream;
 pub mod common_token_stream;
 pub mod lexer;
 mod dfa_serializer;
 pub mod lexer_atn_simulator;
+#[doc(hidden)]
 pub mod atn;
 pub mod errors;
 pub mod error_strategy;
+#[doc(hidden)]
 pub mod lexer_action_executor;
 pub mod parser;
 pub mod parser_atn_simulator;
 //pub mod tokenstream_rewriter_test;
+#[doc(hidden)]
 pub mod atn_type;
 pub mod rule_context;
 pub mod vocabulary;

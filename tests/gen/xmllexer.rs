@@ -16,6 +16,7 @@ use antlr_rust::char_stream::CharStream;
 use antlr_rust::common_token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use antlr_rust::dfa::DFA;
 use antlr_rust::error_listener::ErrorListener;
+use antlr_rust::int_stream::IntStream;
 use antlr_rust::lexer::{BaseLexer, Lexer, LexerRecog};
 use antlr_rust::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
 use antlr_rust::parser_rule_context::{BaseParserRuleContext, cast, ParserRuleContext};
@@ -81,27 +82,27 @@ lazy_static! {
 pub type LexerContext<'input> = BaseParserRuleContext<'input, EmptyCustomRuleContext<'input, LocalTokenFactory<'input>>>;
 pub type LocalTokenFactory<'input> = CommonTokenFactory;
 
-pub struct XMLLexer<'input> {
-    base: BaseLexer<'input, XMLLexerActions, LocalTokenFactory<'input>>,
+pub struct XMLLexer<'input, Input: CharStream<'input>> {
+    base: BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>,
 //	static { RuntimeMetaData.checkVersion("4.8", RuntimeMetaData.VERSION); }
 }
 
-impl<'input> Deref for XMLLexer<'input> {
-    type Target = BaseLexer<'input, XMLLexerActions, LocalTokenFactory<'input>>;
+impl<'input, Input: CharStream<'input>> Deref for XMLLexer<'input, Input> {
+    type Target = BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>;
 
     fn deref(&self) -> &Self::Target {
         &self.base
     }
 }
 
-impl<'input> DerefMut for XMLLexer<'input> {
+impl<'input, Input: CharStream<'input>> DerefMut for XMLLexer<'input, Input> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.base
     }
 }
 
 
-impl<'input> XMLLexer<'input> {
+impl<'input, Input: CharStream<'input>> XMLLexer<'input, Input> {
     fn get_rule_names(&self) -> &'static [&'static str] {
         &ruleNames
     }
@@ -113,7 +114,7 @@ impl<'input> XMLLexer<'input> {
         &_SYMBOLIC_NAMES
     }
 
-    fn add_error_listener(&mut self, _listener: Box<dyn ErrorListener<BaseLexer<'input, XMLLexerActions, LocalTokenFactory<'input>>>>) {
+    fn add_error_listener(&mut self, _listener: Box<dyn ErrorListener<BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>>>) {
         self.base.add_error_listener(_listener);
     }
 
@@ -125,7 +126,7 @@ impl<'input> XMLLexer<'input> {
         "XMLLexer.g4"
     }
 
-    pub fn new_with_token_factory(input: Box<dyn CharStream<'input> + 'input>, tf: &'input LocalTokenFactory<'input>) -> Self {
+    pub fn new_with_token_factory(input: Box<Input>, tf: &'input LocalTokenFactory<'input>) -> Self {
         antlr_rust::recognizer::check_version("0", "2");
         Self {
             base: BaseLexer::new_base_lexer(
@@ -142,8 +143,8 @@ impl<'input> XMLLexer<'input> {
     }
 }
 
-impl<'input> XMLLexer<'input> where &'input LocalTokenFactory<'input>: Default {
-    pub fn new(input: Box<dyn CharStream<'input> + 'input>) -> Self {
+impl<'input, Input: CharStream<'input>> XMLLexer<'input, Input> where &'input LocalTokenFactory<'input>: Default {
+    pub fn new(input: Box<Input>) -> Self {
         XMLLexer::new_with_token_factory(input, <&LocalTokenFactory<'input> as Default>::default())
     }
 }
@@ -152,9 +153,9 @@ pub struct XMLLexerActions {}
 
 impl XMLLexerActions {}
 
-impl<'input> LexerRecog<'input, BaseLexer<'input, XMLLexerActions, LocalTokenFactory<'input>>> for XMLLexerActions {
+impl<'input, Input: CharStream<'input>> LexerRecog<'input, BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>> for XMLLexerActions {
     fn action(_localctx: &(dyn ParserRuleContext<'input, TF=LocalTokenFactory<'input>> + 'input), rule_index: isize, action_index: isize,
-              recog: &mut BaseLexer<'input, XMLLexerActions, LocalTokenFactory<'input>>,
+              recog: &mut BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>,
     ) {
         match rule_index {
             10 =>
@@ -163,7 +164,7 @@ impl<'input> LexerRecog<'input, BaseLexer<'input, XMLLexerActions, LocalTokenFac
         }
     }
     fn sempred(_localctx: &(dyn ParserRuleContext<'input, TF=LocalTokenFactory<'input>> + 'input), rule_index: isize, pred_index: isize,
-               recog: &mut BaseLexer<'input, XMLLexerActions, LocalTokenFactory<'input>>,
+               recog: &mut BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>,
     ) -> bool {
         match rule_index {
             0 =>
@@ -173,18 +174,9 @@ impl<'input> LexerRecog<'input, BaseLexer<'input, XMLLexerActions, LocalTokenFac
     }
 }
 
-trait Trait {
-    type Ty;
-}
-
-impl<'input> Trait for XMLLexer<'input> {
-    type Ty = BaseLexer<'input, XMLLexerActions, LocalTokenFactory<'input>>;
-}
-
-
-impl<'input> XMLLexer<'input> {
+impl<'input, Input: CharStream<'input>> XMLLexer<'input, Input> {
     fn CLOSE_action(_localctx: &LexerContext<'input>, action_index: isize,
-                    recog: &mut <Self as Trait>::Ty,
+                    recog: &mut <Self as Deref>::Target,
     ) {
         match action_index {
             0 => {
@@ -195,7 +187,7 @@ impl<'input> XMLLexer<'input> {
         }
     }
     fn COMMENT_sempred(_localctx: &LexerContext<'input>, pred_index: isize,
-                       recog: &mut <Self as Trait>::Ty,
+                       recog: &mut <Self as Deref>::Target,
     ) -> bool {
         match pred_index {
             0 => {
@@ -212,13 +204,11 @@ impl<'input> TokenAware<'input> for XMLLexerActions {
 
 impl<'input> Recognizer<'input> for XMLLexerActions {}
 
-//impl<'input,TFX:TokenFactory<'input>> Actions<BaseLexer<'input,XMLLexerActions,TFX>> for XMLLexerActions{
-//}
-impl<'input> TokenAware<'input> for XMLLexer<'input> {
+impl<'input, Input: CharStream<'input>> TokenAware<'input> for XMLLexer<'input, Input> {
     type TF = LocalTokenFactory<'input>;
 }
 
-impl<'input> TokenSource<'input> for XMLLexer<'input> {
+impl<'input, Input: CharStream<'input>> TokenSource<'input> for XMLLexer<'input, Input> {
     fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok {
         self.base.next_token()
     }
@@ -231,7 +221,7 @@ impl<'input> TokenSource<'input> for XMLLexer<'input> {
         self.base.get_char_position_in_line()
     }
 
-    fn get_input_stream(&mut self) -> Option<&mut (dyn CharStream<'input> + 'input)> {
+    fn get_input_stream(&mut self) -> Option<&mut dyn IntStream> {
         self.base.get_input_stream()
     }
 

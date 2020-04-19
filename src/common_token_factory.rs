@@ -1,4 +1,4 @@
-use std::borrow::{Borrow, BorrowMut};
+use std::borrow::{Borrow, BorrowMut, Cow};
 use std::borrow::Cow::{Borrowed, Owned};
 use std::cell::Cell;
 use std::marker::{PhantomData, Unsize};
@@ -14,9 +14,7 @@ use crate::token::Token;
 lazy_static! {
     pub static ref CommonTokenFactoryDEFAULT: Box<CommonTokenFactory> =
         Box::new(CommonTokenFactory{});
-}
 
-lazy_static! {
     pub static ref INVALID_OWNING:Box<OwningToken> = Box::new(OwningToken{
         token_type: TOKEN_INVALID_TYPE,
         channel: 0,
@@ -45,48 +43,57 @@ lazy_static! {
 // todo remove redundant allocation for arenas
 
 /// Trait for creating tokens
-pub trait TokenFactory<'a> {
+pub trait TokenFactory<'a>: Sized {
     /// type of tokens emitted by this factory
     type Inner: Token + ?Sized + Unsize<dyn Token + 'a> + 'a;
     type Tok: Borrow<Self::Inner> + Clone + 'a;
 
-    fn create<'b: 'a>(&'a self,
-                      source: Option<&mut dyn CharStream<'b>>,
-                      ttype: isize,
-                      text: Option<String>,
-                      channel: isize,
-                      start: isize,
-                      stop: isize,
-                      line: isize,
-                      column: isize,
-    ) -> Self::Tok;
+    fn create<'b, T>(&'a self,
+                     source: Option<&mut T>,
+                     ttype: isize,
+                     text: Option<String>,
+                     channel: isize,
+                     start: isize,
+                     stop: isize,
+                     line: isize,
+                     column: isize,
+    ) -> Self::Tok where 'b: 'a, T: CharStream<'b> + ?Sized;
 
     fn create_invalid() -> Self::Tok;
 }
 
 #[derive(Default)]
-pub struct CowTokenFactory;
+pub struct CommonTokenFactory;
 
-impl<'a> TokenFactory<'a> for CowTokenFactory {
+impl Default for &'_ CommonTokenFactory {
+    fn default() -> Self {
+        &**CommonTokenFactoryDEFAULT
+    }
+}
+
+impl<'a> TokenFactory<'a> for CommonTokenFactory {
     type Inner = CommonToken<'a>;
     type Tok = Box<Self::Inner>;
 
-    fn create<'b: 'a>(&'a self,
-                      source: Option<&mut dyn CharStream<'b>>,
-                      ttype: isize,
-                      text: Option<String>,
-                      channel: isize,
-                      start: isize,
-                      stop: isize,
-                      line: isize,
-                      column: isize,
-    ) -> Self::Tok {
+    #[inline]
+    fn create<'b, T>(&'a self,
+                     source: Option<&mut T>,
+                     ttype: isize,
+                     text: Option<String>,
+                     channel: isize,
+                     start: isize,
+                     stop: isize,
+                     line: isize,
+                     column: isize,
+    ) -> Self::Tok where 'b: 'a, T: CharStream<'b> + ?Sized {
         let text = match (text, source) {
             (Some(t), _) => Owned(t),
-
             (None, Some(x)) => {
-                let t = if stop >= x.size() || start >= x.size() { "<EOF>" } else { x.get_text(start, stop) };
-                Borrowed(t)
+                if stop >= x.size() || start >= x.size() {
+                    Borrowed("<EOF>")
+                } else {
+                    x.get_text(start, stop).into()
+                }
             }
             _ => Borrowed("")
         };
@@ -109,34 +116,31 @@ impl<'a> TokenFactory<'a> for CowTokenFactory {
 }
 
 #[derive(Default)]
-pub struct CommonTokenFactory {}
+pub struct OwningTokenFactory {}
 
-impl Default for &'_ CommonTokenFactory {
-    fn default() -> Self {
-        &**CommonTokenFactoryDEFAULT
-    }
-}
-
-impl<'a> TokenFactory<'a> for CommonTokenFactory {
+impl<'a> TokenFactory<'a> for OwningTokenFactory {
     type Inner = OwningToken;
     type Tok = Box<Self::Inner>;
 
-    fn create<'b: 'a>(&'a self,
-                      source: Option<&mut dyn CharStream<'b>>,
-                      ttype: isize,
-                      text: Option<String>,
-                      channel: isize,
-                      start: isize,
-                      stop: isize,
-                      line: isize,
-                      column: isize,
-    ) -> Self::Tok {
+    #[inline]
+    fn create<'b, T>(&'a self,
+                     source: Option<&mut T>,
+                     ttype: isize,
+                     text: Option<String>,
+                     channel: isize,
+                     start: isize,
+                     stop: isize,
+                     line: isize,
+                     column: isize,
+    ) -> Self::Tok where 'b: 'a, T: CharStream<'b> + ?Sized {
         let text = match (text, source) {
             (Some(t), _) => t,
-
             (None, Some(x)) => {
-                let t = if stop >= x.size() || start >= x.size() { "<EOF>" } else { x.get_text(start, stop) };
-                t.to_owned()
+                if stop >= x.size() || start >= x.size() {
+                    "<EOF>".to_owned()
+                } else {
+                    x.get_text(start, stop).into().into_owned()
+                }
             }
             _ => String::new()
         };
@@ -165,8 +169,8 @@ impl<'a> TokenFactory<'a> for CommonTokenFactory {
 //
 // }
 
-pub type ArenaCommonFactory<'a> = ArenaFactory<'a, CommonTokenFactory, OwningToken>;
-pub type ArenaCowFactory<'a> = ArenaFactory<'a, CowTokenFactory, CommonToken<'a>>;
+pub type ArenaOwningFactory<'a> = ArenaFactory<'a, OwningTokenFactory, OwningToken>;
+pub type ArenaCommonFactory<'a> = ArenaFactory<'a, CommonTokenFactory, CommonToken<'a>>;
 
 /// This is a wrapper for Token factory that allows to allocate tokens in separate arena.
 /// It will allow to significantly improve performance by passing Token references everywhere.
@@ -188,31 +192,32 @@ impl<'input, TF: TokenFactory<'input, Tok=Box<T>, Inner=T> + Default, T: Token +
 }
 
 
-impl<'input, TF, T> TokenFactory<'input> for ArenaFactory<'input, TF, T>
-    where TF: TokenFactory<'input, Tok=Box<T>, Inner=T>,
-          T: Token + Clone + 'input,
-          for<'a> &'a T: Default
+impl<'input, TF, Tok> TokenFactory<'input> for ArenaFactory<'input, TF, Tok>
+    where TF: TokenFactory<'input, Tok=Box<Tok>, Inner=Tok>,
+          Tok: Token + Clone + 'input,
+          for<'a> &'a Tok: Default
 {
-    type Inner = T;
-    type Tok = &'input T;
+    type Inner = Tok;
+    type Tok = &'input Tok;
 
-    fn create<'b: 'input>(&'input self,
-                          source: Option<&mut dyn CharStream<'b>>,
-                          ttype: isize,
-                          text: Option<String>,
-                          channel: isize,
-                          start: isize,
-                          stop: isize,
-                          line: isize,
-                          column: isize,
-    ) -> Self::Tok {
+    #[inline]
+    fn create<'b, T>(&'input self,
+                     source: Option<&mut T>,
+                     ttype: isize,
+                     text: Option<String>,
+                     channel: isize,
+                     start: isize,
+                     stop: isize,
+                     line: isize,
+                     column: isize,
+    ) -> Self::Tok where 'b: 'input, T: CharStream<'b> + ?Sized {
         let token = self.factory
             .create(source, ttype, text, channel, start, stop, line, column);
         self.arena.alloc(*token)
     }
 
-    fn create_invalid() -> &'input T {
-        <&T as Default>::default()
+    fn create_invalid() -> &'input Tok {
+        <&Tok as Default>::default()
     }
 }
 

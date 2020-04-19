@@ -7,6 +7,7 @@ use std::rc::Rc;
 
 use crate::atn_simulator::IATNSimulator;
 use crate::atn_state::*;
+use crate::char_stream::CharStream;
 use crate::common_token_factory::TokenFactory;
 use crate::dfa::ScopeExt;
 use crate::errors::{ANTLRError, FailedPredicateError, InputMisMatchError, NoViableAltError, RecognitionError};
@@ -175,7 +176,7 @@ impl<'input, TF: TokenFactory<'input> + 'input> DefaultErrorStrategy<'input, TF>
         let (line, column) = (curr.get_line(), curr.get_column());
         recognizer.get_token_factory()
             .create(
-                None,
+                None::<&mut dyn CharStream<T=String>>,
                 expected_token_type,
                 Some(token_text),
                 TOKEN_DEFAULT_CHANNEL,

@@ -1,8 +1,10 @@
-use std::borrow::Borrow;
+use std::borrow::{Borrow, Cow};
 use std::cmp::min;
 use std::convert::TryFrom;
 use std::iter::FromIterator;
+use std::marker::PhantomData;
 use std::result;
+use std::slice::from_raw_parts;
 use std::str::Chars;
 
 use crate::char_stream::CharStream;
@@ -11,60 +13,80 @@ use crate::int_stream::IntStream;
 use crate::interval_set::Interval;
 use crate::token::Token;
 
-pub struct InputStream<'a> {
+pub struct InputStream<'a, T: 'a + From<&'a str>> {
     name: String,
     data_raw: Vec<&'a str>,
     index: isize,
     iter: Chars<'a>,
     data: Vec<isize>,
+    phantom: PhantomData<fn() -> T>,
 }
 
-impl<'a> InputStream<'a> {
-    pub fn new(data_raw: &'a str) -> InputStream {
+impl<'a> InputStream<'a, &'a str> {
+    pub fn new(data_raw: &'a str) -> Self {
+        Self::new_inner(data_raw)
+    }
+}
+
+impl<'a> CharStream<'a> for InputStream<'a, &'a str> {
+    type T = &'a str;
+
+    fn get_text(&self, a: isize, b: isize) -> &'a str {
+        self.text(a, b)
+    }
+}
+
+impl<'a> InputStream<'a, String> {
+    pub fn owned_stream(data_raw: &'a str) -> Self {
+        Self::new_inner(data_raw)
+    }
+}
+
+impl<'a> CharStream<'_> for InputStream<'a, String> {
+    type T = String;
+
+    fn get_text(&self, a: isize, b: isize) -> String {
+        self.text(a, b).into()
+    }
+}
+
+impl<'a, T: 'a + From<&'a str>> InputStream<'a, T> {
+    fn new_inner(data_raw: &'a str) -> Self {
         let data = data_raw.chars().map(|ch| ch as isize).collect();
-        InputStream {
+        Self {
             name: "<empty>".to_string(),
             data_raw: vec![data_raw],
             index: 0,
             iter: data_raw.chars(),
             data,
+            phantom: Default::default(),
         }
     }
 
-//    pub fn from_read<T:IntoIterator<Item=char>>(read: T) -> Result<InputStream> {
-//        let mut data = String::new();
-//        let mut reader = BufReader::new(read);
-//        let _size = reader.read_to_string(&mut data)?;
-//        Ok(InputStream::new(data))
-//    }
-
+    #[inline]
     pub fn reset(&mut self) {
         self.index = 0
     }
 
+    #[inline]
     pub fn lt(&mut self, offset: isize) -> isize {
         self.la(offset)
     }
-}
 
-impl<'a> CharStream<'a> for InputStream<'a> {
-    //todo make it return Cow if implementation can't return borrow
-    fn get_text(&self, _start: isize, _stop: isize) -> &'a str {
-        let stop = min(self.data.len(), (_stop + 1) as usize);
-        // String::from_iter(self.data[_start as usize..stop].iter().map(|x| char::try_from(*x as u32).unwrap()))
-        &self.data_raw[_start as usize][..stop - _start as usize]
-    }
-
-    fn get_text_from_tokens(&self, _start: &dyn Token, _stop: &dyn Token) -> &'a str {
-        unimplemented!()
-    }
-
-    fn get_text_from_interval(&self, i: &Interval) -> &'a str {
-        self.get_text(i.a, i.b)
+    /// Returns text from underlying string for start..=stop range
+    #[inline]
+    fn text(&self, start: isize, stop: isize) -> &'a str {
+        if ((stop + 1) as usize) < self.data_raw.len() {
+            let stop_offset = self.data_raw[(stop + 1) as usize].as_ptr() as usize - self.data_raw[start as usize].as_ptr() as usize;
+            &self.data_raw[start as usize][..stop_offset]
+        } else {
+            self.data_raw[start as usize]
+        }
     }
 }
 
-impl IntStream for InputStream<'_> {
+impl<'a, T: 'a + From<&'a str>> IntStream for InputStream<'a, T> {
+    #[inline]
     fn consume(&mut self) -> result::Result<(), ANTLRError> {
         if self.index >= self.size() {
             return Err(ANTLRError::IllegalStateError("cannot consume EOF".into()));
@@ -77,6 +99,7 @@ impl IntStream for InputStream<'_> {
         Ok(())
     }
 
+    #[inline]
     fn la(&mut self, mut offset: isize) -> isize {
         if offset == 0 {
             return 0;
@@ -94,16 +117,20 @@ impl IntStream for InputStream<'_> {
         return self.data[(self.index + offset - 1) as usize] as isize;
     }
 
+    #[inline]
     fn mark(&mut self) -> isize {
         -1
     }
 
+    #[inline]
     fn release(&mut self, _marker: isize) {}
 
+    #[inline]
     fn index(&self) -> isize {
         self.index
     }
 
+    #[inline]
     fn seek(&mut self, mut index: isize) {
         if index <= self.index {
             self.index = index
@@ -115,6 +142,7 @@ impl IntStream for InputStream<'_> {
         }
     }
 
+    #[inline]
     fn size(&self) -> isize {
         self.data.len() as isize
     }
@@ -123,3 +151,4 @@ impl IntStream for InputStream<'_> {
         self.name.clone()
     }
 }
+

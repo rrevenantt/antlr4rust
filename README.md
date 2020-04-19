@@ -23,12 +23,11 @@ Remaining things before merge:
  - API stabilization
    - [ ] Rust api guidelines compliance  
    - [ ] more tests for API because it is quite different from Java
- - make parsing zero copy(i.e. use &str(or Cow) instead String in token and &Token in tree nodes)
  - more generic `PredictionContext`
- - generic over ownership for string
  - generate enum for labeled alternatives without redundant `Error` option
  - option to generate fields instead of getters by default
  - move useful exports to lib.rs for better documentation
+ - reexport statics crate and move to once_cell
 
 Can be done after merge: 
  - profiling and performance optimizations
@@ -98,7 +97,8 @@ there are quite some differences because Rust is not an OOP language and is much
  - Parser needs to have ownership for listeners, but it is possible te get listener back via `ListenerId`
  otherwise `ParseTreeWalker` should be used.
  - In embedded actions to access parser you should use `recog` variable instead of `self`. 
- This is because predicate have to be inserted into two syntactically different places in generated parser 
+ This is because predicate have to be inserted into two syntactically different places in generated parser
+ - For custom tokens you should use `@tokenfactory` custom action, instead of usual `TokenLabelType` parser option 
  
  
 ### Unsafe

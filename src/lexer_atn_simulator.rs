@@ -44,9 +44,9 @@ pub trait ILexerATNSimulator: IATNSimulator {
     fn set_char_position_in_line(&mut self, column: isize);
     fn get_line(&self) -> isize;
     fn set_line(&mut self, line: isize);
-    fn get_text(&self, input: &dyn CharStream) -> String;
-    fn consume(&self, input: &mut dyn CharStream);
-    fn recover(&mut self, _re: ANTLRError, input: &mut dyn CharStream) {
+    fn get_text<'a, T: CharStream<'a>>(&self, input: &T) -> String;
+    fn consume(&self, input: &mut dyn IntStream);
+    fn recover(&mut self, _re: ANTLRError, input: &mut dyn IntStream) {
         if input.la(1) != EOF {
             self.consume(input)
         }
@@ -112,11 +112,11 @@ impl ILexerATNSimulator for LexerATNSimulator {
         self.current_pos.char_position_in_line.set(line)
     }
 
-    fn get_text(&self, _input: &dyn CharStream<'_>) -> String {
+    fn get_text<'a, T: CharStream<'a>>(&self, input: &T) -> String {
         unimplemented!()
     }
 
-    fn consume(&self, _input: &mut dyn CharStream<'_>) {
+    fn consume(&self, _input: &mut dyn IntStream) {
         let ch = _input.la(1);
         if char::try_from(ch as u32) == Ok('\n') {
             self.current_pos.line.update(|x| x + 1);
@@ -370,7 +370,7 @@ impl LexerATNSimulator {
         }
     }
 
-    fn accept<'input>(&mut self, input: &mut dyn CharStream<'input>) {
+    fn accept<'input>(&mut self, input: &mut dyn IntStream) {
         input.seek(self.prev_accept.index);
         self.current_pos.line.set(self.prev_accept.line);
         self.current_pos.char_position_in_line.set(self.prev_accept.column);
@@ -581,7 +581,7 @@ impl LexerATNSimulator {
         return result;
     }
 
-    fn capture_sim_state(&mut self, input: &dyn CharStream, dfa_state: DFAStateRef) -> bool {
+    fn capture_sim_state(&mut self, input: &dyn IntStream, dfa_state: DFAStateRef) -> bool {
         if self.get_dfa()
             .states
             .read().unwrap()

@@ -10,9 +10,9 @@ mod gen {
     use std::io::Read;
     use std::iter::FromIterator;
 
-    use antlr_rust::common_token_factory::{ArenaCowFactory, CommonTokenFactory};
+    use antlr_rust::common_token_factory::{ArenaCommonFactory, CommonTokenFactory};
     use antlr_rust::common_token_stream::CommonTokenStream;
-    use antlr_rust::input_stream::InputStream;
+    use antlr_rust::InputStream;
     use antlr_rust::int_stream::IntStream;
     use antlr_rust::lexer::Lexer;
     use antlr_rust::parser_rule_context::{BaseParserRuleContext, ParserRuleContext};
@@ -43,6 +43,8 @@ mod gen {
     mod simplelrparser;
     mod simplelrlexer;
     mod simplelrlistener;
+
+    fn test_static<T: 'static>(arg: T) {}
 
     #[test]
     fn lexer_test_xml() -> std::io::Result<()> {
@@ -86,7 +88,7 @@ if (x < x && a > 0) then duh
     #[test]
     fn lexer_test_csv() {
         println!("test started lexer_test_csv");
-        let tf = ArenaCowFactory::default();
+        let tf = ArenaCommonFactory::default();
         let mut _lexer = CSVLexer::new_with_token_factory(
             Box::new(InputStream::new("V123,V2\nd1,d2".into())),
             &tf,
@@ -105,8 +107,8 @@ if (x < x && a > 0) then duh
 
     struct Listener {}
 
-    impl<'input> ParseTreeListener<'input, ArenaCowFactory<'input>> for Listener {
-        fn enter_every_rule(&mut self, ctx: &dyn ParserRuleContext<'input, TF=ArenaCowFactory<'input>>) {
+    impl<'input> ParseTreeListener<'input, ArenaCommonFactory<'input>> for Listener {
+        fn enter_every_rule(&mut self, ctx: &dyn ParserRuleContext<'input, TF=ArenaCommonFactory<'input>>) {
             println!("rule entered {}", csvparser::ruleNames.get(ctx.get_rule_index()).unwrap_or(&"error"))
         }
     }
@@ -116,9 +118,9 @@ if (x < x && a > 0) then duh
     #[test]
     fn parser_test_csv() {
         println!("test started");
-        let tf = ArenaCowFactory::default();
+        let tf = ArenaCommonFactory::default();
         let mut _lexer = CSVLexer::new_with_token_factory(
-            Box::new(InputStream::new("V123,V2\nd1,d2".into())),
+            Box::new(InputStream::new("V123,V2\nd1,d2\n".into())),
             &tf,
         );
         let token_source = CommonTokenStream::new(_lexer);
@@ -126,7 +128,8 @@ if (x < x && a > 0) then duh
         parser.add_parse_listener(Box::new(Listener {}));
         println!("\nstart parsing parser_test_csv");
         let result = parser.csvFile();
-        assert!(result.is_ok())
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().to_string_tree(&*parser), "(csvFile (hdr (row (field V123) , (field V2) \\n)) (row (field d1) , (field d2) \\n))");
     }
 
     struct Listener2 {}
@@ -141,13 +144,15 @@ if (x < x && a > 0) then duh
 
     #[test]
     fn adaptive_predict_test() {
-        let mut _lexer = ReferenceToATNLexer::new(Box::new(InputStream::new("a 34 b".into())));
+        let text = "a 34 b".to_owned();
+        let mut _lexer = ReferenceToATNLexer::new(Box::new(InputStream::owned_stream(&text)));
         let token_source = CommonTokenStream::new(_lexer);
         let mut parser = ReferenceToATNParser::new(Box::new(token_source));
         parser.add_parse_listener(Box::new(Listener2 {}));
         println!("\nstart parsing adaptive_predict_test");
         let result = parser.a();
-        assert!(result.is_ok())
+        assert!(result.is_ok());
+        test_static(result);
     }
 
     struct Listener3;
