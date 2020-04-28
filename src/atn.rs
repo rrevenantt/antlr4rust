@@ -4,7 +4,6 @@ use std::rc::Rc;
 use crate::atn_state::ATNState;
 use crate::atn_state::ATNStateRef;
 use crate::atn_type::ATNType;
-use crate::common_token_factory::{CommonTokenFactory, TokenFactory};
 use crate::dfa::ScopeExt;
 use crate::interval_set::IntervalSet;
 use crate::lexer_action::LexerAction;
@@ -12,6 +11,7 @@ use crate::ll1_analyzer::LL1Analyzer;
 use crate::parser_rule_context::{ParserRuleContext, ParserRuleContextType};
 use crate::rule_context::RuleContext;
 use crate::token::{TOKEN_EOF, TOKEN_EPSILON};
+use crate::token_factory::{CommonTokenFactory, TokenFactory};
 use crate::transition::RuleTransition;
 
 pub const INVALID_ALT: isize = 0;

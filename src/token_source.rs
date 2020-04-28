@@ -3,9 +3,9 @@ use std::marker::Unsize;
 use std::ops::Deref;
 
 use crate::char_stream::CharStream;
-use crate::common_token_factory::{TokenAware, TokenFactory};
 use crate::int_stream::{EOF, IntStream};
 use crate::token::{Token, TOKEN_DEFAULT_CHANNEL};
+use crate::token_factory::{TokenAware, TokenFactory};
 
 /// Provides tokens for parser via `TokenStream`
 pub trait TokenSource<'input>: TokenAware<'input> {

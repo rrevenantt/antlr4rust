@@ -8,13 +8,13 @@ use std::rc::Rc;
 use crate::atn_simulator::IATNSimulator;
 use crate::atn_state::*;
 use crate::char_stream::CharStream;
-use crate::common_token_factory::TokenFactory;
 use crate::dfa::ScopeExt;
 use crate::errors::{ANTLRError, FailedPredicateError, InputMisMatchError, NoViableAltError, RecognitionError};
 use crate::interval_set::IntervalSet;
 use crate::parser::Parser;
 use crate::parser_rule_context::{ParserRuleContext, ParserRuleContextType};
 use crate::token::{OwningToken, Token, TOKEN_DEFAULT_CHANNEL, TOKEN_EOF, TOKEN_EPSILON, TOKEN_INVALID_TYPE};
+use crate::token_factory::TokenFactory;
 use crate::transition::RuleTransition;
 use crate::utils::escape_whitespaces;
 

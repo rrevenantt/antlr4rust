@@ -5,7 +5,7 @@
 #![allow(unused_imports)]
 #![allow(unused_mut)]
 
-use std::any::Any;
+use std::any::{Any, TypeId};
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::RefCell;
 use std::convert::TryFrom;
@@ -16,7 +16,6 @@ use std::sync::Arc;
 
 use antlr_rust::atn::{ATN, INVALID_ALT};
 use antlr_rust::atn_deserializer::ATNDeserializer;
-use antlr_rust::common_token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use antlr_rust::dfa::DFA;
 use antlr_rust::error_strategy::{DefaultErrorStrategy, ErrorStrategy};
 use antlr_rust::errors::*;
@@ -28,9 +27,10 @@ use antlr_rust::PredictionContextCache;
 use antlr_rust::recognizer::{Actions, Recognizer};
 use antlr_rust::rule_context::{BaseRuleContext, CustomRuleContext, RuleContext};
 use antlr_rust::token::{OwningToken, Token, TOKEN_EOF};
+use antlr_rust::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use antlr_rust::token_source::TokenSource;
 use antlr_rust::token_stream::TokenStream;
-use antlr_rust::tree::{ParseTree, TerminalNode};
+use antlr_rust::tree::{ParseTree, ParseTreeWalker, TerminalNode};
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
 
 use super::referencetoatnlistener::*;
@@ -58,6 +58,8 @@ type BaseParserType<'input, I> = BaseParser<'input, ReferenceToATNParserExt, I, 
 
 type TokenType<'input> = <LocalTokenFactory<'input> as TokenFactory<'input>>::Tok;
 pub type LocalTokenFactory<'input> = CommonTokenFactory;
+
+pub type ReferenceToATNTreeWalker<'input> = ParseTreeWalker<'input, LocalTokenFactory<'input>, dyn for<'x> ReferenceToATNListener<'x>>;
 
 pub struct ReferenceToATNParser<'input, I: TokenStream<'input, TF=LocalTokenFactory<'input>>> {
     base: BaseParserType<'input, I>,
@@ -139,9 +141,8 @@ pub struct AContextExt<'input> {
 
 impl<'input> CustomRuleContext<'input> for AContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
-    fn get_rule_index(&self) -> usize {
-        RULE_a
-    }
+    fn get_rule_index(&self) -> usize { RULE_a }
+    //fn type_rule_index() -> usize where Self: Sized { RULE_a }
     fn enter(ctx: &BaseParserRuleContext<'input, Self>, listener: &mut dyn Any) where Self: Sized {
         listener.downcast_mut::<Box<dyn for<'x> ReferenceToATNListener<'x>>>()
             .map(|it| it.enter_a(ctx));
@@ -151,6 +152,8 @@ impl<'input> CustomRuleContext<'input> for AContextExt<'input> {
             .map(|it| it.exit_a(ctx));
     }
 }
+
+antlr_rust::type_id! {AContextExt}
 
 impl<'input> AContextExt<'input> {
     fn new(parent: Option<ParserRuleContextType<'input, LocalTokenFactory<'input>>>, invoking_state: isize) -> Rc<AContextAll<'input>> {

@@ -7,15 +7,14 @@ use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 
-use crate::common_token_factory::{CommonTokenFactory, TokenFactory};
 use crate::errors::ANTLRError;
 use crate::interval_set::Interval;
-use crate::rule_context::{BaseRuleContext, CustomRuleContext, EmptyCustomRuleContext, RuleContext};
+use crate::rule_context::{BaseRuleContext, CustomRuleContext, EmptyCustomRuleContext, RuleContext, Tid};
 use crate::token::{OwningToken, Token};
+use crate::token_factory::{CommonTokenFactory, TokenFactory};
 use crate::tree::{ErrorNode, ErrorNodeCtx, ParseTree, TerminalNode, TerminalNodeCtx, Tree};
 
-pub trait ParserRuleContext<'input>:
-ParseTree<'input> + RuleContext<'input> + Debug
+pub trait ParserRuleContext<'input>: ParseTree<'input> + RuleContext<'input> + Debug
 {
     fn set_exception(&self, e: ANTLRError);
 
@@ -48,7 +47,7 @@ ParseTree<'input> + RuleContext<'input> + Debug
 
     fn child_of_type<T: ParserRuleContext<'input, TF=Self::TF> + 'input>(&self, pos: usize) -> Option<Rc<T>> where Self: Sized {
         let result = self.get_children().iter()
-            .filter(|&it| it.get_rule_index() == T::type_rule_index())
+            .filter(|&it| it.self_id() == T::id())
             .nth(pos)
             .cloned();
 
@@ -60,7 +59,7 @@ ParseTree<'input> + RuleContext<'input> + Debug
         self.get_children()
             .iter()
             // not fully sound until `non_static_type_id` is implemented
-            .filter(|&it| it.get_rule_index() == T::type_rule_index())
+            .filter(|&it| it.self_id() == T::id())
             .map(|it| cast_rc::<T>(it.clone()))
             .collect()
     }
@@ -68,7 +67,7 @@ ParseTree<'input> + RuleContext<'input> + Debug
     fn get_token(&self, ttype: isize, pos: usize) -> Option<Rc<TerminalNode<'input, Self::TF>>> {
         self.get_children()
             .iter()
-            .filter(|&it| it.get_rule_index() == TerminalNode::<'input, Self::TF>::type_rule_index())
+            .filter(|&it| it.self_id() == TerminalNode::<'input, Self::TF>::id())
             .map(|it| cast_rc::<TerminalNode<'input, Self::TF>>(it.clone()))
             .filter(|it| it.symbol.borrow().get_token_type() == ttype)
             .nth(pos)
@@ -77,7 +76,7 @@ ParseTree<'input> + RuleContext<'input> + Debug
     fn get_tokens(&self, ttype: isize) -> Vec<Rc<TerminalNode<'input, Self::TF>>> {
         self.get_children()
             .iter()
-            .filter(|&it| it.get_rule_index() == TerminalNode::<'input, Self::TF>::type_rule_index())
+            .filter(|&it| it.self_id() == TerminalNode::<'input, Self::TF>::id())
             .map(|it| cast_rc::<TerminalNode<'input, Self::TF>>(it.clone()))
             .filter(|it| it.symbol.borrow().get_token_type() == ttype)
             .collect()
@@ -210,6 +209,16 @@ impl<'input, Ctx: CustomRuleContext<'input>> CustomRuleContext<'input> for BaseP
     type TF = Ctx::TF;
 
     fn get_rule_index(&self) -> usize { self.base.ext.get_rule_index() }
+}
+
+unsafe impl<'input, Ctx: CustomRuleContext<'input>> Tid for BaseParserRuleContext<'input, Ctx> {
+    fn self_id(&self) -> TypeId {
+        self.base.ext.self_id()
+    }
+
+    fn id() -> TypeId where Self: Sized {
+        Ctx::id()
+    }
 }
 
 impl<'input, Ctx: CustomRuleContext<'input>> Deref for BaseParserRuleContext<'input, Ctx> {
@@ -363,8 +372,8 @@ impl<'input, Ctx: CustomRuleContext<'input> + 'input> BaseParserRuleContext<'inp
     pub fn new_parser_ctx(parent_ctx: Option<ParserRuleContextType<'input, Ctx::TF>>, invoking_state: isize, ext: Ctx) -> Self {
         Self {
             base: BaseRuleContext::new_ctx(parent_ctx, invoking_state, ext),
-            start: RefCell::new(Ctx::TF::create_invalid().clone()),
-            stop: RefCell::new(Ctx::TF::create_invalid().clone()),
+            start: RefCell::new(Ctx::TF::create_invalid()),
+            stop: RefCell::new(Ctx::TF::create_invalid()),
             exception: None,
             children: RefCell::new(vec![]),
         }
@@ -394,7 +403,7 @@ impl<'input, Ctx: CustomRuleContext<'input> + 'input> BaseParserRuleContext<'inp
 #[doc(hidden)]
 pub trait DerefSeal: Deref {}
 
-impl<'input, T: DerefSeal<Target=I> + 'input + Debug, I: ParserRuleContext<'input> + 'input + ?Sized> ParserRuleContext<'input> for T {
+impl<'input, T: DerefSeal<Target=I> + 'input + Debug + Tid, I: ParserRuleContext<'input> + 'input + ?Sized> ParserRuleContext<'input> for T {
     fn set_exception(&self, e: ANTLRError) { self.deref().set_exception(e) }
 
     fn set_start(&self, t: Option<<Self::TF as TokenFactory<'input>>::Tok>) { self.deref().set_start(t) }
@@ -424,7 +433,7 @@ impl<'input, T: DerefSeal<Target=I> + 'input + Debug, I: ParserRuleContext<'inpu
     fn upcast(&self) -> &dyn ParserRuleContext<'input, TF=Self::TF> { self.deref().upcast() }
 }
 
-impl<'input, T: DerefSeal<Target=I> + 'input + Debug, I: ParserRuleContext<'input> + 'input + ?Sized> RuleContext<'input> for T {
+impl<'input, T: DerefSeal<Target=I> + 'input + Debug + Tid, I: ParserRuleContext<'input> + 'input + ?Sized> RuleContext<'input> for T {
     fn get_invoking_state(&self) -> isize { self.deref().get_invoking_state() }
 
     fn set_invoking_state(&self, t: isize) { self.deref().set_invoking_state(t) }
@@ -436,13 +445,13 @@ impl<'input, T: DerefSeal<Target=I> + 'input + Debug, I: ParserRuleContext<'inpu
     fn set_parent(&self, parent: &Option<ParserRuleContextType<'input, Self::TF>>) { self.deref().set_parent(parent) }
 }
 
-impl<'input, T: DerefSeal<Target=I> + 'input + Debug, I: ParserRuleContext<'input> + 'input + ?Sized> ParseTree<'input> for T {
+impl<'input, T: DerefSeal<Target=I> + 'input + Debug + Tid, I: ParserRuleContext<'input> + 'input + ?Sized> ParseTree<'input> for T {
     fn get_source_interval(&self) -> Interval { self.deref().get_source_interval() }
 
     fn get_text(&self) -> String { self.deref().get_text() }
 }
 
-impl<'input, T: DerefSeal<Target=I> + 'input + Debug, I: ParserRuleContext<'input> + 'input + ?Sized> Tree<'input> for T {
+impl<'input, T: DerefSeal<Target=I> + 'input + Debug + Tid, I: ParserRuleContext<'input> + 'input + ?Sized +> Tree<'input> for T {
     fn get_parent(&self) -> Option<ParserRuleContextType<'input, Self::TF>> { self.deref().get_parent() }
 
     fn has_parent(&self) -> bool { self.deref().has_parent() }
@@ -458,10 +467,12 @@ impl<'input, T: DerefSeal<Target=I> + 'input + Debug, I: ParserRuleContext<'inpu
     fn get_children_full(&self) -> &RefCell<Vec<ParserRuleContextType<'input, Self::TF>>> { self.deref().get_children_full() }
 }
 
-impl<'input, T: DerefSeal<Target=I> + 'input + Debug, I: ParserRuleContext<'input> + 'input + ?Sized> CustomRuleContext<'input> for T {
+impl<'input, T: DerefSeal<Target=I> + 'input + Debug + Tid, I: ParserRuleContext<'input> + 'input + ?Sized> CustomRuleContext<'input> for T {
     type TF = I::TF;
 
     fn get_rule_index(&self) -> usize { self.deref().get_rule_index() }
+
+    // fn type_rule_index() -> usize where Self: Sized { unimplemented!() }
 
     fn get_alt_number(&self) -> isize { self.deref().get_alt_number() }
 

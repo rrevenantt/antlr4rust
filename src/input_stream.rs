@@ -5,7 +5,7 @@ use std::iter::FromIterator;
 use std::marker::PhantomData;
 use std::result;
 use std::slice::from_raw_parts;
-use std::str::Chars;
+use std::str::{CharIndices, Chars};
 
 use crate::char_stream::CharStream;
 use crate::errors::ANTLRError;
@@ -15,10 +15,9 @@ use crate::token::Token;
 
 pub struct InputStream<'a, T: 'a + From<&'a str>> {
     name: String,
-    data_raw: Vec<&'a str>,
+    data_raw: &'a str,
     index: isize,
-    iter: Chars<'a>,
-    data: Vec<isize>,
+    data: Vec<(u32, u32)>,
     phantom: PhantomData<fn() -> T>,
 }
 
@@ -52,12 +51,11 @@ impl<'a> CharStream<'_> for InputStream<'a, String> {
 
 impl<'a, T: 'a + From<&'a str>> InputStream<'a, T> {
     fn new_inner(data_raw: &'a str) -> Self {
-        let data = data_raw.chars().map(|ch| ch as isize).collect();
+        let data = data_raw.char_indices().map(|(i, ch)| (i as u32, ch as u32)).collect();
         Self {
             name: "<empty>".to_string(),
-            data_raw: vec![data_raw],
+            data_raw,
             index: 0,
-            iter: data_raw.chars(),
             data,
             phantom: Default::default(),
         }
@@ -76,11 +74,13 @@ impl<'a, T: 'a + From<&'a str>> InputStream<'a, T> {
     /// Returns text from underlying string for start..=stop range
     #[inline]
     fn text(&self, start: isize, stop: isize) -> &'a str {
-        if ((stop + 1) as usize) < self.data_raw.len() {
-            let stop_offset = self.data_raw[(stop + 1) as usize].as_ptr() as usize - self.data_raw[start as usize].as_ptr() as usize;
-            &self.data_raw[start as usize][..stop_offset]
+        let stop = (stop + 1) as usize;
+        let start_offset = self.data[start as usize].0 as usize;
+        if stop < self.data.len() {
+            let stop_offset = self.data[stop].0 as usize;
+            &self.data_raw[start_offset..stop_offset]
         } else {
-            self.data_raw[start as usize]
+            &self.data_raw[start_offset..]
         }
     }
 }
@@ -92,10 +92,6 @@ impl<'a, T: 'a + From<&'a str>> IntStream for InputStream<'a, T> {
             return Err(ANTLRError::IllegalStateError("cannot consume EOF".into()));
         }
         self.index += 1;
-        if self.data_raw.len() >= self.index as usize {
-            self.iter.next();
-            self.data_raw.push(self.iter.as_str())
-        }
         Ok(())
     }
 
@@ -114,7 +110,7 @@ impl<'a, T: 'a + From<&'a str>> IntStream for InputStream<'a, T> {
         if (self.index + offset - 1) >= self.size() {
             return crate::int_stream::EOF;
         }
-        return self.data[(self.index + offset - 1) as usize] as isize;
+        return self.data[(self.index + offset - 1) as usize].1 as isize;
     }
 
     #[inline]

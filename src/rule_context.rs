@@ -7,8 +7,8 @@ use std::marker::PhantomData;
 use std::rc::{Rc, Weak};
 
 use crate::atn::INVALID_ALT;
-use crate::common_token_factory::{CommonTokenFactory, TokenFactory};
 use crate::parser_rule_context::{BaseParserRuleContext, ParserRuleContext, ParserRuleContextType};
+use crate::token_factory::{CommonTokenFactory, TokenFactory};
 
 //pub trait RuleContext:RuleNode {
 pub trait RuleContext<'input>: CustomRuleContext<'input> {
@@ -26,6 +26,12 @@ pub trait RuleContext<'input>: CustomRuleContext<'input> {
     fn set_parent(&self, parent: &Option<ParserRuleContextType<'input, Self::TF>>);
 }
 
+#[doc(hidden)]
+pub unsafe trait Tid {
+    fn self_id(&self) -> TypeId;
+    fn id() -> TypeId where Self: Sized;
+}
+
 pub struct EmptyCustomRuleContext<'a, TF: TokenFactory<'a> + 'a>(pub(crate) PhantomData<&'a TF::Tok>);
 
 impl<'a, TF: TokenFactory<'a> + 'a> CustomRuleContext<'a> for EmptyCustomRuleContext<'a, TF> {
@@ -36,11 +42,21 @@ impl<'a, TF: TokenFactory<'a> + 'a> CustomRuleContext<'a> for EmptyCustomRuleCon
     }
 }
 
-pub trait CustomRuleContext<'input> {
+unsafe impl<'a, TF: TokenFactory<'a> + 'a> Tid for EmptyCustomRuleContext<'a, TF> {
+    fn self_id(&self) -> TypeId {
+        TypeId::of::<EmptyCustomRuleContext<'static, CommonTokenFactory>>()
+    }
+
+    fn id() -> TypeId where Self: Sized {
+        TypeId::of::<EmptyCustomRuleContext<'static, CommonTokenFactory>>()
+    }
+}
+
+
+pub trait CustomRuleContext<'input>: Tid {
     type TF: TokenFactory<'input> + 'input;
     //const RULE_INDEX:usize;
     fn get_rule_index(&self) -> usize;
-    fn type_rule_index() -> usize where Self: Sized { unimplemented!() }
 
     fn get_alt_number(&self) -> isize { INVALID_ALT }
     fn set_alt_number(&self, _alt_number: isize) {}
@@ -69,6 +85,16 @@ impl<'input, ExtCtx: CustomRuleContext<'input>> CustomRuleContext<'input> for Ba
 
     fn get_rule_index(&self) -> usize {
         unimplemented!()
+    }
+}
+
+unsafe impl<'input, Ctx: CustomRuleContext<'input>> Tid for BaseRuleContext<'input, Ctx> {
+    fn self_id(&self) -> TypeId {
+        self.ext.self_id()
+    }
+
+    fn id() -> TypeId where Self: Sized {
+        Ctx::id()
     }
 }
 

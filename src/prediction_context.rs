@@ -9,11 +9,11 @@ use std::sync::{Arc, RwLock};
 use murmur3::murmur3_32::MurmurHasher;
 
 use crate::atn::ATN;
-use crate::common_token_factory::TokenFactory;
 use crate::dfa::ScopeExt;
 use crate::parser_atn_simulator::MergeCache;
 use crate::parser_rule_context::{empty_ctx, ParserRuleContext};
 use crate::prediction_context::PredictionContext::{Array, Singleton};
+use crate::token_factory::TokenFactory;
 use crate::transition::RuleTransition;
 
 pub const PREDICTION_CONTEXT_EMPTY_RETURN_STATE: isize = 0x7FFFFFFF;

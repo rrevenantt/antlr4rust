@@ -10,7 +10,6 @@ use std::sync::Arc;
 
 use crate::atn::ATN;
 use crate::atn_simulator::IATNSimulator;
-use crate::common_token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use crate::error_listener::{ConsoleErrorListener, ErrorListener, ProxyErrorListener};
 use crate::error_strategy::ErrorStrategy;
 use crate::errors::ANTLRError;
@@ -21,6 +20,7 @@ use crate::parser_rule_context::{BaseParserRuleContext, ParserRuleContext, Parse
 use crate::recognizer::{Actions, Recognizer};
 use crate::rule_context::RuleContext;
 use crate::token::{OwningToken, Token, TOKEN_EOF};
+use crate::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use crate::token_source::TokenSource;
 use crate::token_stream::TokenStream;
 use crate::tree::{ErrorNode, ErrorNodeCtx, ParseTreeListener, TerminalNode, TerminalNodeCtx};
@@ -55,6 +55,17 @@ pub trait Parser<'input>: Recognizer<'input> {
     fn get_state(&self) -> isize;
     fn set_state(&mut self, v: isize);
     fn get_rule_invocation_stack(&self) -> Vec<String>;
+}
+
+trait Context<'input> {
+    type TF: TokenFactory<'input> + 'input;
+    type Listener: ParseTreeListener<'input, Self::TF>;
+    type Node: ParserRuleContext<'input, TF=Self::TF>;
+    type Visitor;
+}
+
+trait Listenable<'input, T: ParseTreeListener<'input>> {
+    fn enter(&self, listener: &mut T);
 }
 
 /// ### Main underlying Parser struct
@@ -479,6 +490,7 @@ impl<'input, I, T, Ext> BaseParser<'input, Ext, I, T>
 //        println!("{}",prev.get_start().unwrap());
         localctx.set_start(Some(prev.start_mut().clone()));
         self.ctx = Some(localctx);
+        1
 
         if self.build_parse_trees {
             self.ctx.as_ref().unwrap().add_child(prev);

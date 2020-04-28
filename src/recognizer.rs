@@ -1,6 +1,6 @@
 use crate::atn::ATN;
-use crate::common_token_factory::{TokenAware, TokenFactory};
 use crate::parser_rule_context::ParserRuleContext;
+use crate::token_factory::{TokenAware, TokenFactory};
 use crate::vocabulary::Vocabulary;
 
 /// Major version of this runtime.

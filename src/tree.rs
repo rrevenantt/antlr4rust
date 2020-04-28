@@ -2,18 +2,19 @@ use std::any::{Any, TypeId};
 use std::borrow::Borrow;
 use std::cell::{Ref, RefCell};
 use std::fmt::{Debug, Error, Formatter};
-use std::ops::Deref;
+use std::marker::PhantomData;
+use std::ops::{CoerceUnsized, Deref};
 use std::rc::Rc;
 
 use crate::atn::INVALID_ALT;
-use crate::common_token_factory::TokenFactory;
 use crate::int_stream::EOF;
 use crate::interval_set::Interval;
 use crate::parser::Parser;
 use crate::parser_rule_context::{BaseParserRuleContext, cast, ParserRuleContext, ParserRuleContextType};
 use crate::recognizer::Recognizer;
-use crate::rule_context::CustomRuleContext;
+use crate::rule_context::{CustomRuleContext, Tid};
 use crate::token::{OwningToken, Token};
+use crate::token_factory::{CommonTokenFactory, TokenFactory};
 use crate::trees;
 
 //todo try to make in more generic
@@ -28,7 +29,10 @@ pub trait Tree<'input>: NodeText + CustomRuleContext<'input> {
 }
 
 pub trait ParseTree<'input>: Tree<'input> {
-    /// Returns interval in input string which corresponds to this subtree
+    /// Return an {@link Interval} indicating the index in the
+    /// {@link TokenStream} of the first and last token associated with this
+    /// subtree. If this node is a leaf, then the interval represents a single
+    /// token and has interval i..i for token index i.
     fn get_source_interval(&self) -> Interval;
 
     /// Return combined text of this AST node.
@@ -83,7 +87,17 @@ impl<'input, TF: TokenFactory<'input> + 'input> CustomRuleContext<'input> for Te
     type TF = TF;
 
     fn get_rule_index(&self) -> usize {
-        unimplemented!()
+        usize::max_value()
+    }
+}
+
+unsafe impl<'input, TF: TokenFactory<'input> + 'input> Tid for TerminalNodeCtx<'input, TF> {
+    fn self_id(&self) -> TypeId {
+        TypeId::of::<TerminalNodeCtx<'static, CommonTokenFactory>>()
+    }
+
+    fn id() -> TypeId where Self: Sized {
+        TypeId::of::<TerminalNodeCtx<'static, CommonTokenFactory>>()
     }
 }
 
@@ -111,7 +125,17 @@ impl<'input, TF: TokenFactory<'input> + 'input> CustomRuleContext<'input> for Er
     type TF = TF;
 
     fn get_rule_index(&self) -> usize {
-        unimplemented!()
+        usize::max_value() - 1
+    }
+}
+
+unsafe impl<'input, TF: TokenFactory<'input> + 'input> Tid for ErrorNodeCtx<'input, TF> {
+    fn self_id(&self) -> TypeId {
+        TypeId::of::<ErrorNodeCtx<'static, CommonTokenFactory>>()
+    }
+
+    fn id() -> TypeId where Self: Sized {
+        TypeId::of::<ErrorNodeCtx<'static, CommonTokenFactory>>()
     }
 }
 
@@ -138,11 +162,12 @@ impl<'input, TF: TokenFactory<'input> + 'input> ParseTree<'input> for ErrorNode<
 
 impl<'input, TF: TokenFactory<'input> + 'input> Debug for BaseParserRuleContext<'input, TerminalNodeCtx<'input, TF>> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-        f.write_str(if self.symbol.borrow().get_token_type() == EOF {
-            "<EOF>"
-        } else {
-            self.symbol.borrow().get_text()
-        }
+        f.write_str(
+            if self.symbol.borrow().get_token_type() == EOF {
+                "<EOF>"
+            } else {
+                self.symbol.borrow().get_text()
+            }
         );
         Ok(())
     }
@@ -150,11 +175,12 @@ impl<'input, TF: TokenFactory<'input> + 'input> Debug for BaseParserRuleContext<
 
 impl<'input, TF: TokenFactory<'input> + 'input> Debug for BaseParserRuleContext<'input, ErrorNodeCtx<'input, TF>> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-        f.write_str(if self.symbol.borrow().get_token_type() == EOF {
-            "<EOF>"
-        } else {
-            self.symbol.borrow().get_text()
-        }
+        f.write_str(
+            if self.symbol.borrow().get_token_type() == EOF {
+                "<EOF>"
+            } else {
+                self.symbol.borrow().get_text()
+            }
         );
         Ok(())
     }
@@ -184,7 +210,7 @@ impl<'input, TF: TokenFactory<'input> + 'input> Debug for BaseParserRuleContext<
 //    fn visit_error_node(&self, node: ErrorNode) -> interface { unimplemented!() }
 //}
 
-pub trait ParseTreeListener<'input, TF: TokenFactory<'input> + 'input>: 'static {
+pub trait ParseTreeListener<'input, TF: TokenFactory<'input> + 'input = CommonTokenFactory>: 'static {
     fn visit_terminal(&mut self, _node: &TerminalNode<'input, TF>) {}
     fn visit_error_node(&mut self, _node: &ErrorNode<'input, TF>) {}
     fn enter_every_rule(&mut self, _ctx: &dyn ParserRuleContext<'input, TF=TF>) {}
@@ -198,32 +224,43 @@ pub trait ParseTreeListener<'input, TF: TokenFactory<'input> + 'input>: 'static 
 //}
 
 /// Helper struct to accept parse listener on already generated tree
-pub struct ParseTreeWalker;
+pub struct ParseTreeWalker<'a, TF: TokenFactory<'a> + 'a, T: ParseTreeListener<'a, TF> + ?Sized = dyn for<'x> ParseTreeListener<'a, TF>>(PhantomData<fn(T) -> &'a TF::Tok>);
 
-impl ParseTreeWalker {
-//    fn new() -> ParseTreeWalker { ParseTreeWalker }
+impl<'a, T: ParseTreeListener<'a, TF> + ?Sized, TF: TokenFactory<'a> + 'a> ParseTreeWalker<'a, TF, T> {
+    // #[doc(hidden)]
+    // pub fn new() -> Self{ Self(PhantomData) }
 
-    pub fn walk<'a, T: ParseTreeListener<'a, Ctx::TF> + ?Sized, Ctx: ParserRuleContext<'a> + 'a + ?Sized>(&self, listener: &mut Box<T>, t: &Ctx) {
-        if t.get_rule_index() == ErrorNode::<'a, Ctx::TF>::type_rule_index() {
+    pub fn walk<Ctx: ParserRuleContext<'a, TF=TF> + 'a + ?Sized, Listener>(listener: Box<Listener>, t: &Ctx) -> Box<Listener>
+        where
+            Box<Listener>: CoerceUnsized<Box<T>>
+    {
+        let mut listener = listener as Box<T>;
+        Self::walk_inner(&mut listener, t);
+
+        // just cast back
+        unsafe { Box::<Listener>::from_raw(Box::into_raw(listener) as *mut _) }
+    }
+
+    fn walk_inner<Ctx: ParserRuleContext<'a, TF=TF> + 'a + ?Sized>(listener: &mut Box<T>, t: &Ctx) {
+        if t.self_id() == ErrorNode::<'a, Ctx::TF>::id() {
             let err = cast::<_, ErrorNode::<'a, Ctx::TF>>(t);
             listener.visit_error_node(err);
-            return
+            return;
         }
-        if t.get_rule_index() == TerminalNode::<'a, Ctx::TF>::type_rule_index() {
+        if t.self_id() == TerminalNode::<'a, Ctx::TF>::id() {
             let leaf = cast::<_, TerminalNode::<'a, Ctx::TF>>(t);
             listener.visit_terminal(leaf);
-            return
+            return;
         }
 
         listener.enter_every_rule(t.upcast());
         t.enter_rule(listener as &mut dyn Any);
 
         for child in t.get_children().iter() {
-            self.walk(listener, child.deref())
+            Self::walk_inner(listener, child.deref())
         }
 
         t.exit_rule(listener as &mut dyn Any);
         listener.exit_every_rule(t.upcast());
     }
-
 }

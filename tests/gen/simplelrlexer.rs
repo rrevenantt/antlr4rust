@@ -13,7 +13,6 @@ use std::sync::Arc;
 use antlr_rust::atn::ATN;
 use antlr_rust::atn_deserializer::ATNDeserializer;
 use antlr_rust::char_stream::CharStream;
-use antlr_rust::common_token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use antlr_rust::dfa::DFA;
 use antlr_rust::error_listener::ErrorListener;
 use antlr_rust::int_stream::IntStream;
@@ -24,6 +23,7 @@ use antlr_rust::PredictionContextCache;
 use antlr_rust::recognizer::{Actions, Recognizer};
 use antlr_rust::rule_context::{BaseRuleContext, EmptyCustomRuleContext};
 use antlr_rust::token::*;
+use antlr_rust::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use antlr_rust::token_source::TokenSource;
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
 

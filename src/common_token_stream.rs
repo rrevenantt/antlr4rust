@@ -1,10 +1,10 @@
 use std::borrow::Borrow;
 use std::ops::Deref;
 
-use crate::common_token_factory::TokenFactory;
 use crate::errors::ANTLRError;
 use crate::int_stream::{EOF, IntStream, IterWrapper};
 use crate::token::{OwningToken, Token, TOKEN_DEFAULT_CHANNEL, TOKEN_INVALID_TYPE};
+use crate::token_factory::TokenFactory;
 use crate::token_source::TokenSource;
 use crate::token_stream::{TokenStream, UnbufferedTokenStream};
 

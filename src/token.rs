@@ -7,8 +7,8 @@ use std::ops::{CoerceUnsized, Deref, DerefMut};
 use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
 
 use crate::char_stream::CharStream;
-use crate::common_token_factory::{INVALID_COMMON, INVALID_OWNING};
 use crate::int_stream::EOF;
+use crate::token_factory::{INVALID_COMMON, INVALID_OWNING};
 use crate::token_source::TokenSource;
 
 pub const TOKEN_INVALID_TYPE: isize = 0;
@@ -140,6 +140,7 @@ impl<T: Borrow<str> + Debug> Display for GenericToken<T> {
         ))
     }
 }
+
 
 // impl<T: Borrow<str> + Debug> TokenWrapper for GenericToken<T> { type Inner = Self; }
 

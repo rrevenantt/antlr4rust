@@ -2,7 +2,7 @@
 
 use std::any::Any;
 
-use antlr_rust::common_token_factory::CommonTokenFactory;
+use antlr_rust::token_factory::CommonTokenFactory;
 // Generated from CSV.g4 by ANTLR 4.8
 use antlr_rust::tree::ParseTreeListener;
 

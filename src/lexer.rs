@@ -5,7 +5,6 @@ use std::ops::DerefMut;
 use std::rc::Rc;
 
 use crate::char_stream::CharStream;
-use crate::common_token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use crate::error_listener::{ConsoleErrorListener, ErrorListener};
 use crate::errors::ANTLRError;
 use crate::int_stream::IntStream;
@@ -13,6 +12,7 @@ use crate::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
 use crate::parser_rule_context::ParserRuleContext;
 use crate::recognizer::{Actions, Recognizer};
 use crate::token::{Token, TOKEN_INVALID_TYPE};
+use crate::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use crate::token_source::TokenSource;
 
 pub trait Lexer<'input>: TokenSource<'input> + Recognizer<'input> {

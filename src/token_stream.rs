@@ -3,10 +3,10 @@ use std::cmp::min;
 use std::marker::{PhantomData, Unsize};
 use std::ops::Deref;
 
-use crate::common_token_factory::{CommonTokenFactory, TokenFactory};
 use crate::errors::ANTLRError;
 use crate::int_stream::{IntStream, IterWrapper};
 use crate::token::{OwningToken, Token, TOKEN_EOF, TOKEN_INVALID_TYPE};
+use crate::token_factory::{CommonTokenFactory, TokenFactory};
 use crate::token_source::TokenSource;
 
 /// An `IntSteam` of `Token`s

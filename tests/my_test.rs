@@ -10,15 +10,15 @@ mod gen {
     use std::io::Read;
     use std::iter::FromIterator;
 
-    use antlr_rust::common_token_factory::{ArenaCommonFactory, CommonTokenFactory};
     use antlr_rust::common_token_stream::CommonTokenStream;
     use antlr_rust::InputStream;
     use antlr_rust::int_stream::IntStream;
     use antlr_rust::lexer::Lexer;
     use antlr_rust::parser_rule_context::{BaseParserRuleContext, ParserRuleContext};
     use antlr_rust::token::{Token, TOKEN_EOF};
+    use antlr_rust::token_factory::{ArenaCommonFactory, CommonTokenFactory};
     use antlr_rust::token_stream::{TokenStream, UnbufferedTokenStream};
-    use antlr_rust::tree::{ParseTree, ParseTreeListener, TerminalNode, TerminalNodeCtx};
+    use antlr_rust::tree::{ParseTree, ParseTreeListener, ParseTreeWalker, TerminalNode, TerminalNodeCtx};
     use csvlexer::*;
     use csvlistener::*;
     use csvparser::CSVParser;
@@ -31,7 +31,7 @@ mod gen {
     use crate::gen::labelsparser::{AddContext, EContextAll, LabelsParser};
     use crate::gen::simplelrlexer::SimpleLRLexer;
     use crate::gen::simplelrlistener::SimpleLRListener;
-    use crate::gen::simplelrparser::SimpleLRParser;
+    use crate::gen::simplelrparser::{SimpleLRParser, SimpleLRTreeWalker};
 
     mod csvlexer;
     mod csvparser;
@@ -175,7 +175,6 @@ if (x < x && a > 0) then duh
 
     #[test]
     fn lr_test() {
-        // let mut
         let mut _lexer = SimpleLRLexer::new(Box::new(InputStream::new("x y z".into())));
         let token_source = CommonTokenStream::new(_lexer);
         let mut parser = SimpleLRParser::new(Box::new(token_source));
@@ -189,7 +188,11 @@ if (x < x && a > 0) then duh
 
     impl<'input> ParseTreeListener<'input, CommonTokenFactory> for Listener4 {
         fn visit_terminal(&mut self, node: &TerminalNode<'input, CommonTokenFactory>) {
+            println!("enter terminal");
             writeln!(&mut self.data, "terminal node {}", node.symbol.get_text());
+        }
+        fn enter_every_rule(&mut self, ctx: &dyn ParserRuleContext<'input, TF=CommonTokenFactory>) {
+            println!("rule entered {}", simplelrparser::ruleNames.get(ctx.get_rule_index()).unwrap_or(&"error"))
         }
     }
 
@@ -202,9 +205,15 @@ if (x < x && a > 0) then duh
         let mut parser = SimpleLRParser::new(Box::new(token_source));
         parser.add_parse_listener(Box::new(Listener3));
         let id = parser.add_parse_listener(Box::new(Listener4 { data: String::new() }));
-        let _result = parser.s().expect("expected to parse successfully");
+        let result = parser.s().expect("expected to parse successfully");
 
-        let listener = parser.remove_parse_listener(id);
+        let mut listener = parser.remove_parse_listener(id);
+        assert_eq!(&listener.data, "terminal node x\nterminal node y\nterminal node z\n");
+
+        println!("--------");
+        listener.data.clear();
+
+        let listener = SimpleLRTreeWalker::walk(listener, &*result);
         assert_eq!(&listener.data, "terminal node x\nterminal node y\nterminal node z\n");
     }
 

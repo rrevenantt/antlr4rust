@@ -52,7 +52,7 @@ pub use parser::{BaseParser, ListenerId, Parser};
 pub use prediction_context::PredictionContextCache;
 
 mod ll1_analyzer;
-pub mod common_token_factory;
+pub mod token_factory;
 pub mod recognizer;
 pub mod int_stream;
 mod lexer_action;
@@ -107,6 +107,22 @@ pub mod parser_atn_simulator;
 pub mod atn_type;
 pub mod rule_context;
 pub mod vocabulary;
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! type_id {
+    ($struct: tt) => {
+        unsafe impl antlr_rust::rule_context::Tid for $struct<'_> {
+            fn self_id(&self) -> TypeId{
+                core::any::TypeId::of::<$struct<'static>>()
+            }
+            fn id() -> TypeId where Self:Sized{
+                core::any::TypeId::of::<$struct<'static>>()
+            }
+
+        }
+    }
+}
 
 //#[cfg(test)]
 // tests are either integration tests in "tests" foulder or unit tests in some modules

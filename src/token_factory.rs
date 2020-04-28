@@ -173,7 +173,7 @@ pub type ArenaOwningFactory<'a> = ArenaFactory<'a, OwningTokenFactory, OwningTok
 pub type ArenaCommonFactory<'a> = ArenaFactory<'a, CommonTokenFactory, CommonToken<'a>>;
 
 /// This is a wrapper for Token factory that allows to allocate tokens in separate arena.
-/// It will allow to significantly improve performance by passing Token references everywhere.
+/// It can allow to significantly improve performance by passing Tokens by references everywhere.
 // Box is used here because it is almost always should be used for token factory
 pub struct ArenaFactory<'input, TF: TokenFactory<'input, Tok=Box<T>, Inner=T>, T: Token + Clone + 'input> {
     arena: Arena<T>,

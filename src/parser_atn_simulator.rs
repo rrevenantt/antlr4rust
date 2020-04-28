@@ -17,7 +17,6 @@ use crate::atn_config_set::ATNConfigSet;
 use crate::atn_simulator::{BaseATNSimulator, IATNSimulator};
 use crate::atn_state::{ATNDecisionState, ATNState, ATNSTATE_BLOCK_END, ATNStateRef, ATNStateType};
 use crate::atn_state::ATNStateType::RuleStopState;
-use crate::common_token_factory::CommonTokenFactory;
 use crate::dfa::{DFA, ScopeExt};
 use crate::dfa_state::{DFAState, DFAStateRef, PredPrediction};
 use crate::errors::{ANTLRError, NoViableAltError};
@@ -31,6 +30,7 @@ use crate::prediction_mode::{all_subsets_conflict, all_subsets_equal, get_alts, 
 use crate::rule_context::RuleContext;
 use crate::semantic_context::SemanticContext;
 use crate::token::{Token, TOKEN_EOF, TOKEN_EPSILON};
+use crate::token_factory::CommonTokenFactory;
 use crate::token_stream::TokenStream;
 use crate::transition::{ActionTransition, EpsilonTransition, PrecedencePredicateTransition, PredicateTransition, RuleTransition, Transition, TransitionType};
 
