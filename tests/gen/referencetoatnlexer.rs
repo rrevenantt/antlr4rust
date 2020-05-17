@@ -1,7 +1,6 @@
 // Generated from ReferenceToATN.g4 by ANTLR 4.8
 #![allow(dead_code)]
-#![allow(non_snake_case)]
-#![allow(non_upper_case_globals)]
+#![allow(nonstandard_style)]
 #![allow(unused_imports)]
 
 use std::cell::RefCell;
@@ -21,7 +20,7 @@ use antlr_rust::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
 use antlr_rust::parser_rule_context::{BaseParserRuleContext, cast, ParserRuleContext};
 use antlr_rust::PredictionContextCache;
 use antlr_rust::recognizer::{Actions, Recognizer};
-use antlr_rust::rule_context::{BaseRuleContext, EmptyCustomRuleContext};
+use antlr_rust::rule_context::{BaseRuleContext, EmptyContext, EmptyCustomRuleContext};
 use antlr_rust::token::*;
 use antlr_rust::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use antlr_rust::token_source::TokenSource;
@@ -127,15 +126,15 @@ pub struct ReferenceToATNLexerActions {}
 
 impl ReferenceToATNLexerActions {}
 
-impl<'input, Input: CharStream<'input>> LexerRecog<'input, BaseLexer<'input, ReferenceToATNLexerActions, Input, LocalTokenFactory<'input>>> for ReferenceToATNLexerActions {}
+impl<'input, Input: CharStream<'input>> Actions<'input, BaseLexer<'input, ReferenceToATNLexerActions, Input, LocalTokenFactory<'input>>> for ReferenceToATNLexerActions {}
 
 impl<'input, Input: CharStream<'input>> ReferenceToATNLexer<'input, Input> {}
+
+impl<'input, Input: CharStream<'input>> LexerRecog<'input, BaseLexer<'input, ReferenceToATNLexerActions, Input, LocalTokenFactory<'input>>> for ReferenceToATNLexerActions {}
 
 impl<'input> TokenAware<'input> for ReferenceToATNLexerActions {
     type TF = LocalTokenFactory<'input>;
 }
-
-impl<'input> Recognizer<'input> for ReferenceToATNLexerActions {}
 
 impl<'input, Input: CharStream<'input>> TokenAware<'input> for ReferenceToATNLexer<'input, Input> {
     type TF = LocalTokenFactory<'input>;

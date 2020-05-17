@@ -1,5 +1,7 @@
 .idea
 .vscode
 /target
+/tests/gen/*.tokens
+/tests/gen/*.interp
 **/*.rs.bk
 Cargo.lock

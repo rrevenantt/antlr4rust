@@ -1,7 +1,6 @@
 // Generated from CSV.g4 by ANTLR 4.8
 #![allow(dead_code)]
-#![allow(non_snake_case)]
-#![allow(non_upper_case_globals)]
+#![allow(nonstandard_style)]
 #![allow(unused_imports)]
 
 use std::cell::RefCell;
@@ -21,7 +20,7 @@ use antlr_rust::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
 use antlr_rust::parser_rule_context::{BaseParserRuleContext, cast, ParserRuleContext};
 use antlr_rust::PredictionContextCache;
 use antlr_rust::recognizer::{Actions, Recognizer};
-use antlr_rust::rule_context::{BaseRuleContext, EmptyCustomRuleContext};
+use antlr_rust::rule_context::{BaseRuleContext, EmptyContext, EmptyCustomRuleContext};
 use antlr_rust::token::*;
 use antlr_rust::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use antlr_rust::token_source::TokenSource;
@@ -120,7 +119,7 @@ impl<'input, Input: CharStream<'input>> CSVLexer<'input, Input> {
                 tf,
             )
         }
-	}
+    }
 }
 
 impl<'input, Input: CharStream<'input>> CSVLexer<'input, Input> where &'input LocalTokenFactory<'input>: Default {
@@ -133,15 +132,15 @@ pub struct CSVLexerActions {}
 
 impl CSVLexerActions {}
 
-impl<'input, Input: CharStream<'input>> LexerRecog<'input, BaseLexer<'input, CSVLexerActions, Input, LocalTokenFactory<'input>>> for CSVLexerActions {}
+impl<'input, Input: CharStream<'input>> Actions<'input, BaseLexer<'input, CSVLexerActions, Input, LocalTokenFactory<'input>>> for CSVLexerActions {}
 
 impl<'input, Input: CharStream<'input>> CSVLexer<'input, Input> {}
+
+impl<'input, Input: CharStream<'input>> LexerRecog<'input, BaseLexer<'input, CSVLexerActions, Input, LocalTokenFactory<'input>>> for CSVLexerActions {}
 
 impl<'input> TokenAware<'input> for CSVLexerActions {
     type TF = LocalTokenFactory<'input>;
 }
-
-impl<'input> Recognizer<'input> for CSVLexerActions {}
 
 impl<'input, Input: CharStream<'input>> TokenAware<'input> for CSVLexer<'input, Input> {
     type TF = LocalTokenFactory<'input>;

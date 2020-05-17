@@ -11,6 +11,8 @@ pub struct Interval {
     pub b: isize,
 }
 
+pub const INVALID: Interval = Interval { a: -1, b: -2 };
+
 impl Interval {
     /* stop is not included! */
     fn new(a: isize, b: isize) -> Interval {
@@ -20,7 +22,6 @@ impl Interval {
     fn contains(&self, _item: isize) -> bool {
         unimplemented!()
     }
-
 
     fn length(&self) -> isize {
         self.b - self.a

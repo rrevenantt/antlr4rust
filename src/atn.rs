@@ -8,8 +8,9 @@ use crate::dfa::ScopeExt;
 use crate::interval_set::IntervalSet;
 use crate::lexer_action::LexerAction;
 use crate::ll1_analyzer::LL1Analyzer;
-use crate::parser_rule_context::{ParserRuleContext, ParserRuleContextType};
-use crate::rule_context::RuleContext;
+use crate::parser::ParserNodeType;
+use crate::parser_rule_context::ParserRuleContext;
+use crate::rule_context::{EmptyContextType, RuleContext};
 use crate::token::{TOKEN_EOF, TOKEN_EPSILON};
 use crate::token_factory::{CommonTokenFactory, TokenFactory};
 use crate::transition::RuleTransition;
@@ -59,7 +60,7 @@ impl ATN {
     ///rule.
     pub fn next_tokens<'a>(&self, s: &'a dyn ATNState) -> &'a IntervalSet {
         s.get_next_tokens_within_rule().get_or_init(|| {
-            self.next_tokens_in_ctx(s, None::<&dyn ParserRuleContext<TF=CommonTokenFactory>>)
+            self.next_tokens_in_ctx::<EmptyContextType<CommonTokenFactory>>(s, None)
                 .modify_with(|r| {
                     r.read_only = true
                 }
@@ -71,9 +72,9 @@ impl ATN {
     /// If `ctx` is null, the set of tokens will not include what can follow
     /// the rule surrounding `s`. In other words, the set will be
     /// restricted to tokens reachable staying within `s`'s rule.
-    pub fn next_tokens_in_ctx<'a, TF: TokenFactory<'a> + 'a>(&self, s: &dyn ATNState, _ctx: Option<&(dyn ParserRuleContext<'a, TF=TF> + 'a)>) -> IntervalSet {
+    pub fn next_tokens_in_ctx<'a, Ctx: ParserNodeType<'a>>(&self, s: &dyn ATNState, _ctx: Option<&Ctx::Type>) -> IntervalSet {
         let analyzer = LL1Analyzer::new(self);
-        analyzer.look(s, None, _ctx)
+        analyzer.look::<'a, Ctx>(s, None, _ctx)
     }
 
     pub(crate) fn add_state(&mut self, state: Box<dyn ATNState>) {
@@ -125,7 +126,7 @@ impl ATN {
     /// specified state in the specified context.
     /// @throws IllegalArgumentException if the ATN does not contain a state with
     /// number {@code stateNumber}
-    pub fn get_expected_tokens<'a, TF: TokenFactory<'a>>(&self, state_number: isize, _ctx: &ParserRuleContextType<'a, TF>) -> IntervalSet {
+    pub fn get_expected_tokens<'a, Ctx: ParserNodeType<'a>>(&self, state_number: isize, _ctx: &Rc<Ctx::Type>) -> IntervalSet {
         let s = self.states[state_number as usize].as_ref();
         let mut following = self.next_tokens(s);
         if !following.contains(TOKEN_EPSILON) {

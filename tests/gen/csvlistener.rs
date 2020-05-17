@@ -8,7 +8,7 @@ use antlr_rust::tree::ParseTreeListener;
 
 use super::csvparser::*;
 
-pub trait CSVListener<'input>: ParseTreeListener<'input, LocalTokenFactory<'input>> {
+pub trait CSVListener<'input>: ParseTreeListener<'input, CSVParserContextType> {
     /**
      * Enter a parse tree produced by {@link CSVParser#csvFile}.
      * @param ctx the parse tree

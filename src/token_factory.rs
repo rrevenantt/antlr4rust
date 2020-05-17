@@ -1,6 +1,7 @@
 use std::borrow::{Borrow, BorrowMut, Cow};
 use std::borrow::Cow::{Borrowed, Owned};
 use std::cell::Cell;
+use std::fmt::Debug;
 use std::marker::{PhantomData, Unsize};
 use std::ops::{CoerceUnsized, Deref};
 use std::sync::atomic::AtomicIsize;
@@ -46,7 +47,7 @@ lazy_static! {
 pub trait TokenFactory<'a>: Sized {
     /// type of tokens emitted by this factory
     type Inner: Token + ?Sized + Unsize<dyn Token + 'a> + 'a;
-    type Tok: Borrow<Self::Inner> + Clone + 'a;
+    type Tok: Borrow<Self::Inner> + Clone + 'a + Debug;
 
     fn create<'b, T>(&'a self,
                      source: Option<&mut T>,

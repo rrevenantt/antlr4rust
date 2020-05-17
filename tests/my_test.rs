@@ -18,7 +18,7 @@ mod gen {
     use antlr_rust::token::{Token, TOKEN_EOF};
     use antlr_rust::token_factory::{ArenaCommonFactory, CommonTokenFactory};
     use antlr_rust::token_stream::{TokenStream, UnbufferedTokenStream};
-    use antlr_rust::tree::{ParseTree, ParseTreeListener, ParseTreeWalker, TerminalNode, TerminalNodeCtx};
+    use antlr_rust::tree::{ParseTree, ParseTreeListener, ParseTreeWalker, TerminalNode};
     use csvlexer::*;
     use csvlistener::*;
     use csvparser::CSVParser;
@@ -27,11 +27,13 @@ mod gen {
     use referencetoatnparser::ReferenceToATNParser;
     use xmllexer::XMLLexer;
 
+    use crate::gen::csvparser::{CSVParserContext, CSVParserContextType};
     use crate::gen::labelslexer::LabelsLexer;
     use crate::gen::labelsparser::{AddContext, EContextAll, LabelsParser};
+    use crate::gen::referencetoatnparser::{ReferenceToATNParserContext, ReferenceToATNParserContextType};
     use crate::gen::simplelrlexer::SimpleLRLexer;
     use crate::gen::simplelrlistener::SimpleLRListener;
-    use crate::gen::simplelrparser::{SimpleLRParser, SimpleLRTreeWalker};
+    use crate::gen::simplelrparser::{SimpleLRParser, SimpleLRParserContext, SimpleLRParserContextType, SimpleLRTreeWalker};
 
     mod csvlexer;
     mod csvparser;
@@ -107,8 +109,8 @@ if (x < x && a > 0) then duh
 
     struct Listener {}
 
-    impl<'input> ParseTreeListener<'input, ArenaCommonFactory<'input>> for Listener {
-        fn enter_every_rule(&mut self, ctx: &dyn ParserRuleContext<'input, TF=ArenaCommonFactory<'input>>) {
+    impl<'input> ParseTreeListener<'input, CSVParserContextType> for Listener {
+        fn enter_every_rule(&mut self, ctx: &dyn CSVParserContext<'input>) {
             println!("rule entered {}", csvparser::ruleNames.get(ctx.get_rule_index()).unwrap_or(&"error"))
         }
     }
@@ -134,8 +136,8 @@ if (x < x && a > 0) then duh
 
     struct Listener2 {}
 
-    impl<'input> ParseTreeListener<'input, CommonTokenFactory> for Listener2 {
-        fn enter_every_rule(&mut self, ctx: &dyn ParserRuleContext<'input, TF=CommonTokenFactory>) {
+    impl<'input> ParseTreeListener<'input, ReferenceToATNParserContextType> for Listener2 {
+        fn enter_every_rule(&mut self, ctx: &dyn ReferenceToATNParserContext<'input>) {
             println!("rule entered {}", referencetoatnparser::ruleNames.get(ctx.get_rule_index()).unwrap_or(&"error"))
         }
     }
@@ -157,16 +159,16 @@ if (x < x && a > 0) then duh
 
     struct Listener3;
 
-    impl<'input> ParseTreeListener<'input, CommonTokenFactory> for Listener3 {
-        fn visit_terminal(&mut self, node: &TerminalNode<'input, CommonTokenFactory>) {
+    impl<'input> ParseTreeListener<'input, SimpleLRParserContextType> for Listener3 {
+        fn visit_terminal(&mut self, node: &TerminalNode<'input, SimpleLRParserContextType>) {
             println!("terminal node {}", node.symbol.get_text());
         }
 
-        fn enter_every_rule(&mut self, ctx: &dyn ParserRuleContext<'input, TF=CommonTokenFactory>) {
+        fn enter_every_rule(&mut self, ctx: &dyn SimpleLRParserContext<'input>) {
             println!("rule entered {}", simplelrparser::ruleNames.get(ctx.get_rule_index()).unwrap_or(&"error"))
         }
 
-        fn exit_every_rule(&mut self, ctx: &dyn ParserRuleContext<'input, TF=CommonTokenFactory>) {
+        fn exit_every_rule(&mut self, ctx: &dyn SimpleLRParserContext<'input>) {
             println!("rule exited {}", simplelrparser::ruleNames.get(ctx.get_rule_index()).unwrap_or(&"error"))
         }
     }
@@ -186,12 +188,12 @@ if (x < x && a > 0) then duh
 
     struct Listener4 { data: String }
 
-    impl<'input> ParseTreeListener<'input, CommonTokenFactory> for Listener4 {
-        fn visit_terminal(&mut self, node: &TerminalNode<'input, CommonTokenFactory>) {
+    impl<'input> ParseTreeListener<'input, SimpleLRParserContextType> for Listener4 {
+        fn visit_terminal(&mut self, node: &TerminalNode<'input, SimpleLRParserContextType>) {
             println!("enter terminal");
             writeln!(&mut self.data, "terminal node {}", node.symbol.get_text());
         }
-        fn enter_every_rule(&mut self, ctx: &dyn ParserRuleContext<'input, TF=CommonTokenFactory>) {
+        fn enter_every_rule(&mut self, ctx: &dyn SimpleLRParserContext<'input>) {
             println!("rule entered {}", simplelrparser::ruleNames.get(ctx.get_rule_index()).unwrap_or(&"error"))
         }
     }

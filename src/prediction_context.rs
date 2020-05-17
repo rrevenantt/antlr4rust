@@ -10,9 +10,11 @@ use murmur3::murmur3_32::MurmurHasher;
 
 use crate::atn::ATN;
 use crate::dfa::ScopeExt;
+use crate::parser::ParserNodeType;
 use crate::parser_atn_simulator::MergeCache;
 use crate::parser_rule_context::{empty_ctx, ParserRuleContext};
 use crate::prediction_context::PredictionContext::{Array, Singleton};
+use crate::rule_context::RuleContext;
 use crate::token_factory::TokenFactory;
 use crate::transition::RuleTransition;
 
@@ -464,12 +466,12 @@ impl PredictionContext {
         return m;
     }
 
-    pub fn from_rule_context<'input, TF: TokenFactory<'input> + 'input>(atn: &ATN, outer_context: &(dyn ParserRuleContext<'input, TF=TF> + 'input)) -> Arc<PredictionContext> {
-        if outer_context.get_parent_ctx().is_none() || ptr::eq(outer_context, empty_ctx().as_ref()) {
+    pub fn from_rule_context<'input, Ctx: ParserNodeType<'input>>(atn: &ATN, outer_context: &Ctx::Type) -> Arc<PredictionContext> {
+        if outer_context.get_parent_ctx().is_none() || outer_context.is_empty()/*ptr::eq(outer_context, empty_ctx().as_ref())*/ {
             return EMPTY_PREDICTION_CONTEXT.clone()
         }
 
-        let parent = PredictionContext::from_rule_context(atn, outer_context.get_parent_ctx().unwrap().deref());
+        let parent = PredictionContext::from_rule_context::<'input, Ctx>(atn, outer_context.get_parent_ctx().unwrap().deref());
 
         let transition = atn.states[outer_context.get_invoking_state() as usize]
             .get_transitions()

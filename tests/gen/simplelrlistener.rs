@@ -8,7 +8,7 @@ use antlr_rust::tree::ParseTreeListener;
 
 use super::simplelrparser::*;
 
-pub trait SimpleLRListener<'input>: ParseTreeListener<'input, LocalTokenFactory<'input>> {
+pub trait SimpleLRListener<'input>: ParseTreeListener<'input, SimpleLRParserContextType> {
     /**
      * Enter a parse tree produced by {@link SimpleLRParser#s}.
      * @param ctx the parse tree

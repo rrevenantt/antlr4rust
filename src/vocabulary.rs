@@ -11,7 +11,7 @@ pub trait Vocabulary: Sync + Debug {
     fn get_max_token_type(&self) -> isize;
     fn get_literal_name(&self, token_type: isize) -> Option<&str>;
     fn get_symbolic_name(&self, token_type: isize) -> Option<&str>;
-    fn get_display_name(&self, token_type: isize) -> Cow<str>;
+    fn get_display_name(&self, token_type: isize) -> Cow<'_, str>;
 }
 
 #[derive(Debug)]

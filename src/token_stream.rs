@@ -2,6 +2,7 @@ use std::borrow::{Borrow, BorrowMut};
 use std::cmp::min;
 use std::marker::{PhantomData, Unsize};
 use std::ops::Deref;
+use std::ptr::drop_in_place;
 
 use crate::errors::ANTLRError;
 use crate::int_stream::{IntStream, IterWrapper};
@@ -28,6 +29,7 @@ pub trait TokenStream<'input>: IntStream {
     fn get_text_from_tokens(&self, a: &dyn Token, b: &dyn Token) -> String;
 }
 
+//
 pub struct TokenIter<'a, 'input: 'a, T: TokenStream<'input>>(&'a mut T, bool, PhantomData<fn() -> &'input str>);
 
 impl<'a, 'input: 'a, T: TokenStream<'input>> Iterator for TokenIter<'a, 'input, T> {
@@ -192,17 +194,21 @@ impl<'input, T: TokenSource<'input>> IntStream for UnbufferedTokenStream<'input,
         self.markers_count -= 1;
         if self.markers_count == 0 {
             if self.p > 0 {
-                //todo rewrite properly as safe code, this is completely wrong
-                // unsafe {
-                // might be UB if 2p > len?
-                // copy_nonoverlapping(
-                // std::intrinsics::copy(
-                //     &self.tokens[self.p as usize] as *const T::Tok,
-                //     &mut self.tokens[0] as *mut T::Tok,
-                //     self.tokens.len() - self.p as usize,
-                // )
-                // }
-                unimplemented!()
+                let new_len = self.tokens.len() - self.p as usize;
+                unsafe {
+                    // drop first p elements
+                    for i in 0..(self.p as usize) {
+                        drop_in_place(&mut self.tokens[i]);
+                    }
+                    // move len-p elements to beginning
+                    std::intrinsics::copy(
+                        &self.tokens[self.p as usize],
+                        &mut self.tokens[0],
+                        new_len,
+                    );
+                    self.tokens.set_len(new_len);
+                }
+                self.p = 0;
             }
         }
     }
@@ -234,36 +240,3 @@ impl<'input, T: TokenSource<'input>> IntStream for UnbufferedTokenStream<'input,
         self.token_source.get_source_name()
     }
 }
-
-// pub(crate) struct DynTokenStream<'input,T:TokenStream<'input>>(pub T);
-//
-// impl<'input,T:TokenStream<'input>> TokenStream<'input> for DynTokenStream<'input,T>{
-//     type TF = Box<dyn Token + 'input>;
-//
-//     fn lt(&mut self, k: isize) -> Option<&Self::Tok> {
-//         match self.0.lt(k){
-//             None => None,
-//             Some(x) => Some(x as &Self::Tok),
-//         }
-//     }
-//
-//     fn get(&self, index: isize) -> &Self::Tok {
-//         self.0.get(index)
-//     }
-//
-//     fn get_token_source(&self) -> &dyn TokenSource<'input, Tok=Self::Tok> {
-//         CommonTokenFactoryDEFAULT
-//     }
-//
-//     fn get_all_text(&self) -> String {
-//         unimplemented!()
-//     }
-//
-//     fn get_text_from_interval(&self, start: isize, stop: isize) -> String {
-//         unimplemented!()
-//     }
-//
-//     fn get_text_from_tokens(&self, a: &Token, b: &Token) -> String {
-//         unimplemented!()
-//     }
-// }

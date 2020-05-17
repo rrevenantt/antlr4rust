@@ -4,91 +4,104 @@ use std::cell::{Ref, RefCell, RefMut};
 use std::convert::identity;
 use std::fmt::{Debug, Error, Formatter};
 use std::marker::PhantomData;
-use std::ops::{Deref, DerefMut};
+use std::ops::{CoerceUnsized, Deref, DerefMut};
 use std::rc::Rc;
 
 use crate::errors::ANTLRError;
 use crate::interval_set::Interval;
-use crate::rule_context::{BaseRuleContext, CustomRuleContext, EmptyCustomRuleContext, RuleContext, Tid};
+use crate::parser::{Listenable, ParserNodeType};
+use crate::rule_context::{BaseRuleContext, CustomRuleContext, EmptyContextType, EmptyCustomRuleContext, RuleContext, Tid};
 use crate::token::{OwningToken, Token};
 use crate::token_factory::{CommonTokenFactory, TokenFactory};
-use crate::tree::{ErrorNode, ErrorNodeCtx, ParseTree, TerminalNode, TerminalNodeCtx, Tree};
+use crate::tree::{ErrorNode, ParseTree, ParseTreeListener, TerminalNode, Tree};
+
+// use crate::utils::IndexIter;
 
 pub trait ParserRuleContext<'input>: ParseTree<'input> + RuleContext<'input> + Debug
 {
-    fn set_exception(&self, e: ANTLRError);
+    fn set_exception(&self, e: ANTLRError) {}
 
-    fn set_start(&self, t: Option<<Self::TF as TokenFactory<'input>>::Tok>);
+    fn set_start(&self, t: Option<<Self::TF as TokenFactory<'input>>::Tok>) {}
 
     /// Get the initial token in this context.
     /// Note that the range from start to stop is inclusive, so for rules that do not consume anything
     /// (for example, zero length or error productions) this token may exceed stop.
     ///
-    fn start<'a>(&'a self) -> Ref<'a, <Self::TF as TokenFactory<'input>>::Inner> where 'input: 'a;
-    fn start_mut<'a>(&'a self) -> RefMut<'a, <Self::TF as TokenFactory<'input>>::Tok> where 'input: 'a;
+    fn start<'a>(&'a self) -> Ref<'a, <Self::TF as TokenFactory<'input>>::Inner> where 'input: 'a { unimplemented!() }
+    fn start_mut<'a>(&'a self) -> RefMut<'a, <Self::TF as TokenFactory<'input>>::Tok> where 'input: 'a { unimplemented!() }
 
-    fn set_stop(&self, t: Option<<Self::TF as TokenFactory<'input>>::Tok>);
+    fn set_stop(&self, t: Option<<Self::TF as TokenFactory<'input>>::Tok>) {}
     ///
     /// Get the final token in this context.
     /// Note that the range from start to stop is inclusive, so for rules that do not consume anything
     /// (for example, zero length or error productions) this token may precede start.
     ///
-    fn stop<'a>(&'a self) -> Ref<'a, <Self::TF as TokenFactory<'input>>::Inner> where 'input: 'a;
-    fn stop_mut<'a>(&'a self) -> RefMut<'a, <Self::TF as TokenFactory<'input>>::Tok> where 'input: 'a;
+    fn stop<'a>(&'a self) -> Ref<'a, <Self::TF as TokenFactory<'input>>::Inner> where 'input: 'a { unimplemented!() }
+    fn stop_mut<'a>(&'a self) -> RefMut<'a, <Self::TF as TokenFactory<'input>>::Tok> where 'input: 'a { unimplemented!() }
 
-    fn add_token_node(&self, token: TerminalNode<'input, Self::TF>) -> ParserRuleContextType<'input, Self::TF>;
-    fn add_error_node(&self, bad_token: ErrorNode<'input, Self::TF>) -> ParserRuleContextType<'input, Self::TF>;
+    // fn add_token_node(&self, token: TerminalNode<'input, Self::TF>) { }
+    // fn add_error_node(&self, bad_token: ErrorNode<'input, Self::TF>) { }
 
-    fn add_child(&self, child: ParserRuleContextType<'input, Self::TF>);
-    fn remove_last_child(&self);
+    fn add_child(&self, child: Rc<<Self::Ctx as ParserNodeType<'input>>::Type>) {}
+    fn remove_last_child(&self) {}
 
-    fn enter_rule(&self, listener: &mut dyn Any);
-    fn exit_rule(&self, listener: &mut dyn Any);
+    // fn enter_rule(&self, listener: &mut dyn Any);
+    // fn exit_rule(&self, listener: &mut dyn Any);
 
-    fn child_of_type<T: ParserRuleContext<'input, TF=Self::TF> + 'input>(&self, pos: usize) -> Option<Rc<T>> where Self: Sized {
-        let result = self.get_children().iter()
-            .filter(|&it| it.self_id() == T::id())
-            .nth(pos)
-            .cloned();
+    fn child_of_type<T: ParserRuleContext<'input, TF=Self::TF, Ctx=Self::Ctx> + 'input>(&self, pos: usize) -> Option<Rc<T>> where Self: Sized {
+        let result = self.get_children()
+            // .iter()
+            .filter(|it| it.self_id() == T::id())
+            .nth(pos);
+        // .cloned();
 
         result.map(cast_rc)
     }
 
     // todo, return iterator
-    fn children_of_type<T: ParserRuleContext<'input, TF=Self::TF> + 'input>(&self) -> Vec<Rc<T>> where Self: Sized {
+    fn children_of_type<T: ParserRuleContext<'input, TF=Self::TF, Ctx=Self::Ctx> + 'input>(&self) -> Vec<Rc<T>> where Self: Sized {
         self.get_children()
-            .iter()
-            // not fully sound until `non_static_type_id` is implemented
-            .filter(|&it| it.self_id() == T::id())
+            // .iter()
+            // might not be fully sound until `non_static_type_id` is implemented
+            .filter(|it| it.self_id() == T::id())
             .map(|it| cast_rc::<T>(it.clone()))
             .collect()
     }
 
-    fn get_token(&self, ttype: isize, pos: usize) -> Option<Rc<TerminalNode<'input, Self::TF>>> {
+    fn get_token(&self, ttype: isize, pos: usize) -> Option<Rc<TerminalNode<'input, Self::Ctx>>> {
         self.get_children()
-            .iter()
-            .filter(|&it| it.self_id() == TerminalNode::<'input, Self::TF>::id())
-            .map(|it| cast_rc::<TerminalNode<'input, Self::TF>>(it.clone()))
+            // .iter()
+            .filter(|it| it.self_id() == TerminalNode::<'input, Self::Ctx>::id())
+            .map(|it| cast_rc::<TerminalNode<'input, Self::Ctx>>(it.clone()))
             .filter(|it| it.symbol.borrow().get_token_type() == ttype)
             .nth(pos)
     }
 
-    fn get_tokens(&self, ttype: isize) -> Vec<Rc<TerminalNode<'input, Self::TF>>> {
+    fn get_tokens(&self, ttype: isize) -> Vec<Rc<TerminalNode<'input, Self::Ctx>>> {
         self.get_children()
-            .iter()
-            .filter(|&it| it.self_id() == TerminalNode::<'input, Self::TF>::id())
-            .map(|it| cast_rc::<TerminalNode<'input, Self::TF>>(it.clone()))
+            // .iter()
+            .filter(|it| it.self_id() == TerminalNode::<'input, Self::Ctx>::id())
+            .map(|it| cast_rc::<TerminalNode<'input, Self::Ctx>>(it.clone()))
             .filter(|it| it.symbol.borrow().get_token_type() == ttype)
             .collect()
     }
 
-    fn upcast(&self) -> &dyn ParserRuleContext<'input, TF=Self::TF>;
+    // fn upcast(&self) -> &dyn ParserRuleContext<'input, TF=Self::TF>;
 }
 
-impl<'input, TF: TokenFactory<'input> + 'input> (dyn ParserRuleContext<'input, TF=TF> + 'input) {
-    fn to_string(self: &Rc<Self>, rule_names: Option<&[&str]>, stop: Option<ParserRuleContextType<'input, TF>>) -> String {
+pub trait RuleContextExt<T: ?Sized> {
+    fn to_string(self: &Rc<Self>, rule_names: Option<&[&str]>, stop: Option<Rc<T>>) -> String;
+}
+
+impl<'input, T: ParserRuleContext<'input> + ?Sized + 'input, Z> RuleContextExt<Z> for T
+    where
+        Z: ParserRuleContext<'input, Ctx=T::Ctx, TF=T::TF> + ?Sized + 'input,
+        T::Ctx: ParserNodeType<'input, Type=Z>,
+        Rc<T>: CoerceUnsized<Rc<Z>>
+{
+    fn to_string(self: &Rc<Self>, rule_names: Option<&[&str]>, stop: Option<Rc<Z>>) -> String {
         let mut result = String::from("[");
-        let mut next: Option<Rc<Self>> = Some(self.clone());
+        let mut next: Option<Rc<Z>> = Some(self.clone() as Rc<Z>);
         while let Some(ref p) = next {
             if stop.is_some() && (stop.is_none() || Rc::ptr_eq(p, stop.as_ref().unwrap())) { break }
 
@@ -128,13 +141,13 @@ impl<'input, TF: TokenFactory<'input> + 'input> (dyn ParserRuleContext<'input, T
 
 //todo do not calc this every time, maybe threadlocal? or it might be ok as it is because it is inlined
 #[inline]
-pub(crate) fn empty_ctx<'input, TF: TokenFactory<'input> + 'input>() -> Box<dyn ParserRuleContext<'input, TF=TF> + 'input> {
-    Box::new(BaseParserRuleContext::new_parser_ctx(None, -1, EmptyCustomRuleContext(PhantomData)))
+pub(crate) fn empty_ctx<'a, TF: TokenFactory<'a>>() -> Box<BaseRuleContext<'a, EmptyCustomRuleContext<'a, TF>>> {
+    Box::new(BaseRuleContext::new_ctx(None, -1, EmptyCustomRuleContext(PhantomData)))
 }
 
 #[inline]
 #[doc(hidden)]
-fn cast_rc<'a, T: ParserRuleContext<'a> + 'a>(ctx: ParserRuleContextType<'a, T::TF>) -> Rc<T> {
+fn cast_rc<'a, T: ParserRuleContext<'a>>(ctx: Rc<<T::Ctx as ParserNodeType<'a>>::Type>) -> Rc<T> {
     // not sure how safe it is
     unsafe { Rc::from_raw(Rc::into_raw(ctx) as *const T) }
 }
@@ -168,7 +181,7 @@ pub fn cast_mut<'a, T: ParserRuleContext<'a> + 'a + ?Sized, Result: 'a>(ctx: &mu
 //     }
 // }
 
-pub type ParserRuleContextType<'input, T> = Rc<dyn ParserRuleContext<'input, TF=T> + 'input>;
+// pub type ParserRuleContextType<'input, T> = Rc<dyn ParserRuleContext<'input, Ctx=T> + 'input>;
 // pub type ParserRuleContextType<'input,T> = ParseTreeNode<'input,T>;
 
 pub struct BaseParserRuleContext<'input, Ctx: CustomRuleContext<'input>> {
@@ -178,7 +191,7 @@ pub struct BaseParserRuleContext<'input, Ctx: CustomRuleContext<'input>> {
     stop: RefCell<<Ctx::TF as TokenFactory<'input>>::Tok>,
     exception: Option<Box<ANTLRError>>,
     /// List of children of current node
-    pub(crate) children: RefCell<Vec<ParserRuleContextType<'input, Ctx::TF>>>,
+    pub(crate) children: RefCell<Vec<Rc<<Ctx::Ctx as ParserNodeType<'input>>::Type>>>,
 }
 
 impl<'input, Ctx: CustomRuleContext<'input>> Debug for BaseParserRuleContext<'input, Ctx> {
@@ -196,17 +209,18 @@ impl<'input, Ctx: CustomRuleContext<'input>> RuleContext<'input> for BaseParserR
         self.base.set_invoking_state(t)
     }
 
-    fn get_parent_ctx(&self) -> Option<ParserRuleContextType<'input, Self::TF>> {
+    fn get_parent_ctx(&self) -> Option<Rc<<Ctx::Ctx as ParserNodeType<'input>>::Type>> {
         self.base.get_parent_ctx()
     }
 
-    fn set_parent(&self, parent: &Option<ParserRuleContextType<'input, Self::TF>>) {
+    fn set_parent(&self, parent: &Option<Rc<<Ctx::Ctx as ParserNodeType<'input>>::Type>>) {
         self.base.set_parent(parent)
     }
 }
 
 impl<'input, Ctx: CustomRuleContext<'input>> CustomRuleContext<'input> for BaseParserRuleContext<'input, Ctx> {
     type TF = Ctx::TF;
+    type Ctx = Ctx::Ctx;
 
     fn get_rule_index(&self) -> usize { self.base.ext.get_rule_index() }
 }
@@ -247,6 +261,7 @@ impl<'input, Ctx: CustomRuleContext<'input>> BorrowMut<Ctx> for BaseParserRuleCo
     }
 }
 
+
 impl<'input, Ctx: CustomRuleContext<'input>> ParserRuleContext<'input> for BaseParserRuleContext<'input, Ctx> {
     fn set_exception(&self, _e: ANTLRError) {
         unimplemented!()
@@ -277,22 +292,22 @@ impl<'input, Ctx: CustomRuleContext<'input>> ParserRuleContext<'input> for BaseP
         self.stop.borrow_mut()
     }
 
-    fn add_token_node(&self, token: TerminalNode<'input, Ctx::TF>) -> ParserRuleContextType<'input, Ctx::TF> {
-        let node: ParserRuleContextType<'input, Ctx::TF> = Rc::new(token);
-        self.children.borrow_mut().push(node.clone());
-        node
-    }
+//     fn add_token_node(&self, token: TerminalNode<'input, Ctx::TF>) -> ParserRuleContextType<'input, Ctx::TF> {
+//         let node: ParserRuleContextType<'input, Ctx::TF> = Rc::new(token);
+//         self.children.borrow_mut().push(node.clone());
+//         node
+//     }
+//
+//     fn add_error_node(&self, bad_token: ErrorNode<'input, Ctx::TF>) -> ParserRuleContextType<'input, Ctx::TF> {
+// //        bad_token.base.parent_ctx =
+//         let node: ParserRuleContextType<'input, Ctx::TF> = Rc::new(bad_token);
+// //        Backtrace::new().frames()[0].symbols()[0];
+//
+//         self.children.borrow_mut().push(node.clone());
+//         node
+//     }
 
-    fn add_error_node(&self, bad_token: ErrorNode<'input, Ctx::TF>) -> ParserRuleContextType<'input, Ctx::TF> {
-//        bad_token.base.parent_ctx =
-        let node: ParserRuleContextType<'input, Ctx::TF> = Rc::new(bad_token);
-//        Backtrace::new().frames()[0].symbols()[0];
-
-        self.children.borrow_mut().push(node.clone());
-        node
-    }
-
-    fn add_child(&self, child: ParserRuleContextType<'input, Ctx::TF>) {
+    fn add_child(&self, child: Rc<<Ctx::Ctx as ParserNodeType<'input>>::Type>) {
         self.children.borrow_mut().push(child);
     }
 
@@ -300,21 +315,21 @@ impl<'input, Ctx: CustomRuleContext<'input>> ParserRuleContext<'input> for BaseP
         self.children.borrow_mut().pop();
     }
 
-    fn enter_rule(&self, listener: &mut dyn Any) {
-        Ctx::enter(self, listener)
-    }
-
-    fn exit_rule(&self, listener: &mut dyn Any) {
-        Ctx::exit(self, listener)
-    }
-
-    fn upcast(&self) -> &dyn ParserRuleContext<'input, TF=Ctx::TF> {
-        self
-    }
+    // fn enter_rule(&self, listener: &mut dyn Any) {
+    //     Ctx::enter(self, listener)
+    // }
+    //
+    // fn exit_rule(&self, listener: &mut dyn Any) {
+    //     Ctx::exit(self, listener)
+    // }
+    //
+    // fn upcast(&self) -> &dyn ParserRuleContext<'input, TF=Ctx::TF> {
+    //     self
+    // }
 }
 
 impl<'input, Ctx: CustomRuleContext<'input>> Tree<'input> for BaseParserRuleContext<'input, Ctx> {
-    fn get_parent(&self) -> Option<ParserRuleContextType<'input, Ctx::TF>> {
+    fn get_parent(&self) -> Option<Rc<<Ctx::Ctx as ParserNodeType<'input>>::Type>> {
         self.get_parent_ctx()
     }
 
@@ -326,7 +341,7 @@ impl<'input, Ctx: CustomRuleContext<'input>> Tree<'input> for BaseParserRuleCont
         unimplemented!()
     }
 
-    fn get_child(&self, i: usize) -> Option<ParserRuleContextType<'input, Ctx::TF>> {
+    fn get_child(&self, i: usize) -> Option<Rc<<Self::Ctx as ParserNodeType<'input>>::Type>> {
         self.children.borrow().get(i).cloned()
     }
 
@@ -334,13 +349,15 @@ impl<'input, Ctx: CustomRuleContext<'input>> Tree<'input> for BaseParserRuleCont
         self.children.borrow().len()
     }
 
-    fn get_children(&self) -> Ref<'_, Vec<ParserRuleContextType<'input, Ctx::TF>>> {
-        self.children.borrow()
-    }
+    // fn get_children<'a>(&'a self) -> Box<dyn ExactSizeIterator<Item=Rc<<Self::Ctx as ParserNodeType<'input>>::Type>> + 'a> where 'input:'a{
+    //     let len = self.children.borrow().len();
+    //
+    //     Box::new(IndexIter::new(self.children.borrow(),len))
+    // }
 
-    fn get_children_full(&self) -> &RefCell<Vec<ParserRuleContextType<'input, Ctx::TF>>> {
-        &self.children
-    }
+    // fn get_children_full(&self) -> &RefCell<Vec<Rc<<Ctx::Ctx as ParserNodeType<'input>>::Type>>> {
+    //     &self.children
+    // }
 }
 
 impl<'input, Ctx: CustomRuleContext<'input>> ParseTree<'input> for BaseParserRuleContext<'input, Ctx> {
@@ -350,13 +367,9 @@ impl<'input, Ctx: CustomRuleContext<'input>> ParseTree<'input> for BaseParserRul
 
     default fn get_text(&self) -> String {
         let children = self.get_children();
-        if children.len() == 0 {
-            return String::new();
-        }
-
         let mut result = String::new();
 
-        for child in children.iter() {
+        for child in children {
             result += &child.get_text()
         }
 
@@ -369,7 +382,7 @@ impl<'input, Ctx: CustomRuleContext<'input>> ParseTree<'input> for BaseParserRul
 }
 
 impl<'input, Ctx: CustomRuleContext<'input> + 'input> BaseParserRuleContext<'input, Ctx> {
-    pub fn new_parser_ctx(parent_ctx: Option<ParserRuleContextType<'input, Ctx::TF>>, invoking_state: isize, ext: Ctx) -> Self {
+    pub fn new_parser_ctx(parent_ctx: Option<Rc<<Ctx::Ctx as ParserNodeType<'input>>::Type>>, invoking_state: isize, ext: Ctx) -> Self {
         Self {
             base: BaseRuleContext::new_ctx(parent_ctx, invoking_state, ext),
             start: RefCell::new(Ctx::TF::create_invalid()),
@@ -378,19 +391,19 @@ impl<'input, Ctx: CustomRuleContext<'input> + 'input> BaseParserRuleContext<'inp
             children: RefCell::new(vec![]),
         }
     }
-    pub fn copy_from<T: ParserRuleContext<'input, TF=Ctx::TF> + ?Sized>(ctx: &T, ext: Ctx) -> Self {
+    pub fn copy_from<T: ParserRuleContext<'input, TF=Ctx::TF, Ctx=Ctx::Ctx> + ?Sized>(ctx: &T, ext: Ctx) -> Self {
         Self {
             base: BaseRuleContext::new_ctx(ctx.get_parent_ctx(), ctx.get_invoking_state(), ext),
             start: RefCell::new(ctx.start_mut().clone()),
             stop: RefCell::new(ctx.stop_mut().clone()),
             exception: None,
-            children: RefCell::new(ctx.get_children().iter().cloned().collect()),
+            children: RefCell::new(ctx.get_children().collect()),
         }
     }
 
-    pub fn to_string(self: Rc<Self>, rule_names: Option<&[&str]>, stop: Option<Rc<dyn ParserRuleContext<'input, TF=Ctx::TF>>>) -> String {
-        (self as ParserRuleContextType<'input, Ctx::TF>).to_string(rule_names, stop)
-    }
+    // pub fn to_string(self: Rc<Self>, rule_names: Option<&[&str]>, stop: Option<Rc<Ctx::Ctx::Type>>) -> String {
+    //     (self as Rc<<Ctx::Ctx as ParserNodeType<'input>>::Type>).to_string(rule_names, stop)
+    // }
 }
 
 
@@ -418,19 +431,15 @@ impl<'input, T: DerefSeal<Target=I> + 'input + Debug + Tid, I: ParserRuleContext
 
     fn stop_mut<'a>(&'a self) -> RefMut<'a, <Self::TF as TokenFactory<'input>>::Tok> where 'input: 'a { self.deref().stop_mut() }
 
-    fn add_token_node(&self, token: TerminalNode<'input, I::TF>) -> ParserRuleContextType<'input, Self::TF> { self.deref().add_token_node(token) }
-
-    fn add_error_node(&self, bad_token: ErrorNode<'input, I::TF>) -> ParserRuleContextType<'input, Self::TF> { self.deref().add_error_node(bad_token) }
-
-    fn add_child(&self, child: ParserRuleContextType<'input, Self::TF>) { self.deref().add_child(child) }
+    fn add_child(&self, child: Rc<<I::Ctx as ParserNodeType<'input>>::Type>) { self.deref().add_child(child) }
 
     fn remove_last_child(&self) { self.deref().remove_last_child() }
 
-    fn enter_rule(&self, listener: &mut dyn Any) { self.deref().enter_rule(listener) }
-
-    fn exit_rule(&self, listener: &mut dyn Any) { self.deref().exit_rule(listener) }
-
-    fn upcast(&self) -> &dyn ParserRuleContext<'input, TF=Self::TF> { self.deref().upcast() }
+    // fn enter_rule(&self, listener: &mut dyn Any) { self.deref().enter_rule(listener) }
+    //
+    // fn exit_rule(&self, listener: &mut dyn Any) { self.deref().exit_rule(listener) }
+    //
+    // fn upcast(&self) -> &dyn ParserRuleContext<'input, TF=Self::TF> { self.deref().upcast() }
 }
 
 impl<'input, T: DerefSeal<Target=I> + 'input + Debug + Tid, I: ParserRuleContext<'input> + 'input + ?Sized> RuleContext<'input> for T {
@@ -440,9 +449,9 @@ impl<'input, T: DerefSeal<Target=I> + 'input + Debug + Tid, I: ParserRuleContext
 
     fn is_empty(&self) -> bool { self.deref().is_empty() }
 
-    fn get_parent_ctx(&self) -> Option<ParserRuleContextType<'input, Self::TF>> { self.deref().get_parent_ctx() }
+    fn get_parent_ctx(&self) -> Option<Rc<<I::Ctx as ParserNodeType<'input>>::Type>> { self.deref().get_parent_ctx() }
 
-    fn set_parent(&self, parent: &Option<ParserRuleContextType<'input, Self::TF>>) { self.deref().set_parent(parent) }
+    fn set_parent(&self, parent: &Option<Rc<<I::Ctx as ParserNodeType<'input>>::Type>>) { self.deref().set_parent(parent) }
 }
 
 impl<'input, T: DerefSeal<Target=I> + 'input + Debug + Tid, I: ParserRuleContext<'input> + 'input + ?Sized> ParseTree<'input> for T {
@@ -452,23 +461,24 @@ impl<'input, T: DerefSeal<Target=I> + 'input + Debug + Tid, I: ParserRuleContext
 }
 
 impl<'input, T: DerefSeal<Target=I> + 'input + Debug + Tid, I: ParserRuleContext<'input> + 'input + ?Sized +> Tree<'input> for T {
-    fn get_parent(&self) -> Option<ParserRuleContextType<'input, Self::TF>> { self.deref().get_parent() }
+    fn get_parent(&self) -> Option<Rc<<I::Ctx as ParserNodeType<'input>>::Type>> { self.deref().get_parent() }
 
     fn has_parent(&self) -> bool { self.deref().has_parent() }
 
     fn get_payload(&self) -> Box<dyn Any> { self.deref().get_payload() }
 
-    fn get_child(&self, i: usize) -> Option<ParserRuleContextType<'input, Self::TF>> { self.deref().get_child(i) }
+    fn get_child(&self, i: usize) -> Option<Rc<<I::Ctx as ParserNodeType<'input>>::Type>> { self.deref().get_child(i) }
 
     fn get_child_count(&self) -> usize { self.deref().get_child_count() }
 
-    fn get_children(&self) -> Ref<'_, Vec<ParserRuleContextType<'input, Self::TF>>> { self.deref().get_children() }
+    fn get_children<'a>(&'a self) -> Box<dyn Iterator<Item=Rc<<Self::Ctx as ParserNodeType<'input>>::Type>> + 'a> where 'input: 'a { self.deref().get_children() }
 
-    fn get_children_full(&self) -> &RefCell<Vec<ParserRuleContextType<'input, Self::TF>>> { self.deref().get_children_full() }
+    // fn get_children_full(&self) -> &RefCell<Vec<Rc<<I::Ctx as ParserNodeType<'input>>::Type>>> { self.deref().get_children_full() }
 }
 
 impl<'input, T: DerefSeal<Target=I> + 'input + Debug + Tid, I: ParserRuleContext<'input> + 'input + ?Sized> CustomRuleContext<'input> for T {
     type TF = I::TF;
+    type Ctx = I::Ctx;
 
     fn get_rule_index(&self) -> usize { self.deref().get_rule_index() }
 

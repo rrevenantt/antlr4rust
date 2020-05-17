@@ -15,7 +15,7 @@ pub fn string_tree<'a, T: Tree<'a> + ?Sized>(tree: &T, rule_names: &[&str]) -> S
     result.push('(');
     result.extend(s.chars());
     result = tree.get_children()
-        .iter()
+        // .iter()
         .map(|child| string_tree(child.deref(), rule_names))
         .fold(result, |mut acc, text| {
             acc.push(' ');

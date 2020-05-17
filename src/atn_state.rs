@@ -80,7 +80,7 @@ pub trait ATNState: Sync + Send + Debug {
     fn get_state_type_id(&self) -> isize;
 
     fn get_state_number(&self) -> usize;
-    fn set_state_number(&self, stateNumber: isize);
+    fn set_state_number(&self, state_number: isize);
 
     fn get_transitions(&self) -> &Vec<Box<dyn Transition>>;
     fn set_transitions(&self, t: Vec<Box<dyn Transition>>);
@@ -156,7 +156,7 @@ impl ATNState for BaseATNState {
         self.state_number
     }
 
-    fn set_state_number(&self, _stateNumber: isize) {
+    fn set_state_number(&self, _state_number: isize) {
         unimplemented!()
     }
 

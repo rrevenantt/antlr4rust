@@ -8,7 +8,7 @@ use antlr_rust::tree::ParseTreeListener;
 
 use super::labelsparser::*;
 
-pub trait LabelsListener<'input>: ParseTreeListener<'input, LocalTokenFactory<'input>> {
+pub trait LabelsListener<'input>: ParseTreeListener<'input, LabelsParserContextType> {
     /**
      * Enter a parse tree produced by {@link LabelsParser#s}.
      * @param ctx the parse tree

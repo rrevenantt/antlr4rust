@@ -13,7 +13,7 @@ use crate::recognizer::Recognizer;
 use crate::token::Token;
 
 pub trait ErrorListener<T> {
-    fn syntax_error(&self, /*todo _recognizer: (Option<&dyn Lexer<'_>>,Option<&dyn Parser<'_>>),*/ _offending_symbol: Option<&dyn Token>,
+    fn syntax_error(&self, _recognizer: &T, _offending_symbol: Option<&dyn Token>,
                     _line: isize, _column: isize, _msg: &str, _e: Option<&ANTLRError>, ) {}
 
     fn report_ambiguity(&self, _recognizer: &T, _dfa: &DFA, _start_index: isize, _stop_index: isize,
@@ -30,7 +30,7 @@ pub trait ErrorListener<T> {
 pub struct ConsoleErrorListener {}
 
 impl<T> ErrorListener<T> for ConsoleErrorListener {
-    fn syntax_error(&self, _offending_symbol: Option<&dyn Token>,
+    fn syntax_error(&self, _recognizer: &T, _offending_symbol: Option<&dyn Token>,
                     line: isize, column: isize, msg: &str, _e: Option<&ANTLRError>) {
         eprintln!("line {}:{} {}", line, column, msg);
     }
@@ -41,9 +41,9 @@ pub(crate) struct ProxyErrorListener<'a, T> {
 }
 
 impl<'a, T> ErrorListener<T> for ProxyErrorListener<'a, T> {
-    fn syntax_error(&self, offending_symbol: Option<&dyn Token>, line: isize, column: isize, msg: &str, e: Option<&ANTLRError>) {
+    fn syntax_error(&self, _recognizer: &T, offending_symbol: Option<&dyn Token>, line: isize, column: isize, msg: &str, e: Option<&ANTLRError>) {
         for listener in self.delegates.deref() {
-            listener.syntax_error(offending_symbol, line, column, msg, e)
+            listener.syntax_error(_recognizer, offending_symbol, line, column, msg, e)
         }
     }
 

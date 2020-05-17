@@ -8,8 +8,8 @@ use std::rc::Rc;
 
 use crate::atn_simulator::IATNSimulator;
 use crate::interval_set::IntervalSet;
-use crate::parser::Parser;
-use crate::parser_rule_context::{ParserRuleContext, ParserRuleContextType};
+use crate::parser::{Parser, ParserNodeType};
+use crate::parser_rule_context::ParserRuleContext;
 use crate::token::{OwningToken, Token};
 use crate::transition::PredicateTransition;
 use crate::transition::TransitionType::TRANSITION_PREDICATE;
@@ -19,7 +19,7 @@ use crate::transition::TransitionType::TRANSITION_PREDICATE;
 pub enum ANTLRError {
     /// Returned from Lexer when it fails to find matching token type for current input
     ///
-    /// Usually Lexers contain rule that captures all invalid tokens like:
+    /// Usually Lexers contain last rule that captures all invalid tokens like:
     /// ```text
     /// ERROR_TOKEN: . ;
     /// ```
@@ -119,7 +119,7 @@ pub struct BaseRecognitionError {
 impl BaseRecognitionError {
     pub fn get_expected_tokens<'a, T: Parser<'a>>(&self, recognizer: &T) -> IntervalSet {
         recognizer.get_interpreter().atn()
-            .get_expected_tokens(self.offending_state, recognizer.get_parser_rule_context())
+            .get_expected_tokens::<'a, T::Node>(self.offending_state, recognizer.get_parser_rule_context())
     }
 
     fn new<'a, T: Parser<'a>>(recog: &mut T) -> BaseRecognitionError {
@@ -187,7 +187,7 @@ impl InputMisMatchError {
         }
     }
 
-    pub fn with_state<'a, T: Parser<'a>>(recognizer: &mut T, offending_state: isize, ctx: ParserRuleContextType<'a, T::TF>) -> InputMisMatchError {
+    pub fn with_state<'a, T: Parser<'a>>(recognizer: &mut T, offending_state: isize, ctx: Rc<<T::Node as ParserNodeType<'a>>::Type>) -> InputMisMatchError {
         let mut a = Self::new(recognizer);
         // a.base.ctx = ctx;
         a.base.offending_state = offending_state;

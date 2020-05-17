@@ -1,7 +1,6 @@
 // Generated from XMLLexer.g4 by ANTLR 4.8
 #![allow(dead_code)]
-#![allow(non_snake_case)]
-#![allow(non_upper_case_globals)]
+#![allow(nonstandard_style)]
 #![allow(unused_imports)]
 
 use std::cell::RefCell;
@@ -21,7 +20,7 @@ use antlr_rust::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
 use antlr_rust::parser_rule_context::{BaseParserRuleContext, cast, ParserRuleContext};
 use antlr_rust::PredictionContextCache;
 use antlr_rust::recognizer::{Actions, Recognizer};
-use antlr_rust::rule_context::{BaseRuleContext, EmptyCustomRuleContext};
+use antlr_rust::rule_context::{BaseRuleContext, EmptyContext, EmptyCustomRuleContext};
 use antlr_rust::token::*;
 use antlr_rust::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use antlr_rust::token_source::TokenSource;
@@ -153,8 +152,8 @@ pub struct XMLLexerActions {}
 
 impl XMLLexerActions {}
 
-impl<'input, Input: CharStream<'input>> LexerRecog<'input, BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>> for XMLLexerActions {
-    fn action(_localctx: &(dyn ParserRuleContext<'input, TF=LocalTokenFactory<'input>> + 'input), rule_index: isize, action_index: isize,
+impl<'input, Input: CharStream<'input>> Actions<'input, BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>> for XMLLexerActions {
+    fn action(_localctx: &EmptyContext<'input, LocalTokenFactory<'input>>, rule_index: isize, action_index: isize,
               recog: &mut BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>,
     ) {
         match rule_index {
@@ -163,7 +162,7 @@ impl<'input, Input: CharStream<'input>> LexerRecog<'input, BaseLexer<'input, XML
             _ => {}
         }
     }
-    fn sempred(_localctx: &(dyn ParserRuleContext<'input, TF=LocalTokenFactory<'input>> + 'input), rule_index: isize, pred_index: isize,
+    fn sempred(_localctx: &EmptyContext<'input, LocalTokenFactory<'input>>, rule_index: isize, pred_index: isize,
                recog: &mut BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>,
     ) -> bool {
         match rule_index {
@@ -198,11 +197,11 @@ impl<'input, Input: CharStream<'input>> XMLLexer<'input, Input> {
     }
 }
 
+impl<'input, Input: CharStream<'input>> LexerRecog<'input, BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>> for XMLLexerActions {}
+
 impl<'input> TokenAware<'input> for XMLLexerActions {
     type TF = LocalTokenFactory<'input>;
 }
-
-impl<'input> Recognizer<'input> for XMLLexerActions {}
 
 impl<'input, Input: CharStream<'input>> TokenAware<'input> for XMLLexer<'input, Input> {
     type TF = LocalTokenFactory<'input>;

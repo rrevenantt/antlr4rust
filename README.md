@@ -17,17 +17,18 @@ For now development is going on in this repository
 but eventually it will be merged to main ANTLR4 repo
 
 Currently requires nightly version of rust. 
-This likely will be the case until `specialization`,`try_blocks` and `unsize` features are stabilized. 
+This likely will be the case until `unsize` or some kind of `CoerceUnsized` is stabilized. 
+There are other unstable features in use but only `CoerceUnsized` is essential. 
 
 Remaining things before merge:
  - API stabilization
    - [ ] Rust api guidelines compliance  
    - [ ] more tests for API because it is quite different from Java
- - more generic `PredictionContext`
  - generate enum for labeled alternatives without redundant `Error` option
  - option to generate fields instead of getters by default
  - move useful exports to lib.rs for better documentation
  - reexport statics crate and move to once_cell
+ - support byte level parser
 
 Can be done after merge: 
  - profiling and performance optimizations

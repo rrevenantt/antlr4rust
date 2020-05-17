@@ -8,7 +8,7 @@ use antlr_rust::tree::ParseTreeListener;
 
 use super::referencetoatnparser::*;
 
-pub trait ReferenceToATNListener<'input>: ParseTreeListener<'input, LocalTokenFactory<'input>> {
+pub trait ReferenceToATNListener<'input>: ParseTreeListener<'input, ReferenceToATNParserContextType> {
     /**
      * Enter a parse tree produced by {@link ReferenceToATNParser#a}.
      * @param ctx the parse tree
