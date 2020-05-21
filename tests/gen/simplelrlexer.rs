@@ -15,6 +15,7 @@ use antlr_rust::char_stream::CharStream;
 use antlr_rust::dfa::DFA;
 use antlr_rust::error_listener::ErrorListener;
 use antlr_rust::int_stream::IntStream;
+use antlr_rust::lazy_static;
 use antlr_rust::lexer::{BaseLexer, Lexer, LexerRecog};
 use antlr_rust::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
 use antlr_rust::parser_rule_context::{BaseParserRuleContext, cast, ParserRuleContext};
@@ -54,12 +55,14 @@ lazy_static! {
 pub type LexerContext<'input> = BaseParserRuleContext<'input, EmptyCustomRuleContext<'input, LocalTokenFactory<'input>>>;
 pub type LocalTokenFactory<'input> = CommonTokenFactory;
 
-pub struct SimpleLRLexer<'input, Input: CharStream<'input>> {
+type From<'a> = <LocalTokenFactory<'a> as TokenFactory<'a>>::From;
+
+pub struct SimpleLRLexer<'input, Input: CharStream<From<'input>>> {
     base: BaseLexer<'input, SimpleLRLexerActions, Input, LocalTokenFactory<'input>>,
 //	static { RuntimeMetaData.checkVersion("4.8", RuntimeMetaData.VERSION); }
 }
 
-impl<'input, Input: CharStream<'input>> Deref for SimpleLRLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> Deref for SimpleLRLexer<'input, Input> {
     type Target = BaseLexer<'input, SimpleLRLexerActions, Input, LocalTokenFactory<'input>>;
 
     fn deref(&self) -> &Self::Target {
@@ -67,14 +70,14 @@ impl<'input, Input: CharStream<'input>> Deref for SimpleLRLexer<'input, Input> {
     }
 }
 
-impl<'input, Input: CharStream<'input>> DerefMut for SimpleLRLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> DerefMut for SimpleLRLexer<'input, Input> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.base
     }
 }
 
 
-impl<'input, Input: CharStream<'input>> SimpleLRLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> SimpleLRLexer<'input, Input> {
     fn get_rule_names(&self) -> &'static [&'static str] {
         &ruleNames
     }
@@ -84,14 +87,6 @@ impl<'input, Input: CharStream<'input>> SimpleLRLexer<'input, Input> {
 
     fn get_symbolic_names(&self) -> &[Option<&str>] {
         &_SYMBOLIC_NAMES
-    }
-
-    fn add_error_listener(&mut self, _listener: Box<dyn ErrorListener<BaseLexer<'input, SimpleLRLexerActions, Input, LocalTokenFactory<'input>>>>) {
-        self.base.add_error_listener(_listener);
-    }
-
-    fn remove_error_listeners(&mut self) {
-        self.base.remove_error_listeners()
     }
 
     fn get_grammar_file_name(&self) -> &'static str {
@@ -115,7 +110,7 @@ impl<'input, Input: CharStream<'input>> SimpleLRLexer<'input, Input> {
     }
 }
 
-impl<'input, Input: CharStream<'input>> SimpleLRLexer<'input, Input> where &'input LocalTokenFactory<'input>: Default {
+impl<'input, Input: CharStream<From<'input>>> SimpleLRLexer<'input, Input> where &'input LocalTokenFactory<'input>: Default {
     pub fn new(input: Box<Input>) -> Self {
         SimpleLRLexer::new_with_token_factory(input, <&LocalTokenFactory<'input> as Default>::default())
     }
@@ -125,21 +120,21 @@ pub struct SimpleLRLexerActions {}
 
 impl SimpleLRLexerActions {}
 
-impl<'input, Input: CharStream<'input>> Actions<'input, BaseLexer<'input, SimpleLRLexerActions, Input, LocalTokenFactory<'input>>> for SimpleLRLexerActions {}
+impl<'input, Input: CharStream<From<'input>>> Actions<'input, BaseLexer<'input, SimpleLRLexerActions, Input, LocalTokenFactory<'input>>> for SimpleLRLexerActions {}
 
-impl<'input, Input: CharStream<'input>> SimpleLRLexer<'input, Input> {}
+impl<'input, Input: CharStream<From<'input>>> SimpleLRLexer<'input, Input> {}
 
-impl<'input, Input: CharStream<'input>> LexerRecog<'input, BaseLexer<'input, SimpleLRLexerActions, Input, LocalTokenFactory<'input>>> for SimpleLRLexerActions {}
+impl<'input, Input: CharStream<From<'input>>> LexerRecog<'input, BaseLexer<'input, SimpleLRLexerActions, Input, LocalTokenFactory<'input>>> for SimpleLRLexerActions {}
 
 impl<'input> TokenAware<'input> for SimpleLRLexerActions {
     type TF = LocalTokenFactory<'input>;
 }
 
-impl<'input, Input: CharStream<'input>> TokenAware<'input> for SimpleLRLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> TokenAware<'input> for SimpleLRLexer<'input, Input> {
     type TF = LocalTokenFactory<'input>;
 }
 
-impl<'input, Input: CharStream<'input>> TokenSource<'input> for SimpleLRLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> TokenSource<'input> for SimpleLRLexer<'input, Input> {
     fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok {
         self.base.next_token()
     }
@@ -196,4 +191,3 @@ const _serializedATN: &'static str =
 		\x02\x02\x0a\x08\x03\x02\x02\x02\x0a\x0b\x03\x02\x02\x02\x0b\x04\x03\x02\
 		\x02\x02\x0c\x0d\x09\x02\x02\x02\x0d\x0e\x03\x02\x02\x02\x0e\x0f\x08\x03\
 		\x02\x02\x0f\x06\x03\x02\x02\x02\x04\x02\x0a\x03\x08\x02\x02";
-

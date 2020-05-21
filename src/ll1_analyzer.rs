@@ -24,17 +24,17 @@ pub struct LL1Analyzer<'a> {
 impl LL1Analyzer<'_> {
     pub fn new(atn: &ATN) -> LL1Analyzer<'_> { LL1Analyzer { atn } }
 
-//    fn get_decision_lookahead(&self, _s: &dyn ATNState) -> &Vec<IntervalSet> { unimplemented!() }
+    //    fn get_decision_lookahead(&self, _s: &dyn ATNState) -> &Vec<IntervalSet> { unimplemented!() }
 
-    pub fn look<'input, Ctx: ParserNodeType<'input>>(&self,
-                                                     s: &dyn ATNState,
-                                                     stop_state: Option<&dyn ATNState>,
-                                                     ctx: Option<&Ctx::Type>,
+    pub fn look<'input, Ctx: ParserNodeType<'input>>(
+        &self,
+        s: &dyn ATNState,
+        stop_state: Option<&dyn ATNState>,
+        ctx: Option<&Ctx::Type>,
     ) -> IntervalSet {
         let mut r = IntervalSet::new();
-        let look_ctx = ctx.map(|x|
-            PredictionContext::from_rule_context::<'input, Ctx>(self.atn, x)
-        );
+        let look_ctx =
+            ctx.map(|x| PredictionContext::from_rule_context::<'input, Ctx>(self.atn, x));
         let mut looks_busy: HashSet<ATNConfig> = HashSet::new();
         let mut called_rule_stack = BitSet::new();
         self.look_work(
@@ -50,20 +50,22 @@ impl LL1Analyzer<'_> {
         r
     }
 
-
-    fn look_work(&self,
-//                 atn:&ATN,
-                 s: &dyn ATNState,
-                 stop_state: Option<&dyn ATNState>,
-                 ctx: Option<Arc<PredictionContext>>,
-                 look: &mut IntervalSet,
-                 look_busy: &mut HashSet<ATNConfig>,
-                 called_rule_stack: &mut BitSet,
-                 see_thru_preds: bool,
-                 add_eof: bool,
+    fn look_work(
+        &self,
+        //                 atn:&ATN,
+        s: &dyn ATNState,
+        stop_state: Option<&dyn ATNState>,
+        ctx: Option<Arc<PredictionContext>>,
+        look: &mut IntervalSet,
+        look_busy: &mut HashSet<ATNConfig>,
+        called_rule_stack: &mut BitSet,
+        see_thru_preds: bool,
+        add_eof: bool,
     ) {
         let c = ATNConfig::new(s.get_state_number(), 0, ctx.clone());
-        if !look_busy.insert(c) { return; }
+        if !look_busy.insert(c) {
+            return;
+        }
 
         if Some(s.get_state_number()) == stop_state.map(|x| x.get_state_number()) {
             match ctx {
@@ -119,19 +121,40 @@ impl LL1Analyzer<'_> {
             match tr.get_serialization_type() {
                 TransitionType::TRANSITION_RULE => {
                     let rule_tr = tr.as_ref().cast::<RuleTransition>();
-                    if called_rule_stack.contains(target.get_rule_index()) { continue; }
+                    if called_rule_stack.contains(target.get_rule_index()) {
+                        continue;
+                    }
 
-                    let new_ctx = Arc::new(PredictionContext::new_singleton(ctx.clone(), rule_tr.follow_state as isize));
+                    let new_ctx = Arc::new(PredictionContext::new_singleton(
+                        ctx.clone(),
+                        rule_tr.follow_state as isize,
+                    ));
 
                     called_rule_stack.insert(target.get_rule_index());
-                    self.look_work(target, stop_state, Some(new_ctx), look, look_busy,
-                                   called_rule_stack, see_thru_preds, add_eof);
+                    self.look_work(
+                        target,
+                        stop_state,
+                        Some(new_ctx),
+                        look,
+                        look_busy,
+                        called_rule_stack,
+                        see_thru_preds,
+                        add_eof,
+                    );
                     called_rule_stack.remove(target.get_rule_index());
                 }
                 TransitionType::TRANSITION_PREDICATE | TransitionType::TRANSITION_PRECEDENCE => {
                     if see_thru_preds {
-                        self.look_work(target, stop_state, ctx.clone(), look, look_busy,
-                                       called_rule_stack, see_thru_preds, add_eof)
+                        self.look_work(
+                            target,
+                            stop_state,
+                            ctx.clone(),
+                            look,
+                            look_busy,
+                            called_rule_stack,
+                            see_thru_preds,
+                            add_eof,
+                        )
                     } else {
                         look.add_one(TOKEN_INVALID_TYPE)
                     }
@@ -139,14 +162,21 @@ impl LL1Analyzer<'_> {
                 TransitionType::TRANSITION_WILDCARD => {
                     look.add_range(TOKEN_MIN_USER_TOKEN_TYPE, self.atn.max_token_type)
                 }
-                _ if tr.is_epsilon() => {
-                    self.look_work(target, stop_state, ctx.clone(), look, look_busy,
-                                   called_rule_stack, see_thru_preds, add_eof)
-                }
+                _ if tr.is_epsilon() => self.look_work(
+                    target,
+                    stop_state,
+                    ctx.clone(),
+                    look,
+                    look_busy,
+                    called_rule_stack,
+                    see_thru_preds,
+                    add_eof,
+                ),
                 _ => {
                     if let Some(mut set) = tr.get_label() {
                         if tr.get_serialization_type() == TRANSITION_NOTSET {
-                            let complement = set.complement(TOKEN_MIN_USER_TOKEN_TYPE, self.atn.max_token_type);
+                            let complement =
+                                set.complement(TOKEN_MIN_USER_TOKEN_TYPE, self.atn.max_token_type);
                             *set.to_mut() = complement;
                         }
                         look.add_set(set.deref())
@@ -156,4 +186,3 @@ impl LL1Analyzer<'_> {
         }
     }
 }
- 

@@ -15,6 +15,7 @@ use antlr_rust::char_stream::CharStream;
 use antlr_rust::dfa::DFA;
 use antlr_rust::error_listener::ErrorListener;
 use antlr_rust::int_stream::IntStream;
+use antlr_rust::lazy_static;
 use antlr_rust::lexer::{BaseLexer, Lexer, LexerRecog};
 use antlr_rust::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
 use antlr_rust::parser_rule_context::{BaseParserRuleContext, cast, ParserRuleContext};
@@ -53,14 +54,17 @@ lazy_static! {
 
 
 pub type LexerContext<'input> = BaseParserRuleContext<'input, EmptyCustomRuleContext<'input, LocalTokenFactory<'input>>>;
-pub type LocalTokenFactory<'input> = CommonTokenFactory;
 
-pub struct ReferenceToATNLexer<'input, Input: CharStream<'input>> {
+pub type LocalTokenFactory<'input> = antlr_rust::token_factory::OwningTokenFactory;
+
+type From<'a> = <LocalTokenFactory<'a> as TokenFactory<'a>>::From;
+
+pub struct ReferenceToATNLexer<'input, Input: CharStream<From<'input>>> {
     base: BaseLexer<'input, ReferenceToATNLexerActions, Input, LocalTokenFactory<'input>>,
 //	static { RuntimeMetaData.checkVersion("4.8", RuntimeMetaData.VERSION); }
 }
 
-impl<'input, Input: CharStream<'input>> Deref for ReferenceToATNLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> Deref for ReferenceToATNLexer<'input, Input> {
     type Target = BaseLexer<'input, ReferenceToATNLexerActions, Input, LocalTokenFactory<'input>>;
 
     fn deref(&self) -> &Self::Target {
@@ -68,14 +72,14 @@ impl<'input, Input: CharStream<'input>> Deref for ReferenceToATNLexer<'input, In
     }
 }
 
-impl<'input, Input: CharStream<'input>> DerefMut for ReferenceToATNLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> DerefMut for ReferenceToATNLexer<'input, Input> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.base
     }
 }
 
 
-impl<'input, Input: CharStream<'input>> ReferenceToATNLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> ReferenceToATNLexer<'input, Input> {
     fn get_rule_names(&self) -> &'static [&'static str] {
         &ruleNames
     }
@@ -85,14 +89,6 @@ impl<'input, Input: CharStream<'input>> ReferenceToATNLexer<'input, Input> {
 
     fn get_symbolic_names(&self) -> &[Option<&str>] {
         &_SYMBOLIC_NAMES
-    }
-
-    fn add_error_listener(&mut self, _listener: Box<dyn ErrorListener<BaseLexer<'input, ReferenceToATNLexerActions, Input, LocalTokenFactory<'input>>>>) {
-        self.base.add_error_listener(_listener);
-    }
-
-    fn remove_error_listeners(&mut self) {
-        self.base.remove_error_listeners()
     }
 
     fn get_grammar_file_name(&self) -> &'static str {
@@ -116,7 +112,7 @@ impl<'input, Input: CharStream<'input>> ReferenceToATNLexer<'input, Input> {
     }
 }
 
-impl<'input, Input: CharStream<'input>> ReferenceToATNLexer<'input, Input> where &'input LocalTokenFactory<'input>: Default {
+impl<'input, Input: CharStream<From<'input>>> ReferenceToATNLexer<'input, Input> where &'input LocalTokenFactory<'input>: Default {
     pub fn new(input: Box<Input>) -> Self {
         ReferenceToATNLexer::new_with_token_factory(input, <&LocalTokenFactory<'input> as Default>::default())
     }
@@ -126,21 +122,21 @@ pub struct ReferenceToATNLexerActions {}
 
 impl ReferenceToATNLexerActions {}
 
-impl<'input, Input: CharStream<'input>> Actions<'input, BaseLexer<'input, ReferenceToATNLexerActions, Input, LocalTokenFactory<'input>>> for ReferenceToATNLexerActions {}
+impl<'input, Input: CharStream<From<'input>>> Actions<'input, BaseLexer<'input, ReferenceToATNLexerActions, Input, LocalTokenFactory<'input>>> for ReferenceToATNLexerActions {}
 
-impl<'input, Input: CharStream<'input>> ReferenceToATNLexer<'input, Input> {}
+impl<'input, Input: CharStream<From<'input>>> ReferenceToATNLexer<'input, Input> {}
 
-impl<'input, Input: CharStream<'input>> LexerRecog<'input, BaseLexer<'input, ReferenceToATNLexerActions, Input, LocalTokenFactory<'input>>> for ReferenceToATNLexerActions {}
+impl<'input, Input: CharStream<From<'input>>> LexerRecog<'input, BaseLexer<'input, ReferenceToATNLexerActions, Input, LocalTokenFactory<'input>>> for ReferenceToATNLexerActions {}
 
 impl<'input> TokenAware<'input> for ReferenceToATNLexerActions {
     type TF = LocalTokenFactory<'input>;
 }
 
-impl<'input, Input: CharStream<'input>> TokenAware<'input> for ReferenceToATNLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> TokenAware<'input> for ReferenceToATNLexer<'input, Input> {
     type TF = LocalTokenFactory<'input>;
 }
 
-impl<'input, Input: CharStream<'input>> TokenSource<'input> for ReferenceToATNLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> TokenSource<'input> for ReferenceToATNLexer<'input, Input> {
     fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok {
         self.base.next_token()
     }
@@ -201,4 +197,3 @@ const _serializedATN: &'static str =
 		\x02\x02\x11\x12\x03\x02\x02\x02\x12\x06\x03\x02\x02\x02\x13\x14\x09\x02\
 		\x02\x02\x14\x15\x03\x02\x02\x02\x15\x16\x08\x04\x02\x02\x16\x08\x03\x02\
 		\x02\x02\x05\x02\x0c\x11\x03\x08\x02\x02";
-

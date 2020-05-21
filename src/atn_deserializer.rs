@@ -60,23 +60,20 @@ impl ATNDeserializer {
         }
     }
 
-    fn String_in_slice(_a: String, _list: Vec<String>) -> isize {
-        unimplemented!()
-    }
+    fn String_in_slice(_a: String, _list: Vec<String>) -> isize { unimplemented!() }
 
     fn is_feature_supported(&self, _feature: String, _actualUUID: String) -> bool {
         unimplemented!()
     }
 
     pub fn deserialize(&self, data: Chars) -> ATN {
-        let mut data = data.clone()
-            .map(|ch| {
-                let mut ch = ch as isize;
-                // decode surrogates
-                ch = if ch > 0xFFFF { ch - 0x3000 } else { ch };
-                ch -= 2;
-                ch
-            });
+        let mut data = data.clone().map(|ch| {
+            let mut ch = ch as isize;
+            // decode surrogates
+            ch = if ch > 0xFFFF { ch - 0x3000 } else { ch };
+            ch -= 2;
+            ch
+        });
 
         self.check_version(data.next().unwrap() + 2);
 
@@ -88,12 +85,13 @@ impl ATNDeserializer {
         self.read_rules(&mut atn, &mut data);
         self.read_modes(&mut atn, &mut data);
 
-        let mut sets = self.read_sets(&mut atn, &mut data,
-                                      |data| data.next().unwrap() as u16 as isize);
+        let mut sets = self.read_sets(&mut atn, &mut data, |data| {
+            data.next().unwrap() as u16 as isize
+        });
 
-        sets.extend(self.read_sets(&mut atn, &mut data,
-                                   |data|
-                                       (data.next().unwrap() & 0xFFFF) | data.next().unwrap() << 16));
+        sets.extend(self.read_sets(&mut atn, &mut data, |data| {
+            (data.next().unwrap() & 0xFFFF) | data.next().unwrap() << 16
+        }));
 
         self.read_edges(&mut atn, &mut data, &sets);
         self.read_decisions(&mut atn, &mut data);
@@ -113,9 +111,7 @@ impl ATNDeserializer {
         atn
     }
 
-    fn reset(&self, _data: Vec<u8>) {
-        unimplemented!()
-    }
+    fn reset(&self, _data: Vec<u8>) { unimplemented!() }
 
     fn check_version(&self, version: isize) {
         if version != self::SERIALIZED_VERSION {
@@ -190,13 +186,11 @@ impl ATNDeserializer {
         //println!("num_non_greedy {}", num_non_greedy);
         for _ in 0..num_non_greedy {
             let st = data.next().unwrap() as usize;
-            if let ATNStateType::DecisionState {
-                nongreedy: ng, ..
-            } = atn.states[st].get_state_type_mut()
+            if let ATNStateType::DecisionState { nongreedy: ng, .. } =
+            atn.states[st].get_state_type_mut()
             {
                 *ng = true
             }
-
         }
 
         //if (supportsPrecedencePredicates)
@@ -217,9 +211,9 @@ impl ATNDeserializer {
 
     fn read_rules(&self, atn: &mut ATN, data: &mut dyn Iterator<Item=isize>) {
         let nrules = data.next().unwrap() as usize;
-//        if atn.grammar_type == ATNType::LEXER {
-//            atn.rule_to_token_type.resize(nrules, 0)
-//        }
+        //        if atn.grammar_type == ATNType::LEXER {
+        //            atn.rule_to_token_type.resize(nrules, 0)
+        //        }
 
         atn.rule_to_start_state.resize(nrules, 0);
         for i in 0..nrules {
@@ -240,12 +234,12 @@ impl ATNDeserializer {
             if let ATNStateType::RuleStopState = state.get_state_type() {
                 let rule_index = state.get_rule_index();
                 atn.rule_to_stop_state[rule_index] = i;
-                let start_state = atn.states
+                let start_state = atn
+                    .states
                     .get_mut(atn.rule_to_start_state[rule_index])
                     .unwrap();
                 if let ATNStateType::RuleStartState {
-                    stop_state: stop,
-                    ..
+                    stop_state: stop, ..
                 } = start_state.get_state_type_mut()
                 {
                     *stop = i
@@ -314,45 +308,54 @@ impl ATNDeserializer {
             for tr in i.get_transitions() {
                 match tr.get_serialization_type() {
                     TransitionType::TRANSITION_RULE => {
-//                        println!("TRANSITION_RULE");
+                        //                        println!("TRANSITION_RULE");
                         let tr = tr.as_ref().cast::<RuleTransition>();
                         let target = atn.states.get(tr.get_target()).unwrap();
 
-                        let outermost_prec_return =
-                            if let ATNStateType::RuleStartState { is_left_recursive: true, .. } = atn.states
-                                .get(atn.rule_to_start_state[target.get_rule_index()])
-                                .unwrap()
-                                .get_state_type()
-                            {
-                                if tr.precedence == 0 {
-                                    target.get_rule_index() as isize
-                                } else {
-                                    -1
-                                }
+                        let outermost_prec_return = if let ATNStateType::RuleStartState {
+                            is_left_recursive: true,
+                            ..
+                        } = atn
+                            .states
+                            .get(atn.rule_to_start_state[target.get_rule_index()])
+                            .unwrap()
+                            .get_state_type()
+                        {
+                            if tr.precedence == 0 {
+                                target.get_rule_index() as isize
                             } else {
                                 -1
-                            };
+                            }
+                        } else {
+                            -1
+                        };
 
                         let return_tr = EpsilonTransition {
                             target: tr.follow_state,
                             outermost_precedence_return: outermost_prec_return,
                         };
-                        new_tr.push((atn.rule_to_stop_state[target.get_rule_index()], Box::new(return_tr)));
+                        new_tr.push((
+                            atn.rule_to_stop_state[target.get_rule_index()],
+                            Box::new(return_tr),
+                        ));
                     }
                     _ => continue,
                 }
             }
         }
-        new_tr.drain(..).for_each(
-            |(state, tr)|
-                atn.states[state].add_transition(tr)
-        );
+        new_tr
+            .drain(..)
+            .for_each(|(state, tr)| atn.states[state].add_transition(tr));
 
         for i in 0..atn.states.len() {
             let atn_state = atn.states.get(i).unwrap();
             match atn_state.get_state_type() {
                 ATNStateType::DecisionState {
-                    state: ATNDecisionState::BlockStartState { end_state: _, en: _ },
+                    state:
+                    ATNDecisionState::BlockStartState {
+                        end_state: _,
+                        en: _,
+                    },
                     ..
                 } => {
 
@@ -410,7 +413,11 @@ impl ATNDeserializer {
         }
     }
 
-    fn generate_rule_bypass_transitions(&self, _atn: &mut ATN, _data: &mut dyn Iterator<Item=isize>) {
+    fn generate_rule_bypass_transitions(
+        &self,
+        _atn: &mut ATN,
+        _data: &mut dyn Iterator<Item=isize>,
+    ) {
         unimplemented!()
     }
 
@@ -431,17 +438,29 @@ impl ATNDeserializer {
         let mut precedence_states = Vec::new();
         for state in _atn.states.iter() {
             if let ATNStateType::DecisionState {
-                state: ATNDecisionState::StarLoopEntry {
+                state:
+                ATNDecisionState::StarLoopEntry {
                     loop_back_state,
-                    is_precedence
-                }, ..
-            } = state.get_state_type() {
-                if let ATNStateType::RuleStartState { is_left_recursive: true, .. } = _atn.states[_atn.rule_to_start_state[state.get_rule_index()]].get_state_type() {
-                    let maybe_loop_end = state.get_transitions().iter().last().unwrap().get_target();
+                    is_precedence,
+                },
+                ..
+            } = state.get_state_type()
+            {
+                if let ATNStateType::RuleStartState {
+                    is_left_recursive: true,
+                    ..
+                } =
+                _atn.states[_atn.rule_to_start_state[state.get_rule_index()]].get_state_type()
+                {
+                    let maybe_loop_end =
+                        state.get_transitions().iter().last().unwrap().get_target();
                     let maybe_loop_end = _atn.states[maybe_loop_end].as_ref();
                     if let ATNStateType::LoopEndState(_) = maybe_loop_end.get_state_type() {
                         if maybe_loop_end.has_epsilon_only_transitions() {
-                            if let ATNStateType::RuleStopState = _atn.states[maybe_loop_end.get_transitions()[0].get_target()].get_state_type() {
+                            if let ATNStateType::RuleStopState = _atn.states
+                                [maybe_loop_end.get_transitions()[0].get_target()]
+                                .get_state_type()
+                            {
                                 precedence_states.push(state.get_state_number())
                             }
                         }
@@ -451,11 +470,14 @@ impl ATNDeserializer {
         }
         for st in precedence_states {
             if let ATNStateType::DecisionState {
-                state: ATNDecisionState::StarLoopEntry {
+                state:
+                ATNDecisionState::StarLoopEntry {
                     loop_back_state,
-                    is_precedence
-                }, ..
-            } = _atn.states[st].get_state_type_mut() {
+                    is_precedence,
+                },
+                ..
+            } = _atn.states[st].get_state_type_mut()
+            {
                 *is_precedence = true
             }
         }
@@ -465,25 +487,15 @@ impl ATNDeserializer {
         //TODO
     }
 
-    fn check_condition(&self, _condition: bool, _message: String) {
-        unimplemented!()
-    }
+    fn check_condition(&self, _condition: bool, _message: String) { unimplemented!() }
 
-    fn read_int(&self) -> isize {
-        unimplemented!()
-    }
+    fn read_int(&self) -> isize { unimplemented!() }
 
-    fn read_int32(&self) -> isize {
-        unimplemented!()
-    }
+    fn read_int32(&self) -> isize { unimplemented!() }
 
-    fn create_byte_to_hex() -> Vec<String> {
-        unimplemented!()
-    }
+    fn create_byte_to_hex() -> Vec<String> { unimplemented!() }
 
-    fn read_uuid(&self) -> String {
-        unimplemented!()
-    }
+    fn read_uuid(&self) -> String { unimplemented!() }
 
     fn edge_factory(
         &self,
@@ -496,13 +508,13 @@ impl ATNDeserializer {
         arg3: isize,
         sets: &Vec<IntervalSet>,
     ) -> Box<dyn Transition> {
-//        //        let target = atn.states.get
-//        let mut base = BaseTransition {
-//            target: trg,
-//            //            is_epsilon: false,
-//            //            label: 0,
-//            interval_set: IntervalSet::new_interval_set(),
-//        };
+        //        //        let target = atn.states.get
+        //        let mut base = BaseTransition {
+        //            target: trg,
+        //            //            is_epsilon: false,
+        //            //            label: 0,
+        //            interval_set: IntervalSet::new_interval_set(),
+        //        };
 
         match type_index {
             TRANSITION_EPSILON => Box::new(EpsilonTransition {
@@ -519,7 +531,7 @@ impl ATNDeserializer {
                 stop: arg2,
             }),
             TRANSITION_RULE => {
-//                base.set_target(arg1 as usize);
+                //                base.set_target(arg1 as usize);
                 Box::new(RuleTransition {
                     target: arg1 as usize,
                     follow_state: target,
@@ -544,18 +556,14 @@ impl ATNDeserializer {
                 action_index: arg2,
                 pred_index: 0,
             }),
-            TRANSITION_SET => {
-                Box::new(SetTransition {
-                    target,
-                    set: sets[arg1 as usize].clone(),
-                })
-            }
-            TRANSITION_NOTSET => {
-                Box::new(NotSetTransition {
-                    target,
-                    set: sets[arg1 as usize].clone(),
-                })
-            }
+            TRANSITION_SET => Box::new(SetTransition {
+                target,
+                set: sets[arg1 as usize].clone(),
+            }),
+            TRANSITION_NOTSET => Box::new(NotSetTransition {
+                target,
+                set: sets[arg1 as usize].clone(),
+            }),
             TRANSITION_WILDCARD => Box::new(WildcardTransition { target }),
             TRANSITION_PRECEDENCE => Box::new(PrecedencePredicateTransition {
                 target,
@@ -631,26 +639,24 @@ impl ATNDeserializer {
 
             _ => panic!("invalid ATN state type"),
         };
-//        println!("created state {} {:?}", state_number, state.state_type);
+        //        println!("created state {} {:?}", state_number, state.state_type);
         Box::new(state)
     }
 
-    fn lexer_action_factory(
-        &self,
-        action_type: isize,
-        data1: isize,
-        data2: isize,
-    ) -> LexerAction {
+    fn lexer_action_factory(&self, action_type: isize, data1: isize, data2: isize) -> LexerAction {
         match action_type {
             LEXER_ACTION_TYPE_CHANNEL => LexerChannelAction(data1),
-            LEXER_ACTION_TYPE_CUSTOM => LexerCustomAction { rule_index: data1, action_index: data2 },
+            LEXER_ACTION_TYPE_CUSTOM => LexerCustomAction {
+                rule_index: data1,
+                action_index: data2,
+            },
             LEXER_ACTION_TYPE_MODE => LexerModeAction(data1),
             LEXER_ACTION_TYPE_MORE => LexerMoreAction,
             LEXER_ACTION_TYPE_POP_MODE => LexerPopModeAction,
             LEXER_ACTION_TYPE_PUSH_MODE => LexerPushModeAction(data1),
             LEXER_ACTION_TYPE_SKIP => LexerSkipAction,
             LEXER_ACTION_TYPE_TYPE => LexerTypeAction(data1),
-            _ => panic!("invalid action type {}", action_type)
+            _ => panic!("invalid action type {}", action_type),
         }
     }
 }

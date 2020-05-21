@@ -17,18 +17,13 @@ For now development is going on in this repository
 but eventually it will be merged to main ANTLR4 repo
 
 Currently requires nightly version of rust. 
-This likely will be the case until `unsize` or some kind of `CoerceUnsized` is stabilized. 
+This likely will be the case until `coerce_unsize` or some kind of coersion trait is stabilized. 
 There are other unstable features in use but only `CoerceUnsized` is essential. 
 
 Remaining things before merge:
  - API stabilization
    - [ ] Rust api guidelines compliance  
    - [ ] more tests for API because it is quite different from Java
- - generate enum for labeled alternatives without redundant `Error` option
- - option to generate fields instead of getters by default
- - move useful exports to lib.rs for better documentation
- - reexport statics crate and move to once_cell
- - support byte level parser
 
 Can be done after merge: 
  - profiling and performance optimizations
@@ -40,9 +35,10 @@ Can be done after merge:
    - [ ] Not all warning are fixed
  - cfg to not build potentially unnecessary parts 
  (no Lexer if custom token stream, no ParserATNSimulator if LL(1) grammar)  
- - visitor
  - run rustfmt on generated parser
 ###### Long term improvements
+ - generate enum for labeled alternatives without redundant `Error` option
+ - option to generate fields instead of getters by default
  - make tree generic over pointer type
  (requires GAT, otherwise it would be a problem for users that want ownership for parse tree)
  - support stable rust
@@ -65,10 +61,9 @@ Then add following to `Cargo.toml` of the crate from which generated parser
 is going to be used:
 ```toml 
 [dependencies]
-lazy_static = "1.4"
-antlr-rust = "0.1"
+antlr-rust = "=0.2"
 ```
-and `#![feature(try_blocks)]` in your project root module.
+and `#![feature(try_blocks)]`(also `#![feature(specialization)]` if you are generating visitor) in your project root module.  
  
 ### Parse Tree structure
 
@@ -89,16 +84,17 @@ It also is possible to disable generic parse tree creation to keep only selected
 `parser.build_parse_trees = false`.
   
 ### Differences with Java
-Although Rust runtime API is made as close as possible to Java, 
+Although Rust runtime API has been made as close as possible to Java, 
 there are quite some differences because Rust is not an OOP language and is much more explicit. 
 
  - All rule context variables (rule argument or rule return) should implement `Default + Clone`.
  - If you are using labeled alternatives, 
  struct generated for rule is a enum with variant for each alternative
- - Parser needs to have ownership for listeners, but it is possible te get listener back via `ListenerId`
+ - Parser needs to have ownership for listeners, but it is possible to get listener back via `ListenerId`
  otherwise `ParseTreeWalker` should be used.
- - In embedded actions to access parser you should use `recog` variable instead of `self`. 
+ - In embedded actions to access parser you should use `recog` variable instead of `self`/`this`. 
  This is because predicate have to be inserted into two syntactically different places in generated parser
+ - In actions you have to escape `'` in rust lifetimes with `\ ` because ANTLR considers them as strings: `Struct<\'lifetime>`
  - For custom tokens you should use `@tokenfactory` custom action, instead of usual `TokenLabelType` parser option 
  
  

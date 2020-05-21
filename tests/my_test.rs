@@ -1,9 +1,10 @@
 #![feature(try_blocks)]
 #![feature(inner_deref)]
+#![feature(specialization)]
 //! Integration tests
 
-#[macro_use]
-extern crate lazy_static;
+// #[macro_use]
+// extern crate lazy_static;
 
 mod gen {
     use std::fmt::Write;
@@ -16,7 +17,7 @@ mod gen {
     use antlr_rust::lexer::Lexer;
     use antlr_rust::parser_rule_context::{BaseParserRuleContext, ParserRuleContext};
     use antlr_rust::token::{Token, TOKEN_EOF};
-    use antlr_rust::token_factory::{ArenaCommonFactory, CommonTokenFactory};
+    use antlr_rust::token_factory::{ArenaCommonFactory, CommonTokenFactory, OwningTokenFactory};
     use antlr_rust::token_stream::{TokenStream, UnbufferedTokenStream};
     use antlr_rust::tree::{ParseTree, ParseTreeListener, ParseTreeWalker, TerminalNode};
     use csvlexer::*;
@@ -30,28 +31,32 @@ mod gen {
     use crate::gen::csvparser::{CSVParserContext, CSVParserContextType};
     use crate::gen::labelslexer::LabelsLexer;
     use crate::gen::labelsparser::{AddContext, EContextAll, LabelsParser};
-    use crate::gen::referencetoatnparser::{ReferenceToATNParserContext, ReferenceToATNParserContextType};
+    use crate::gen::referencetoatnparser::{
+        ReferenceToATNParserContext, ReferenceToATNParserContextType,
+    };
     use crate::gen::simplelrlexer::SimpleLRLexer;
     use crate::gen::simplelrlistener::SimpleLRListener;
-    use crate::gen::simplelrparser::{SimpleLRParser, SimpleLRParserContext, SimpleLRParserContextType, SimpleLRTreeWalker};
+    use crate::gen::simplelrparser::{
+        SimpleLRParser, SimpleLRParserContext, SimpleLRParserContextType, SimpleLRTreeWalker,
+    };
 
     mod csvlexer;
-    mod csvparser;
     mod csvlistener;
-    mod xmllexer;
-    mod referencetoatnparser;
+    mod csvparser;
+    mod csvvisitor;
     mod referencetoatnlexer;
     mod referencetoatnlistener;
-    mod simplelrparser;
+    mod referencetoatnparser;
     mod simplelrlexer;
     mod simplelrlistener;
+    mod simplelrparser;
+    mod xmllexer;
 
     fn test_static<T: 'static>(arg: T) {}
 
     #[test]
     fn lexer_test_xml() -> std::io::Result<()> {
-        let data =
-            r#"<?xml version="1.0"?>
+        let data = r#"<?xml version="1.0"?>
 <!--comment-->>
 <?xml-stylesheet type="text/css" href="nutrition.css"?>
 <script>
@@ -60,8 +65,9 @@ function f(x) {
 if (x < x && a > 0) then duh
 }
 ]]>
-</script>"#.to_owned();
-        let mut _lexer = XMLLexer::new(Box::new(InputStream::new(&data)));
+</script>"#
+            .to_owned();
+        let mut _lexer = XMLLexer::new(Box::new(InputStream::new(&*data)));
         //        _lexer.base.add_error_listener();
         let _a = "a".to_owned() + "";
         let mut string = String::new();
@@ -73,17 +79,30 @@ if (x < x && a > 0) then duh
 
                     let len = token.get_stop() as usize + 1 - token.get_start() as usize;
                     string.extend(
-                        format!("{},len {}:\n{}\n",
-                                xmllexer::_SYMBOLIC_NAMES[token.get_token_type() as usize].unwrap_or(&format!("{}", token.get_token_type())),
-                                len,
-                                String::from_iter(data.chars().skip(token.get_start() as usize).take(len))
-                        ).chars());
+                        format!(
+                            "{},len {}:\n{}\n",
+                            xmllexer::_SYMBOLIC_NAMES[token.get_token_type() as usize]
+                                .unwrap_or(&format!("{}", token.get_token_type())),
+                            len,
+                            String::from_iter(
+                                data.chars().skip(token.get_start() as usize).take(len)
+                            )
+                        )
+                            .chars(),
+                    );
                 }
                 token_source.consume();
             }
         }
         println!("{}", string);
-        println!("{}", _lexer.get_interpreter().unwrap().get_dfa().to_lexer_string());
+        println!(
+            "{}",
+            _lexer
+                .get_interpreter()
+                .unwrap()
+                .get_dfa()
+                .to_lexer_string()
+        );
         Ok(())
     }
 
@@ -92,26 +111,64 @@ if (x < x && a > 0) then duh
         println!("test started lexer_test_csv");
         let tf = ArenaCommonFactory::default();
         let mut _lexer = CSVLexer::new_with_token_factory(
-            Box::new(InputStream::new("V123,V2\nd1,d2".into())),
+            Box::new(InputStream::new("V123,V2\nd1,d222".into())),
             &tf,
         );
-        let mut token_source = CommonTokenStream::new(_lexer);
-        let mut token_source_iter = token_source.iter();
-        assert_eq!(token_source_iter.next().unwrap(), 5);
-        assert_eq!(token_source_iter.next().unwrap(), 1);
-        assert_eq!(token_source_iter.next().unwrap(), 5);
-        assert_eq!(token_source_iter.next().unwrap(), 3);
-        assert_eq!(token_source_iter.next().unwrap(), 5);
-        assert_eq!(token_source_iter.next().unwrap(), 1);
-        assert_eq!(token_source_iter.next().unwrap(), 5);
-        assert_eq!(token_source_iter.next(), None);
+        let mut token_source = UnbufferedTokenStream::new_buffered(_lexer);
+        let mut token_source_iter = token_source.token_iter();
+        println!(
+            "{} {}",
+            token_source_iter.next().unwrap().to_string(),
+            "[@0,0:3='V123',<5>,1:0]"
+        );
+        println!(
+            "{} {}",
+            token_source_iter.next().unwrap().to_string(),
+            "[@1,4:4=',',<1>,1:4]"
+        );
+        println!(
+            "{} {}",
+            token_source_iter.next().unwrap().to_string(),
+            "[@2,5:6='V2',<5>,1:5]"
+        );
+        println!(
+            "{} {}",
+            token_source_iter.next().unwrap().to_string(),
+            "[@3,7:7='\\n',<3>,1:7]"
+        );
+        println!(
+            "{} {}",
+            token_source_iter.next().unwrap().to_string(),
+            "[@4,8:9='d1',<5>,2:0]"
+        );
+        println!(
+            "{} {}",
+            token_source_iter.next().unwrap().to_string(),
+            "[@5,10:10=',',<1>,2:2]"
+        );
+        println!(
+            "{} {}",
+            token_source_iter.next().unwrap().to_string(),
+            "[@6,11:12='d222',<5>,2:3]"
+        );
+        println!(
+            "{} {}",
+            token_source_iter.next().unwrap().to_string(),
+            "[@6,11:12='d222',<5>,2:3]"
+        );
+        assert!(token_source_iter.next().is_none());
     }
 
     struct Listener {}
 
     impl<'input> ParseTreeListener<'input, CSVParserContextType> for Listener {
         fn enter_every_rule(&mut self, ctx: &dyn CSVParserContext<'input>) {
-            println!("rule entered {}", csvparser::ruleNames.get(ctx.get_rule_index()).unwrap_or(&"error"))
+            println!(
+                "rule entered {}",
+                csvparser::ruleNames
+                    .get(ctx.get_rule_index())
+                    .unwrap_or(&"error")
+            )
         }
     }
 
@@ -131,23 +188,36 @@ if (x < x && a > 0) then duh
         println!("\nstart parsing parser_test_csv");
         let result = parser.csvFile();
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().to_string_tree(&*parser), "(csvFile (hdr (row (field V123) , (field V2) \\n)) (row (field d1) , (field d2) \\n))");
+        assert_eq!(
+            result.unwrap().to_string_tree(&*parser),
+            "(csvFile (hdr (row (field V123) , (field V2) \\n)) (row (field d1) , (field d2) \\n))"
+        );
     }
 
     struct Listener2 {}
 
     impl<'input> ParseTreeListener<'input, ReferenceToATNParserContextType> for Listener2 {
         fn enter_every_rule(&mut self, ctx: &dyn ReferenceToATNParserContext<'input>) {
-            println!("rule entered {}", referencetoatnparser::ruleNames.get(ctx.get_rule_index()).unwrap_or(&"error"))
+            println!(
+                "rule entered {}",
+                referencetoatnparser::ruleNames
+                    .get(ctx.get_rule_index())
+                    .unwrap_or(&"error")
+            )
         }
     }
 
     impl<'input> ReferenceToATNListener<'input> for Listener2 {}
 
+    static FACTORY: OwningTokenFactory = OwningTokenFactory;
+
     #[test]
     fn adaptive_predict_test() {
         let text = "a 34 b".to_owned();
-        let mut _lexer = ReferenceToATNLexer::new(Box::new(InputStream::owned_stream(&text)));
+        let mut _lexer = ReferenceToATNLexer::new_with_token_factory(
+            Box::new(InputStream::new(&*text)),
+            &FACTORY,
+        );
         let token_source = CommonTokenStream::new(_lexer);
         let mut parser = ReferenceToATNParser::new(Box::new(token_source));
         parser.add_parse_listener(Box::new(Listener2 {}));
@@ -165,11 +235,21 @@ if (x < x && a > 0) then duh
         }
 
         fn enter_every_rule(&mut self, ctx: &dyn SimpleLRParserContext<'input>) {
-            println!("rule entered {}", simplelrparser::ruleNames.get(ctx.get_rule_index()).unwrap_or(&"error"))
+            println!(
+                "rule entered {}",
+                simplelrparser::ruleNames
+                    .get(ctx.get_rule_index())
+                    .unwrap_or(&"error")
+            )
         }
 
         fn exit_every_rule(&mut self, ctx: &dyn SimpleLRParserContext<'input>) {
-            println!("rule exited {}", simplelrparser::ruleNames.get(ctx.get_rule_index()).unwrap_or(&"error"))
+            println!(
+                "rule exited {}",
+                simplelrparser::ruleNames
+                    .get(ctx.get_rule_index())
+                    .unwrap_or(&"error")
+            )
         }
     }
 
@@ -186,7 +266,9 @@ if (x < x && a > 0) then duh
         assert_eq!(result.to_string_tree(&*parser), "(s (a (a (a x) y) z))");
     }
 
-    struct Listener4 { data: String }
+    struct Listener4 {
+        data: String,
+    }
 
     impl<'input> ParseTreeListener<'input, SimpleLRParserContextType> for Listener4 {
         fn visit_terminal(&mut self, node: &TerminalNode<'input, SimpleLRParserContextType>) {
@@ -194,7 +276,12 @@ if (x < x && a > 0) then duh
             writeln!(&mut self.data, "terminal node {}", node.symbol.get_text());
         }
         fn enter_every_rule(&mut self, ctx: &dyn SimpleLRParserContext<'input>) {
-            println!("rule entered {}", simplelrparser::ruleNames.get(ctx.get_rule_index()).unwrap_or(&"error"))
+            println!(
+                "rule entered {}",
+                simplelrparser::ruleNames
+                    .get(ctx.get_rule_index())
+                    .unwrap_or(&"error")
+            )
         }
     }
 
@@ -206,23 +293,33 @@ if (x < x && a > 0) then duh
         let token_source = CommonTokenStream::new(_lexer);
         let mut parser = SimpleLRParser::new(Box::new(token_source));
         parser.add_parse_listener(Box::new(Listener3));
-        let id = parser.add_parse_listener(Box::new(Listener4 { data: String::new() }));
+        let id = parser.add_parse_listener(Box::new(Listener4 {
+            data: String::new(),
+        }));
         let result = parser.s().expect("expected to parse successfully");
 
         let mut listener = parser.remove_parse_listener(id);
-        assert_eq!(&listener.data, "terminal node x\nterminal node y\nterminal node z\n");
+        assert_eq!(
+            &listener.data,
+            "terminal node x\nterminal node y\nterminal node z\n"
+        );
 
         println!("--------");
         listener.data.clear();
 
         let listener = SimpleLRTreeWalker::walk(listener, &*result);
-        assert_eq!(&listener.data, "terminal node x\nterminal node y\nterminal node z\n");
+        assert_eq!(
+            &listener.data,
+            "terminal node x\nterminal node y\nterminal node z\n"
+        );
     }
 
+    #[test]
+    fn test_byte_parser() {}
 
     mod labelslexer;
-    mod labelsparser;
     mod labelslistener;
+    mod labelsparser;
 
     #[test]
     fn test_complex_convert() {
@@ -234,8 +331,11 @@ if (x < x && a > 0) then duh
         assert_eq!("* + a 4 2", string);
         let x = result.q.as_deref().unwrap();
         match x {
-            EContextAll::MultContext(x) => { assert_eq!("(a+4)", x.a.as_ref().unwrap().get_text()) },
-            _ => panic!("oops")
+            EContextAll::MultContext(x) => assert_eq!("(a+4)", x.a.as_ref().unwrap().get_text()),
+            _ => panic!("oops"),
         }
     }
+
+    #[test]
+    fn test_visitor() {}
 }

@@ -39,6 +39,9 @@
 #[macro_use]
 extern crate lazy_static;
 
+#[doc(hidden)]
+pub use lazy_static::lazy_static;
+
 #[doc(inline)]
 pub use error_strategy::{BailErrorStrategy, DefaultErrorStrategy, ErrorStrategy};
 #[doc(inline)]

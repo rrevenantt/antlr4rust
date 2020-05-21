@@ -15,6 +15,7 @@ use antlr_rust::char_stream::CharStream;
 use antlr_rust::dfa::DFA;
 use antlr_rust::error_listener::ErrorListener;
 use antlr_rust::int_stream::IntStream;
+use antlr_rust::lazy_static;
 use antlr_rust::lexer::{BaseLexer, Lexer, LexerRecog};
 use antlr_rust::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
 use antlr_rust::parser_rule_context::{BaseParserRuleContext, cast, ParserRuleContext};
@@ -61,12 +62,14 @@ pub type LexerContext<'input> = BaseParserRuleContext<'input, EmptyCustomRuleCon
 
 pub type LocalTokenFactory<'input> = antlr_rust::token_factory::ArenaCommonFactory<'input>;
 
-pub struct CSVLexer<'input, Input: CharStream<'input>> {
+type From<'a> = <LocalTokenFactory<'a> as TokenFactory<'a>>::From;
+
+pub struct CSVLexer<'input, Input: CharStream<From<'input>>> {
     base: BaseLexer<'input, CSVLexerActions, Input, LocalTokenFactory<'input>>,
 //	static { RuntimeMetaData.checkVersion("4.8", RuntimeMetaData.VERSION); }
 }
 
-impl<'input, Input: CharStream<'input>> Deref for CSVLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> Deref for CSVLexer<'input, Input> {
     type Target = BaseLexer<'input, CSVLexerActions, Input, LocalTokenFactory<'input>>;
 
     fn deref(&self) -> &Self::Target {
@@ -74,14 +77,14 @@ impl<'input, Input: CharStream<'input>> Deref for CSVLexer<'input, Input> {
     }
 }
 
-impl<'input, Input: CharStream<'input>> DerefMut for CSVLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> DerefMut for CSVLexer<'input, Input> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.base
     }
 }
 
 
-impl<'input, Input: CharStream<'input>> CSVLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> CSVLexer<'input, Input> {
     fn get_rule_names(&self) -> &'static [&'static str] {
         &ruleNames
     }
@@ -91,14 +94,6 @@ impl<'input, Input: CharStream<'input>> CSVLexer<'input, Input> {
 
     fn get_symbolic_names(&self) -> &[Option<&str>] {
         &_SYMBOLIC_NAMES
-    }
-
-    fn add_error_listener(&mut self, _listener: Box<dyn ErrorListener<BaseLexer<'input, CSVLexerActions, Input, LocalTokenFactory<'input>>>>) {
-        self.base.add_error_listener(_listener);
-    }
-
-    fn remove_error_listeners(&mut self) {
-        self.base.remove_error_listeners()
     }
 
     fn get_grammar_file_name(&self) -> &'static str {
@@ -122,7 +117,7 @@ impl<'input, Input: CharStream<'input>> CSVLexer<'input, Input> {
     }
 }
 
-impl<'input, Input: CharStream<'input>> CSVLexer<'input, Input> where &'input LocalTokenFactory<'input>: Default {
+impl<'input, Input: CharStream<From<'input>>> CSVLexer<'input, Input> where &'input LocalTokenFactory<'input>: Default {
     pub fn new(input: Box<Input>) -> Self {
         CSVLexer::new_with_token_factory(input, <&LocalTokenFactory<'input> as Default>::default())
     }
@@ -132,21 +127,21 @@ pub struct CSVLexerActions {}
 
 impl CSVLexerActions {}
 
-impl<'input, Input: CharStream<'input>> Actions<'input, BaseLexer<'input, CSVLexerActions, Input, LocalTokenFactory<'input>>> for CSVLexerActions {}
+impl<'input, Input: CharStream<From<'input>>> Actions<'input, BaseLexer<'input, CSVLexerActions, Input, LocalTokenFactory<'input>>> for CSVLexerActions {}
 
-impl<'input, Input: CharStream<'input>> CSVLexer<'input, Input> {}
+impl<'input, Input: CharStream<From<'input>>> CSVLexer<'input, Input> {}
 
-impl<'input, Input: CharStream<'input>> LexerRecog<'input, BaseLexer<'input, CSVLexerActions, Input, LocalTokenFactory<'input>>> for CSVLexerActions {}
+impl<'input, Input: CharStream<From<'input>>> LexerRecog<'input, BaseLexer<'input, CSVLexerActions, Input, LocalTokenFactory<'input>>> for CSVLexerActions {}
 
 impl<'input> TokenAware<'input> for CSVLexerActions {
     type TF = LocalTokenFactory<'input>;
 }
 
-impl<'input, Input: CharStream<'input>> TokenAware<'input> for CSVLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> TokenAware<'input> for CSVLexer<'input, Input> {
     type TF = LocalTokenFactory<'input>;
 }
 
-impl<'input, Input: CharStream<'input>> TokenSource<'input> for CSVLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> TokenSource<'input> for CSVLexer<'input, Input> {
     fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok {
         self.base.next_token()
     }
@@ -218,4 +213,3 @@ const _serializedATN: &'static str =
 		\x26\x29\x03\x02\x02\x02\x27\x25\x03\x02\x02\x02\x27\x28\x03\x02\x02\x02\
 		\x28\x2a\x03\x02\x02\x02\x29\x27\x03\x02\x02\x02\x2a\x2b\x07\x24\x02\x02\
 		\x2b\x0e\x03\x02\x02\x02\x07\x02\x18\x1f\x25\x27\x03\x02\x03\x02";
-

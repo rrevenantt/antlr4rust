@@ -4,6 +4,7 @@ use std::marker::{PhantomData, Unsize};
 use std::ops::Deref;
 use std::ptr::drop_in_place;
 
+use crate::char_stream::InputData;
 use crate::errors::ANTLRError;
 use crate::int_stream::{IntStream, IterWrapper};
 use crate::token::{OwningToken, Token, TOKEN_EOF, TOKEN_INVALID_TYPE};
@@ -26,7 +27,9 @@ pub trait TokenStream<'input>: IntStream {
     fn get_all_text(&self) -> String;
     fn get_text_from_interval(&self, start: isize, stop: isize) -> String;
     //    fn get_text_from_rule_context(&self,context: RuleContext) -> String;
-    fn get_text_from_tokens(&self, a: &dyn Token, b: &dyn Token) -> String;
+    fn get_text_from_tokens<T: Token + ?Sized>(&self, a: &T, b: &T) -> String where Self: Sized {
+        self.get_text_from_interval(a.get_token_index(), b.get_token_index())
+    }
 }
 
 //
@@ -150,15 +153,12 @@ impl<'input, T: TokenSource<'input>> TokenStream<'input> for UnbufferedTokenStre
         for i in a..(b + 1) {
             let t = self.tokens[i as usize].borrow();
             if t.get_token_type() == TOKEN_EOF { break }
-            buf.push_str(t.get_text());
+            buf.extend(t.get_text().to_display().chars());
         }
 
         return buf;
     }
 
-    fn get_text_from_tokens(&self, a: &dyn Token, b: &dyn Token) -> String {
-        self.get_text_from_interval(a.get_token_index(), b.get_token_index())
-    }
 }
 
 impl<'input, T: TokenSource<'input>> IntStream for UnbufferedTokenStream<'input, T> {

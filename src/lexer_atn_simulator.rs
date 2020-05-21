@@ -44,7 +44,6 @@ pub trait ILexerATNSimulator: IATNSimulator {
     fn set_char_position_in_line(&mut self, column: isize);
     fn get_line(&self) -> isize;
     fn set_line(&mut self, line: isize);
-    fn get_text<'a, T: CharStream<'a>>(&self, input: &T) -> String;
     fn consume(&self, input: &mut dyn IntStream);
     fn recover(&mut self, _re: ANTLRError, input: &mut dyn IntStream) {
         if input.la(1) != EOF {
@@ -110,10 +109,6 @@ impl ILexerATNSimulator for LexerATNSimulator {
 
     fn set_line(&mut self, line: isize) {
         self.current_pos.char_position_in_line.set(line)
-    }
-
-    fn get_text<'a, T: CharStream<'a>>(&self, input: &T) -> String {
-        unimplemented!()
     }
 
     fn consume(&self, _input: &mut dyn IntStream) {

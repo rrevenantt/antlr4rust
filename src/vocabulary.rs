@@ -22,8 +22,12 @@ pub struct VocabularyImpl {
     max_token_type: isize,
 }
 
-fn collect_to_string<'b, T: Borrow<str> + 'b>(iter: impl IntoIterator<Item=&'b Option<T>>) -> Vec<Option<String>> {
-    iter.into_iter().map(|x| x.as_ref().map(|it| it.borrow().to_owned())).collect()
+fn collect_to_string<'b, T: Borrow<str> + 'b>(
+    iter: impl IntoIterator<Item=&'b Option<T>>,
+) -> Vec<Option<String>> {
+    iter.into_iter()
+        .map(|x| x.as_ref().map(|it| it.borrow().to_owned()))
+        .collect()
 }
 
 impl VocabularyImpl {
@@ -32,17 +36,21 @@ impl VocabularyImpl {
         symbolic_names: Iter,
         display_names: Option<Iter>,
     ) -> VocabularyImpl {
-//        let display_names = display_names.unwrap_or(&[]);
+        //        let display_names = display_names.unwrap_or(&[]);
         VocabularyImpl {
             literal_names: collect_to_string(literal_names),
             symbolic_names: collect_to_string(symbolic_names),
             display_names: collect_to_string(display_names.into_iter().flatten()),
             max_token_type: 0,
-        }.modify_with(|it|
-            it.max_token_type = max(it.literal_names.len(), max(it.symbolic_names.len(), it.display_names.len())) as isize - 1
-        )
+        }
+            .modify_with(|it| {
+                it.max_token_type = max(
+                    it.literal_names.len(),
+                    max(it.symbolic_names.len(), it.display_names.len()),
+                ) as isize
+                    - 1
+            })
     }
-
 
     pub fn from_token_names(token_names: &[Option<&str>]) -> VocabularyImpl {
         let token_names = collect_to_string(token_names.iter());
@@ -59,7 +67,9 @@ impl VocabularyImpl {
                     literal_names[i] = None;
                     continue;
                 }
-                None => { continue; }
+                None => {
+                    continue;
+                }
                 _ => {}
             }
             literal_names[i] = None;
@@ -75,23 +85,26 @@ impl VocabularyImpl {
 }
 
 impl Vocabulary for VocabularyImpl {
-    fn get_max_token_type(&self) -> isize {
-        self.max_token_type
-    }
+    fn get_max_token_type(&self) -> isize { self.max_token_type }
 
     fn get_literal_name(&self, token_type: isize) -> Option<&str> {
-        self.literal_names.get(token_type as usize).and_then(|x| x.as_deref())
+        self.literal_names
+            .get(token_type as usize)
+            .and_then(|x| x.as_deref())
     }
 
     fn get_symbolic_name(&self, token_type: isize) -> Option<&str> {
         if token_type == TOKEN_EOF {
             return Some("EOF");
         }
-        self.symbolic_names.get(token_type as usize).and_then(|x| x.as_deref())
+        self.symbolic_names
+            .get(token_type as usize)
+            .and_then(|x| x.as_deref())
     }
 
     fn get_display_name(&self, token_type: isize) -> Cow<str> {
-        self.display_names.get(token_type as usize)
+        self.display_names
+            .get(token_type as usize)
             .and_then(|x| x.as_deref())
             .or_else(|| self.get_literal_name(token_type))
             .or_else(|| self.get_symbolic_name(token_type))

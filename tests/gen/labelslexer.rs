@@ -15,6 +15,7 @@ use antlr_rust::char_stream::CharStream;
 use antlr_rust::dfa::DFA;
 use antlr_rust::error_listener::ErrorListener;
 use antlr_rust::int_stream::IntStream;
+use antlr_rust::lazy_static;
 use antlr_rust::lexer::{BaseLexer, Lexer, LexerRecog};
 use antlr_rust::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
 use antlr_rust::parser_rule_context::{BaseParserRuleContext, cast, ParserRuleContext};
@@ -64,12 +65,14 @@ lazy_static! {
 pub type LexerContext<'input> = BaseParserRuleContext<'input, EmptyCustomRuleContext<'input, LocalTokenFactory<'input>>>;
 pub type LocalTokenFactory<'input> = CommonTokenFactory;
 
-pub struct LabelsLexer<'input, Input: CharStream<'input>> {
+type From<'a> = <LocalTokenFactory<'a> as TokenFactory<'a>>::From;
+
+pub struct LabelsLexer<'input, Input: CharStream<From<'input>>> {
     base: BaseLexer<'input, LabelsLexerActions, Input, LocalTokenFactory<'input>>,
 //	static { RuntimeMetaData.checkVersion("4.8", RuntimeMetaData.VERSION); }
 }
 
-impl<'input, Input: CharStream<'input>> Deref for LabelsLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> Deref for LabelsLexer<'input, Input> {
     type Target = BaseLexer<'input, LabelsLexerActions, Input, LocalTokenFactory<'input>>;
 
     fn deref(&self) -> &Self::Target {
@@ -77,14 +80,14 @@ impl<'input, Input: CharStream<'input>> Deref for LabelsLexer<'input, Input> {
     }
 }
 
-impl<'input, Input: CharStream<'input>> DerefMut for LabelsLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> DerefMut for LabelsLexer<'input, Input> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.base
     }
 }
 
 
-impl<'input, Input: CharStream<'input>> LabelsLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> LabelsLexer<'input, Input> {
     fn get_rule_names(&self) -> &'static [&'static str] {
         &ruleNames
     }
@@ -94,14 +97,6 @@ impl<'input, Input: CharStream<'input>> LabelsLexer<'input, Input> {
 
     fn get_symbolic_names(&self) -> &[Option<&str>] {
         &_SYMBOLIC_NAMES
-    }
-
-    fn add_error_listener(&mut self, _listener: Box<dyn ErrorListener<BaseLexer<'input, LabelsLexerActions, Input, LocalTokenFactory<'input>>>>) {
-        self.base.add_error_listener(_listener);
-    }
-
-    fn remove_error_listeners(&mut self) {
-        self.base.remove_error_listeners()
     }
 
     fn get_grammar_file_name(&self) -> &'static str {
@@ -125,7 +120,7 @@ impl<'input, Input: CharStream<'input>> LabelsLexer<'input, Input> {
     }
 }
 
-impl<'input, Input: CharStream<'input>> LabelsLexer<'input, Input> where &'input LocalTokenFactory<'input>: Default {
+impl<'input, Input: CharStream<From<'input>>> LabelsLexer<'input, Input> where &'input LocalTokenFactory<'input>: Default {
     pub fn new(input: Box<Input>) -> Self {
         LabelsLexer::new_with_token_factory(input, <&LocalTokenFactory<'input> as Default>::default())
     }
@@ -135,21 +130,21 @@ pub struct LabelsLexerActions {}
 
 impl LabelsLexerActions {}
 
-impl<'input, Input: CharStream<'input>> Actions<'input, BaseLexer<'input, LabelsLexerActions, Input, LocalTokenFactory<'input>>> for LabelsLexerActions {}
+impl<'input, Input: CharStream<From<'input>>> Actions<'input, BaseLexer<'input, LabelsLexerActions, Input, LocalTokenFactory<'input>>> for LabelsLexerActions {}
 
-impl<'input, Input: CharStream<'input>> LabelsLexer<'input, Input> {}
+impl<'input, Input: CharStream<From<'input>>> LabelsLexer<'input, Input> {}
 
-impl<'input, Input: CharStream<'input>> LexerRecog<'input, BaseLexer<'input, LabelsLexerActions, Input, LocalTokenFactory<'input>>> for LabelsLexerActions {}
+impl<'input, Input: CharStream<From<'input>>> LexerRecog<'input, BaseLexer<'input, LabelsLexerActions, Input, LocalTokenFactory<'input>>> for LabelsLexerActions {}
 
 impl<'input> TokenAware<'input> for LabelsLexerActions {
     type TF = LocalTokenFactory<'input>;
 }
 
-impl<'input, Input: CharStream<'input>> TokenAware<'input> for LabelsLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> TokenAware<'input> for LabelsLexer<'input, Input> {
     type TF = LocalTokenFactory<'input>;
 }
 
-impl<'input, Input: CharStream<'input>> TokenSource<'input> for LabelsLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> TokenSource<'input> for LabelsLexer<'input, Input> {
     fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok {
         self.base.next_token()
     }
@@ -222,4 +217,3 @@ const _serializedATN: &'static str =
 		\x2b\x29\x03\x02\x02\x02\x2b\x2c\x03\x02\x02\x02\x2c\x12\x03\x02\x02\x02\
 		\x2d\x2e\x09\x02\x02\x02\x2e\x2f\x03\x02\x02\x02\x2f\x30\x08\x0a\x02\x02\
 		\x30\x14\x03\x02\x02\x02\x05\x02\x26\x2b\x03\x08\x02\x02";
-

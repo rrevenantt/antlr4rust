@@ -18,6 +18,8 @@ pub fn escape_whitespaces(data: impl Borrow<str>, escape_spaces: bool) -> String
     res
 }
 
+pub trait Sealed {}
+
 // pub enum Cow2<'a,Ref,T:Borrow<Ref> = Ref>{
 //     Borrowed2(&'a Ref),
 //     Owned2(T)

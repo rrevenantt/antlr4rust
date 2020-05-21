@@ -15,6 +15,7 @@ use antlr_rust::char_stream::CharStream;
 use antlr_rust::dfa::DFA;
 use antlr_rust::error_listener::ErrorListener;
 use antlr_rust::int_stream::IntStream;
+use antlr_rust::lazy_static;
 use antlr_rust::lexer::{BaseLexer, Lexer, LexerRecog};
 use antlr_rust::lexer_atn_simulator::{ILexerATNSimulator, LexerATNSimulator};
 use antlr_rust::parser_rule_context::{BaseParserRuleContext, cast, ParserRuleContext};
@@ -81,12 +82,14 @@ lazy_static! {
 pub type LexerContext<'input> = BaseParserRuleContext<'input, EmptyCustomRuleContext<'input, LocalTokenFactory<'input>>>;
 pub type LocalTokenFactory<'input> = CommonTokenFactory;
 
-pub struct XMLLexer<'input, Input: CharStream<'input>> {
+type From<'a> = <LocalTokenFactory<'a> as TokenFactory<'a>>::From;
+
+pub struct XMLLexer<'input, Input: CharStream<From<'input>>> {
     base: BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>,
 //	static { RuntimeMetaData.checkVersion("4.8", RuntimeMetaData.VERSION); }
 }
 
-impl<'input, Input: CharStream<'input>> Deref for XMLLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> Deref for XMLLexer<'input, Input> {
     type Target = BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>;
 
     fn deref(&self) -> &Self::Target {
@@ -94,14 +97,14 @@ impl<'input, Input: CharStream<'input>> Deref for XMLLexer<'input, Input> {
     }
 }
 
-impl<'input, Input: CharStream<'input>> DerefMut for XMLLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> DerefMut for XMLLexer<'input, Input> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.base
     }
 }
 
 
-impl<'input, Input: CharStream<'input>> XMLLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> XMLLexer<'input, Input> {
     fn get_rule_names(&self) -> &'static [&'static str] {
         &ruleNames
     }
@@ -111,14 +114,6 @@ impl<'input, Input: CharStream<'input>> XMLLexer<'input, Input> {
 
     fn get_symbolic_names(&self) -> &[Option<&str>] {
         &_SYMBOLIC_NAMES
-    }
-
-    fn add_error_listener(&mut self, _listener: Box<dyn ErrorListener<BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>>>) {
-        self.base.add_error_listener(_listener);
-    }
-
-    fn remove_error_listeners(&mut self) {
-        self.base.remove_error_listeners()
     }
 
     fn get_grammar_file_name(&self) -> &'static str {
@@ -142,7 +137,7 @@ impl<'input, Input: CharStream<'input>> XMLLexer<'input, Input> {
     }
 }
 
-impl<'input, Input: CharStream<'input>> XMLLexer<'input, Input> where &'input LocalTokenFactory<'input>: Default {
+impl<'input, Input: CharStream<From<'input>>> XMLLexer<'input, Input> where &'input LocalTokenFactory<'input>: Default {
     pub fn new(input: Box<Input>) -> Self {
         XMLLexer::new_with_token_factory(input, <&LocalTokenFactory<'input> as Default>::default())
     }
@@ -152,7 +147,7 @@ pub struct XMLLexerActions {}
 
 impl XMLLexerActions {}
 
-impl<'input, Input: CharStream<'input>> Actions<'input, BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>> for XMLLexerActions {
+impl<'input, Input: CharStream<From<'input>>> Actions<'input, BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>> for XMLLexerActions {
     fn action(_localctx: &EmptyContext<'input, LocalTokenFactory<'input>>, rule_index: isize, action_index: isize,
               recog: &mut BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>,
     ) {
@@ -173,7 +168,7 @@ impl<'input, Input: CharStream<'input>> Actions<'input, BaseLexer<'input, XMLLex
     }
 }
 
-impl<'input, Input: CharStream<'input>> XMLLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> XMLLexer<'input, Input> {
     fn CLOSE_action(_localctx: &LexerContext<'input>, action_index: isize,
                     recog: &mut <Self as Deref>::Target,
     ) {
@@ -197,17 +192,17 @@ impl<'input, Input: CharStream<'input>> XMLLexer<'input, Input> {
     }
 }
 
-impl<'input, Input: CharStream<'input>> LexerRecog<'input, BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>> for XMLLexerActions {}
+impl<'input, Input: CharStream<From<'input>>> LexerRecog<'input, BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>> for XMLLexerActions {}
 
 impl<'input> TokenAware<'input> for XMLLexerActions {
     type TF = LocalTokenFactory<'input>;
 }
 
-impl<'input, Input: CharStream<'input>> TokenAware<'input> for XMLLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> TokenAware<'input> for XMLLexer<'input, Input> {
     type TF = LocalTokenFactory<'input>;
 }
 
-impl<'input, Input: CharStream<'input>> TokenSource<'input> for XMLLexer<'input, Input> {
+impl<'input, Input: CharStream<From<'input>>> TokenSource<'input> for XMLLexer<'input, Input> {
     fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok {
         self.base.next_token()
     }
@@ -381,4 +376,3 @@ const _serializedATN: &'static str =
 		\x34\x03\x02\x02\x02\x14\x02\x03\x04\x3d\x53\x60\x71\x7c\u{80}\u{84}\u{87}\
 		\u{a2}\u{b9}\u{c1}\u{c5}\u{cb}\u{da}\u{dd}\x08\x08\x02\x02\x07\x03\x02\
 		\x05\x02\x02\x07\x04\x02\x03\x0c\x02\x06\x02\x02";
-

@@ -9,11 +9,11 @@ use std::rc::Rc;
 
 use crate::errors::ANTLRError;
 use crate::interval_set::Interval;
-use crate::parser::{Listenable, ParserNodeType};
+use crate::parser::ParserNodeType;
 use crate::rule_context::{BaseRuleContext, CustomRuleContext, EmptyContextType, EmptyCustomRuleContext, RuleContext, Tid};
 use crate::token::{OwningToken, Token};
 use crate::token_factory::{CommonTokenFactory, TokenFactory};
-use crate::tree::{ErrorNode, ParseTree, ParseTreeListener, TerminalNode, Tree};
+use crate::tree::{ErrorNode, ParseTree, ParseTreeListener, ParseTreeVisitor, TerminalNode, Tree, Visitable};
 
 // use crate::utils::IndexIter;
 
@@ -89,17 +89,24 @@ pub trait ParserRuleContext<'input>: ParseTree<'input> + RuleContext<'input> + D
     // fn upcast(&self) -> &dyn ParserRuleContext<'input, TF=Self::TF>;
 }
 
-pub trait RuleContextExt<T: ?Sized> {
-    fn to_string(self: &Rc<Self>, rule_names: Option<&[&str]>, stop: Option<Rc<T>>) -> String;
+// allows to implement generic functions on trait object as well
+pub trait RuleContextExt<'input>: ParserRuleContext<'input> {
+    fn to_string<Z>(self: &Rc<Self>, rule_names: Option<&[&str]>, stop: Option<Rc<Z>>) -> String
+        where Z: ParserRuleContext<'input, Ctx=Self::Ctx, TF=Self::TF> + ?Sized + 'input,
+              Self::Ctx: ParserNodeType<'input, Type=Z>,
+              Rc<Self>: CoerceUnsized<Rc<Z>>;
+
+    fn accept_children<V>(&self, visitor: &mut V)
+        where V: ParseTreeVisitor<'input, Self::Ctx> + ?Sized,
+              <Self::Ctx as ParserNodeType<'input>>::Type: Visitable<V>;
 }
 
-impl<'input, T: ParserRuleContext<'input> + ?Sized + 'input, Z> RuleContextExt<Z> for T
-    where
-        Z: ParserRuleContext<'input, Ctx=T::Ctx, TF=T::TF> + ?Sized + 'input,
-        T::Ctx: ParserNodeType<'input, Type=Z>,
-        Rc<T>: CoerceUnsized<Rc<Z>>
-{
-    fn to_string(self: &Rc<Self>, rule_names: Option<&[&str]>, stop: Option<Rc<Z>>) -> String {
+impl<'input, T: ParserRuleContext<'input> + ?Sized + 'input> RuleContextExt<'input> for T {
+    fn to_string<Z>(self: &Rc<Self>, rule_names: Option<&[&str]>, stop: Option<Rc<Z>>) -> String
+        where Z: ParserRuleContext<'input, Ctx=T::Ctx, TF=T::TF> + ?Sized + 'input,
+              T::Ctx: ParserNodeType<'input, Type=Z>,
+              Rc<T>: CoerceUnsized<Rc<Z>>
+    {
         let mut result = String::from("[");
         let mut next: Option<Rc<Z>> = Some(self.clone() as Rc<Z>);
         while let Some(ref p) = next {
@@ -128,6 +135,14 @@ impl<'input, T: ParserRuleContext<'input> + ?Sized + 'input, Z> RuleContextExt<Z
 
         result.push(']');
         return result
+    }
+
+    fn accept_children<V>(&self, visitor: &mut V)
+        where V: ParseTreeVisitor<'input, Self::Ctx> + ?Sized,
+              <Self::Ctx as ParserNodeType<'input>>::Type: Visitable<V>
+    {
+        self.get_children()
+            .for_each(|child| child.accept(visitor))
     }
 }
 
@@ -376,9 +391,6 @@ impl<'input, Ctx: CustomRuleContext<'input>> ParseTree<'input> for BaseParserRul
         result
     }
 
-//    fn to_string_tree(&self, r: &dyn Parser) -> String {
-//
-//    }
 }
 
 impl<'input, Ctx: CustomRuleContext<'input> + 'input> BaseParserRuleContext<'input, Ctx> {

@@ -11,9 +11,10 @@ use crate::lexer::Lexer;
 use crate::parser::Parser;
 use crate::recognizer::Recognizer;
 use crate::token::Token;
+use crate::token_factory::TokenFactory;
 
-pub trait ErrorListener<T> {
-    fn syntax_error(&self, _recognizer: &T, _offending_symbol: Option<&dyn Token>,
+pub trait ErrorListener<'a, T: Recognizer<'a>> {
+    fn syntax_error(&self, _recognizer: &T, _offending_symbol: Option<&<T::TF as TokenFactory<'a>>::Inner>,
                     _line: isize, _column: isize, _msg: &str, _e: Option<&ANTLRError>, ) {}
 
     fn report_ambiguity(&self, _recognizer: &T, _dfa: &DFA, _start_index: isize, _stop_index: isize,
@@ -29,19 +30,19 @@ pub trait ErrorListener<T> {
 #[derive(Debug)]
 pub struct ConsoleErrorListener {}
 
-impl<T> ErrorListener<T> for ConsoleErrorListener {
-    fn syntax_error(&self, _recognizer: &T, _offending_symbol: Option<&dyn Token>,
+impl<'a, T: Recognizer<'a>> ErrorListener<'a, T> for ConsoleErrorListener {
+    fn syntax_error(&self, _recognizer: &T, _offending_symbol: Option<&<T::TF as TokenFactory<'a>>::Inner>,
                     line: isize, column: isize, msg: &str, _e: Option<&ANTLRError>) {
         eprintln!("line {}:{} {}", line, column, msg);
     }
 }
 
-pub(crate) struct ProxyErrorListener<'a, T> {
-    pub delegates: Ref<'a, Vec<Box<dyn ErrorListener<T>>>>
+pub(crate) struct ProxyErrorListener<'b, 'a, T> {
+    pub delegates: Ref<'b, Vec<Box<dyn ErrorListener<'a, T>>>>
 }
 
-impl<'a, T> ErrorListener<T> for ProxyErrorListener<'a, T> {
-    fn syntax_error(&self, _recognizer: &T, offending_symbol: Option<&dyn Token>, line: isize, column: isize, msg: &str, e: Option<&ANTLRError>) {
+impl<'b, 'a, T: Recognizer<'a>> ErrorListener<'a, T> for ProxyErrorListener<'b, 'a, T> {
+    fn syntax_error(&self, _recognizer: &T, offending_symbol: Option<&<T::TF as TokenFactory<'a>>::Inner>, line: isize, column: isize, msg: &str, e: Option<&ANTLRError>) {
         for listener in self.delegates.deref() {
             listener.syntax_error(_recognizer, offending_symbol, line, column, msg, e)
         }
@@ -93,7 +94,7 @@ impl DiagnosticErrorListener {
     }
 }
 
-impl<'a, T: Parser<'a>> ErrorListener<T> for DiagnosticErrorListener {
+impl<'a, T: Parser<'a>> ErrorListener<'a, T> for DiagnosticErrorListener {
     fn report_ambiguity(&self, recognizer: &T, dfa: &DFA, start_index: isize, stop_index: isize, exact: bool, ambig_alts: &BitSet<u32>, _configs: &ATNConfigSet) {
         if self.exact_only && !exact { return }
         let msg = format!("reportAmbiguity d={}: ambigAlts={:?}, input='{}'",

@@ -4,7 +4,7 @@ use std::cell::{Cell, RefCell};
 use std::ops::DerefMut;
 use std::rc::Rc;
 
-use crate::char_stream::CharStream;
+use crate::char_stream::{CharStream, InputData};
 use crate::error_listener::{ConsoleErrorListener, ErrorListener};
 use crate::errors::ANTLRError;
 use crate::int_stream::IntStream;
@@ -17,7 +17,10 @@ use crate::token::{Token, TOKEN_INVALID_TYPE};
 use crate::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use crate::token_source::TokenSource;
 
-pub trait Lexer<'input>: TokenSource<'input> + Recognizer<'input, Node=EmptyContextType<'input, <Self as TokenAware<'input>>::TF>> {
+pub trait Lexer<'input>:
+TokenSource<'input>
++ Recognizer<'input, Node=EmptyContextType<'input, <Self as TokenAware<'input>>::TF>>
+{
     /// Sets channel where current token will be pushed
     ///
     /// By default two channels are available:
@@ -39,7 +42,7 @@ pub trait Lexer<'input>: TokenSource<'input> + Recognizer<'input, Node=EmptyCont
     /// Sets lexer mode discarding current one
     fn set_mode(&mut self, m: usize);
 
-    /// Used to informs lexer that it should consider next token as a continution of the current one
+    /// Used to informs lexer that it should consider next token as a continuation of the current one
     fn more(&mut self);
 
     /// Tells lexer to completely ignore and not emit current token.
@@ -58,9 +61,10 @@ pub trait LexerRecog<'a, T: Recognizer<'a>>: Actions<'a, T> + Sized + 'static {
     fn before_emit(_lexer: &mut T) {}
 }
 
-pub struct BaseLexer<'input,
+pub struct BaseLexer<
+    'input,
     T: LexerRecog<'input, Self> + 'static,
-    Input: CharStream<'input>,
+    Input: CharStream<TF::From>,
     TF: TokenFactory<'input> = CommonTokenFactory,
 > {
     pub interpreter: Option<LexerATNSimulator>,
@@ -69,7 +73,7 @@ pub struct BaseLexer<'input,
 
     factory: &'input TF,
 
-    error_listeners: RefCell<Vec<Box<dyn ErrorListener<Self>>>>,
+    error_listeners: RefCell<Vec<Box<dyn ErrorListener<'input, Self>>>>,
 
     pub token_start_char_index: isize,
     pub token_start_line: isize,
@@ -91,17 +95,28 @@ pub(crate) struct LexerPosition {
 }
 
 impl<'input, T, Input, TF> Recognizer<'input> for BaseLexer<'input, T, Input, TF>
-    where T: LexerRecog<'input, Self> + 'static,
-          Input: CharStream<'input>,
-          TF: TokenFactory<'input>
+    where
+        T: LexerRecog<'input, Self> + 'static,
+        Input: CharStream<TF::From>,
+        TF: TokenFactory<'input>,
 {
     type Node = EmptyContextType<'input, TF>;
 
-    fn sempred(&mut self, _localctx: &<Self::Node as ParserNodeType<'input>>::Type, rule_index: isize, action_index: isize) -> bool {
+    fn sempred(
+        &mut self,
+        _localctx: &<Self::Node as ParserNodeType<'input>>::Type,
+        rule_index: isize,
+        action_index: isize,
+    ) -> bool {
         <T as Actions<'input, Self>>::sempred(_localctx, rule_index, action_index, self)
     }
 
-    fn action(&mut self, _localctx: &<Self::Node as ParserNodeType<'input>>::Type, rule_index: isize, action_index: isize) {
+    fn action(
+        &mut self,
+        _localctx: &<Self::Node as ParserNodeType<'input>>::Type,
+        rule_index: isize,
+        action_index: isize,
+    ) {
         <T as Actions<'input, Self>>::action(_localctx, rule_index, action_index, self)
     }
 }
@@ -116,13 +131,12 @@ pub const LEXER_MIN_CHAR_VALUE: isize = 0x0000;
 pub const LEXER_MAX_CHAR_VALUE: isize = 0x10FFFF;
 
 impl<'input, T, Input, TF> BaseLexer<'input, T, Input, TF>
-    where T: LexerRecog<'input, Self> + 'static,
-          Input: CharStream<'input>,
-          TF: TokenFactory<'input>
+    where
+        T: LexerRecog<'input, Self> + 'static,
+        Input: CharStream<TF::From>,
+        TF: TokenFactory<'input>,
 {
-    fn emit_token(&mut self, token: TF::Tok) {
-        self.token = Some(token);
-    }
+    fn emit_token(&mut self, token: TF::Tok) { self.token = Some(token); }
 
     fn emit(&mut self) {
         <T as LexerRecog<Self>>::before_emit(self);
@@ -154,39 +168,31 @@ impl<'input, T, Input, TF> BaseLexer<'input, T, Input, TF>
         self.emit_token(token)
     }
 
-    pub fn get_type(&self) -> isize {
-        self.token_type
+    pub fn get_type(&self) -> isize { self.token_type }
+
+    pub fn get_char_index(&self) -> isize { self.input.as_ref().unwrap().index() }
+
+    /// Current token text
+    pub fn get_text(&self) -> &str {
+        self.text.as_ref().map(|it| it.borrow()).unwrap()
+        // .unwrap_or_else(
+        //     || self.input.as_ref().unwrap().get_text(self.token_start_char_index, self.get_char_index() - 1)
+        // )
     }
 
-    pub fn get_char_index(&self) -> isize {
-        self.input.as_ref().unwrap().index()
-    }
+    /// Used from lexer actions to override text of the token that will be emitted next
+    pub fn set_text(&mut self, _text: String) { self.text = Some(_text); }
 
-    pub fn get_text(&self) -> Cow<'input, str> {
-        self.input.as_ref().unwrap().get_text(self.token_start_char_index, self.get_char_index() - 1).into()
-    }
+    fn get_all_tokens(&mut self) -> Vec<TF::Tok> { unimplemented!() }
 
-    /// Used from lexer actions to override token text
-    pub fn set_text(&mut self, _text: String) {
-        self.text = Some(_text);
-    }
-
-    fn get_all_tokens(&self) -> Vec<Box<dyn Token>> {
-        unimplemented!()
-    }
-
-    fn get_char_error_display(&self, _c: char) -> String {
-        unimplemented!()
-    }
+    fn get_char_error_display(&self, _c: char) -> String { unimplemented!() }
 
     /// Add error listener
-    pub fn add_error_listener(&mut self, listener: Box<dyn ErrorListener<Self>>) {
+    pub fn add_error_listener(&mut self, listener: Box<dyn ErrorListener<'input, Self>>) {
         self.error_listeners.borrow_mut().push(listener);
     }
 
-    pub fn remove_error_listeners(&mut self) {
-        self.error_listeners.borrow_mut().clear();
-    }
+    pub fn remove_error_listeners(&mut self) { self.error_listeners.borrow_mut().clear(); }
 
     pub fn new_base_lexer(
         input: Box<Input>,
@@ -203,7 +209,10 @@ impl<'input, T, Input, TF> BaseLexer<'input, T, Input, TF>
             token_start_char_index: 0,
             token_start_line: 0,
             token_start_column: 0,
-            current_pos: Rc::new(LexerPosition { line: Cell::new(1), char_position_in_line: Cell::new(0) }),
+            current_pos: Rc::new(LexerPosition {
+                line: Cell::new(1),
+                char_position_in_line: Cell::new(0),
+            }),
             token_type: super::token::TOKEN_INVALID_TYPE,
             text: None,
             token: None,
@@ -220,17 +229,19 @@ impl<'input, T, Input, TF> BaseLexer<'input, T, Input, TF>
 }
 
 impl<'input, T, Input, TF> TokenAware<'input> for BaseLexer<'input, T, Input, TF>
-    where T: LexerRecog<'input, Self> + 'static,
-          Input: CharStream<'input>,
-          TF: TokenFactory<'input>
+    where
+        T: LexerRecog<'input, Self> + 'static,
+        Input: CharStream<TF::From>,
+        TF: TokenFactory<'input>,
 {
     type TF = TF;
 }
 
 impl<'input, T, Input, TF> TokenSource<'input> for BaseLexer<'input, T, Input, TF>
-    where T: LexerRecog<'input, Self> + 'static,
-          Input: CharStream<'input>,
-          TF: TokenFactory<'input>
+    where
+        T: LexerRecog<'input, Self> + 'static,
+        Input: CharStream<TF::From>,
+        TF: TokenFactory<'input>,
 {
     #[inline]
     #[allow(unused_labels)]
@@ -245,7 +256,11 @@ impl<'input, T, Input, TF> TokenSource<'input> for BaseLexer<'input, T, Input, T
             }
             self.token = None;
             self.channel = LEXER_DEFAULT_TOKEN_CHANNEL;
-            self.token_start_column = self.interpreter.as_ref().unwrap().get_char_position_in_line();
+            self.token_start_column = self
+                .interpreter
+                .as_ref()
+                .unwrap()
+                .get_char_position_in_line();
             self.token_start_line = self.interpreter.as_ref().unwrap().get_line();
             self.text = None;
             let index = self.get_input_stream().unwrap().index();
@@ -257,24 +272,26 @@ impl<'input, T, Input, TF> TokenSource<'input> for BaseLexer<'input, T, Input, T
                 {
                     // detach from self, to allow self to be passed deeper
                     let mut interpreter = self.interpreter.take().unwrap();
-//                    let mut input = self.input.take().unwrap();
-                    let result = interpreter
-                        .match_token(self.mode, self);
+                    //                    let mut input = self.input.take().unwrap();
+                    let result = interpreter.match_token(self.mode, self);
                     self.interpreter = Some(interpreter);
 
                     ttype = match result {
                         Ok(ttype) => {
-//                            println!("new mode {}",self.mode);
+                            //                            println!("new mode {}",self.mode);
                             ttype
-                        },
+                        }
                         Err(err) => {
-//                            println!("error, recovering");
+                            //                            println!("error, recovering");
                             notify_listeners(&mut self.error_listeners.borrow_mut(), &err, self);
-                            self.interpreter.as_mut().unwrap().recover(err, self.input.as_mut().unwrap().deref_mut());
+                            self.interpreter
+                                .as_mut()
+                                .unwrap()
+                                .recover(err, self.input.as_mut().unwrap().deref_mut());
                             LEXER_SKIP
                         }
                     };
-//                    self.input = Some(input)
+                    //                    self.input = Some(input)
                 }
                 if self.get_input_stream().unwrap().la(1) == super::int_stream::EOF {
                     self.hit_eof = true;
@@ -302,58 +319,73 @@ impl<'input, T, Input, TF> TokenSource<'input> for BaseLexer<'input, T, Input, T
         self.token.take().unwrap()
     }
 
-    fn get_line(&self) -> isize {
-        self.current_pos.line.get()
-    }
+    fn get_line(&self) -> isize { self.current_pos.line.get() }
 
-    fn get_char_position_in_line(&self) -> isize {
-        self.current_pos.char_position_in_line.get()
-    }
+    fn get_char_position_in_line(&self) -> isize { self.current_pos.char_position_in_line.get() }
 
     fn get_input_stream(&mut self) -> Option<&mut dyn IntStream> {
         match self.input {
             None => None,
-            Some(ref mut x) => { Some(x.deref_mut()) },
+            Some(ref mut x) => Some(x.deref_mut()),
         }
     }
 
     fn get_source_name(&self) -> String {
-        self.input.as_deref().map(|it| it.get_source_name()).unwrap_or("<none>".to_string())
+        self.input
+            .as_deref()
+            .map(|it| it.get_source_name())
+            .unwrap_or("<none>".to_string())
     }
 
-//    fn set_token_factory<'c: 'b>(&mut self, f: &'c TokenFactory) {
-//        self.factory = f;
-//    }
+    //    fn set_token_factory<'c: 'b>(&mut self, f: &'c TokenFactory) {
+    //        self.factory = f;
+    //    }
 
-    fn get_token_factory(&self) -> &'input TF {
-        self.factory
-    }
+    fn get_token_factory(&self) -> &'input TF { self.factory }
 }
 
-fn notify_listeners<'input, T, Input, TF>(_liseners: &mut Vec<Box<dyn ErrorListener<BaseLexer<'input, T, Input, TF>>>>, e: &ANTLRError, lexer: &BaseLexer<'input, T, Input, TF>)
-    where T: LexerRecog<'input, BaseLexer<'input, T, Input, TF>> + 'static,
-          Input: CharStream<'input>,
-          TF: TokenFactory<'input>
+fn notify_listeners<'input, T, Input, TF>(
+    liseners: &mut Vec<Box<dyn ErrorListener<'input, BaseLexer<'input, T, Input, TF>>>>,
+    e: &ANTLRError,
+    lexer: &BaseLexer<'input, T, Input, TF>,
+) where
+    T: LexerRecog<'input, BaseLexer<'input, T, Input, TF>> + 'static,
+    Input: CharStream<TF::From>,
+    TF: TokenFactory<'input>,
 {
-    let text = format!("token recognition error at: '{}'", lexer.input.as_ref().unwrap().get_text(lexer.token_start_char_index, lexer.get_char_index()).borrow());
-    for listener in _liseners.iter_mut() {
-        listener.syntax_error(lexer, None, lexer.token_start_line, lexer.token_start_column, &text, Some(e))
+    let text = format!(
+        "token recognition error at: '{}'",
+        lexer
+            .input
+            .as_ref()
+            .unwrap()
+            .get_text(lexer.token_start_char_index, lexer.get_char_index())
+            .borrow()
+            .to_display()
+    );
+    for listener in liseners.iter_mut() {
+        listener.syntax_error(
+            lexer,
+            None,
+            lexer.token_start_line,
+            lexer.token_start_column,
+            &text,
+            Some(e),
+        )
     }
 }
-
 
 impl<'input, T, Input, TF> Lexer<'input> for BaseLexer<'input, T, Input, TF>
-    where T: LexerRecog<'input, Self> + 'static,
-          Input: CharStream<'input>,
-          TF: TokenFactory<'input>
+    where
+        T: LexerRecog<'input, Self> + 'static,
+        Input: CharStream<TF::From>,
+        TF: TokenFactory<'input>,
 {
-    fn set_channel(&mut self, v: isize) {
-        self.channel = v;
-    }
+    fn set_channel(&mut self, v: isize) { self.channel = v; }
 
-    fn push_mode(&mut self, _m: usize) {
+    fn push_mode(&mut self, m: usize) {
         self.mode_stack.push(self.mode);
-        self.mode = _m;
+        self.mode = m;
     }
 
     fn pop_mode(&mut self) -> Option<usize> {
@@ -363,25 +395,15 @@ impl<'input, T, Input, TF> Lexer<'input> for BaseLexer<'input, T, Input, TF>
         })
     }
 
-    fn set_type(&mut self, t: isize) {
-        self.token_type = t;
-    }
+    fn set_type(&mut self, t: isize) { self.token_type = t; }
 
-    fn set_mode(&mut self, m: usize) {
-        self.mode = m;
-    }
+    fn set_mode(&mut self, m: usize) { self.mode = m; }
 
-    fn more(&mut self) {
-        self.set_type(LEXER_MORE)
-    }
+    fn more(&mut self) { self.set_type(LEXER_MORE) }
 
-    fn skip(&mut self) {
-        self.set_type(LEXER_SKIP)
-    }
+    fn skip(&mut self) { self.set_type(LEXER_SKIP) }
 
-    fn reset(&mut self) {
-        unimplemented!()
-    }
+    fn reset(&mut self) { unimplemented!() }
 
     fn get_interpreter(&self) -> Option<&LexerATNSimulator> { self.interpreter.as_ref() }
 }

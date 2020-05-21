@@ -61,10 +61,7 @@ impl ATN {
     pub fn next_tokens<'a>(&self, s: &'a dyn ATNState) -> &'a IntervalSet {
         s.get_next_tokens_within_rule().get_or_init(|| {
             self.next_tokens_in_ctx::<EmptyContextType<CommonTokenFactory>>(s, None)
-                .modify_with(|r| {
-                    r.read_only = true
-                }
-                )
+                .modify_with(|r| r.read_only = true)
         })
     }
 
@@ -72,7 +69,11 @@ impl ATN {
     /// If `ctx` is null, the set of tokens will not include what can follow
     /// the rule surrounding `s`. In other words, the set will be
     /// restricted to tokens reachable staying within `s`'s rule.
-    pub fn next_tokens_in_ctx<'a, Ctx: ParserNodeType<'a>>(&self, s: &dyn ATNState, _ctx: Option<&Ctx::Type>) -> IntervalSet {
+    pub fn next_tokens_in_ctx<'a, Ctx: ParserNodeType<'a>>(
+        &self,
+        s: &dyn ATNState,
+        _ctx: Option<&Ctx::Type>,
+    ) -> IntervalSet {
         let analyzer = LL1Analyzer::new(self);
         analyzer.look::<'a, Ctx>(s, None, _ctx)
     }
@@ -82,13 +83,9 @@ impl ATN {
         self.states.push(state)
     }
 
-    fn remove_state(&self, _state: ATNStateRef) {
-        unimplemented!()
-    }
+    fn remove_state(&self, _state: ATNStateRef) { unimplemented!() }
 
-    fn define_decision_state(&self, _s: ATNStateRef) -> isize {
-        unimplemented!()
-    }
+    fn define_decision_state(&self, _s: ATNStateRef) -> isize { unimplemented!() }
 
     pub fn get_decision_state(&self, decision: usize) -> ATNStateRef {
         self.decision_to_state[decision]
@@ -126,7 +123,11 @@ impl ATN {
     /// specified state in the specified context.
     /// @throws IllegalArgumentException if the ATN does not contain a state with
     /// number {@code stateNumber}
-    pub fn get_expected_tokens<'a, Ctx: ParserNodeType<'a>>(&self, state_number: isize, _ctx: &Rc<Ctx::Type>) -> IntervalSet {
+    pub fn get_expected_tokens<'a, Ctx: ParserNodeType<'a>>(
+        &self,
+        state_number: isize,
+        _ctx: &Rc<Ctx::Type>,
+    ) -> IntervalSet {
         let s = self.states[state_number as usize].as_ref();
         let mut following = self.next_tokens(s);
         if !following.contains(TOKEN_EPSILON) {
@@ -138,7 +139,9 @@ impl ATN {
         let mut ctx = Some(Rc::clone(_ctx));
 
         while let Some(c) = ctx {
-            if c.get_invoking_state() < 0 || !following.contains(TOKEN_EPSILON) { break }
+            if c.get_invoking_state() < 0 || !following.contains(TOKEN_EPSILON) {
+                break;
+            }
 
             let invoking_state = self.states[c.get_invoking_state() as usize].as_ref();
             let tr = invoking_state.get_transitions().first().unwrap().as_ref();

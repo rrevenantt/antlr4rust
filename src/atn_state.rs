@@ -63,7 +63,6 @@ pub enum ATNBlockStart {
 
 pub type ATNStateRef = usize;
 
-
 // todo no need for trait here, it is too slow for hot code
 pub trait ATNState: Sync + Send + Debug {
     fn has_epsilon_only_transitions(&self) -> bool;
@@ -72,7 +71,7 @@ pub trait ATNState: Sync + Send + Debug {
     fn set_rule_index(&self, v: usize);
 
     fn get_next_tokens_within_rule(&self) -> &OnceCell<IntervalSet>;
-//    fn set_next_token_within_rule(&mut self, v: IntervalSet);
+    //    fn set_next_token_within_rule(&mut self, v: IntervalSet);
 
     fn get_state_type(&self) -> &ATNStateType;
     fn get_state_type_mut(&mut self) -> &mut ATNStateType;
@@ -103,7 +102,6 @@ pub struct BaseATNState {
     pub state_type: ATNStateType,
 
     transitions: Vec<Box<dyn Transition>>,
-
 }
 
 impl BaseATNState {
@@ -119,54 +117,32 @@ impl BaseATNState {
         }
     }
 
-    fn is_non_greedy_exit_state(&self) -> bool {
-        unimplemented!()
-    }
+    fn is_non_greedy_exit_state(&self) -> bool { unimplemented!() }
 }
 
 impl ATNState for BaseATNState {
-    fn has_epsilon_only_transitions(&self) -> bool {
-        self.epsilon_only_transitions
-    }
-    fn get_rule_index(&self) -> usize {
-        self.rule_index
-    }
+    fn has_epsilon_only_transitions(&self) -> bool { self.epsilon_only_transitions }
+    fn get_rule_index(&self) -> usize { self.rule_index }
 
-    fn set_rule_index(&self, _v: usize) {
-        unimplemented!()
-    }
+    fn set_rule_index(&self, _v: usize) { unimplemented!() }
 
     fn get_next_tokens_within_rule(&self) -> &OnceCell<IntervalSet> {
         &self.next_tokens_within_rule
     }
 
-    fn get_state_type(&self) -> &ATNStateType {
-        &self.state_type
-    }
+    fn get_state_type(&self) -> &ATNStateType { &self.state_type }
 
-    fn get_state_type_mut(&mut self) -> &mut ATNStateType {
-        &mut self.state_type
-    }
+    fn get_state_type_mut(&mut self) -> &mut ATNStateType { &mut self.state_type }
 
-    fn get_state_type_id(&self) -> isize {
-        self.state_type_id
-    }
+    fn get_state_type_id(&self) -> isize { self.state_type_id }
 
-    fn get_state_number(&self) -> usize {
-        self.state_number
-    }
+    fn get_state_number(&self) -> usize { self.state_number }
 
-    fn set_state_number(&self, _state_number: isize) {
-        unimplemented!()
-    }
+    fn set_state_number(&self, _state_number: isize) { unimplemented!() }
 
-    fn get_transitions(&self) -> &Vec<Box<dyn Transition>> {
-        &self.transitions
-    }
+    fn get_transitions(&self) -> &Vec<Box<dyn Transition>> { &self.transitions }
 
-    fn set_transitions(&self, _t: Vec<Box<dyn Transition>>) {
-        unimplemented!()
-    }
+    fn set_transitions(&self, _t: Vec<Box<dyn Transition>>) { unimplemented!() }
 
     fn add_transition(&mut self, trans: Box<dyn Transition>) {
         if self.transitions.is_empty() {
@@ -178,7 +154,10 @@ impl ATNState for BaseATNState {
         let mut already_present = false;
         for existing in self.transitions.iter() {
             if existing.get_target() == trans.get_target() {
-                if existing.get_label().is_some() && trans.get_label().is_some() && existing.get_label() == trans.get_label() {
+                if existing.get_label().is_some()
+                    && trans.get_label().is_some()
+                    && existing.get_label() == trans.get_label()
+                {
                     already_present = true;
                     break;
                 } else if existing.is_epsilon() && trans.is_epsilon() {

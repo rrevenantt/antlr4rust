@@ -83,7 +83,7 @@ impl Error for ANTLRError {
 }
 
 impl RecognitionError for ANTLRError {
-    fn get_offending_token(&self) -> Option<&dyn Token> {
+    fn get_offending_token(&self) -> Option<&OwningToken> {
         Some(match self {
             ANTLRError::NoAltError(e) => &e.base.offending_token,
             ANTLRError::InputMismatchError(e) => &e.base.offending_token,
@@ -101,7 +101,7 @@ impl RecognitionError for ANTLRError {
 //}
 
 pub trait RecognitionError: Error {
-    fn get_offending_token(&self) -> Option<&dyn Token>;
+    fn get_offending_token(&self) -> Option<&OwningToken>;
     fn get_message(&self) -> String { self.to_string() }
 //    fn get_input_stream(&self) -> &IntStream;
 }

@@ -38,41 +38,35 @@ pub trait TokenSource<'input>: TokenAware<'input> {
     fn get_token_factory(&self) -> &'input Self::TF;
 }
 
-impl<'input, T> TokenAware<'input> for &mut T where T: TokenSource<'input> {
+impl<'input, T> TokenAware<'input> for &mut T
+    where
+        T: TokenSource<'input>,
+{
     type TF = T::TF;
 }
 
 // allows user to call parser with &mut reference to Lexer
-impl<'input, T> TokenSource<'input> for &mut T where T: TokenSource<'input> {
+impl<'input, T> TokenSource<'input> for &mut T
+    where
+        T: TokenSource<'input>,
+{
     #[inline(always)]
-    fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok {
-        (**self).next_token()
-    }
+    fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok { (**self).next_token() }
 
     #[inline(always)]
-    fn get_line(&self) -> isize {
-        (**self).get_line()
-    }
+    fn get_line(&self) -> isize { (**self).get_line() }
 
     #[inline(always)]
-    fn get_char_position_in_line(&self) -> isize {
-        (**self).get_char_position_in_line()
-    }
+    fn get_char_position_in_line(&self) -> isize { (**self).get_char_position_in_line() }
 
     #[inline(always)]
-    fn get_input_stream(&mut self) -> Option<&mut dyn IntStream> {
-        (**self).get_input_stream()
-    }
+    fn get_input_stream(&mut self) -> Option<&mut dyn IntStream> { (**self).get_input_stream() }
 
     #[inline(always)]
-    fn get_source_name(&self) -> String {
-        (**self).get_source_name()
-    }
+    fn get_source_name(&self) -> String { (**self).get_source_name() }
 
     #[inline(always)]
-    fn get_token_factory(&self) -> &'input Self::TF {
-        (**self).get_token_factory()
-    }
+    fn get_token_factory(&self) -> &'input Self::TF { (**self).get_token_factory() }
 }
 
 // / adaptor to feed parser with existing tokens
