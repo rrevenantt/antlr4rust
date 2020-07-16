@@ -219,7 +219,8 @@ impl<Ctx: CustomRuleContext> BorrowMut<Ctx> for BaseParserRuleContext<Ctx> {
 
 impl<Ctx: CustomRuleContext> ParserRuleContext for BaseParserRuleContext<Ctx> {
     fn set_exception(&self, _e: ANTLRError) {
-        unimplemented!()
+        // empty for this version
+//        unimplemented!()
 //        self.exception = Some(Box::new(e));
     }
 

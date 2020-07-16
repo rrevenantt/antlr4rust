@@ -1,5 +1,5 @@
 use std::cell::{Cell, RefCell};
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 
 use crate::char_stream::CharStream;
@@ -78,6 +78,20 @@ pub struct BaseLexer<T: LexerRecog<Recog=Self> + 'static> {
 pub(crate) struct LexerPosition {
     pub(crate) line: Cell<isize>,
     pub(crate) char_position_in_line: Cell<isize>,
+}
+
+impl<T: LexerRecog<Recog=Self> + 'static> Deref for BaseLexer<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        self.recog.as_ref()
+    }
+}
+
+impl<T: LexerRecog<Recog=Self> + 'static> DerefMut for BaseLexer<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.recog.as_mut()
+    }
 }
 
 impl<T: LexerRecog<Recog=Self> + 'static> Recognizer for BaseLexer<T> {
