@@ -439,7 +439,9 @@ impl<T, Ext> BaseParser<Ext, T>
         let retctx = self.ctx.clone().unwrap();
         retctx.set_stop(self.input.lt(-1).map(Token::to_owned));
         if !self.parse_listeners.is_empty() {
-            while !Rc::ptr_eq(self.ctx.as_ref().unwrap(), parent_ctx.as_ref().unwrap()) {
+            while self.ctx.as_ref().map(|x| Rc::as_ptr(x))
+                != parent_ctx.as_ref().map(|x| Rc::as_ptr(x))
+            {
 //                println!("{:p} {:p}",self.ctx.as_deref().unwrap(),parent_ctx.as_ref().unwrap());
                 self.trigger_exit_rule_event();
                 self.ctx = self.ctx.as_ref().unwrap().get_parent_ctx()

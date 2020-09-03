@@ -170,6 +170,18 @@ if (x < x && a > 0) then duh
         assert_eq!(result.to_string_tree(&*parser), "(s (a (a (a x) y) z))");
     }
 
+    #[test]
+    fn immediate_lr_test() {
+        let mut _lexer = SimpleLRLexer::new(Box::new(InputStream::new("x y z".into())));
+        let token_source = CommonTokenStream::new(_lexer);
+        let mut parser = SimpleLRParser::new(Box::new(token_source));
+        parser.add_parse_listener(Box::new(Listener3));
+        println!("\nstart parsing lr_test");
+        let result = parser.a().expect("expected to parse successfully");
+        assert_eq!(result.to_string_tree(&*parser), "(a (a (a x) y) z)");
+    }
+
+
     struct Listener4 { data: String }
 
     impl ParseTreeListener for Listener4 {
