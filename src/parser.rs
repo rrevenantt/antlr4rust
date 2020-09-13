@@ -404,7 +404,12 @@ impl<T, Ext> BaseParser<Ext, T>
                 }
             }
 
-            self.ctx = Some(new_ctx)
+            // trigger `enter_XXX`, but not `enter_every_rule`
+            for listener in self.parse_listeners.iter_mut() {
+                new_ctx.enter_rule(listener as &mut dyn Any);
+            }
+
+            self.ctx = Some(new_ctx);
         }
     }
 
