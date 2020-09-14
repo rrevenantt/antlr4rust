@@ -416,7 +416,6 @@ impl<T, Ext> BaseParser<Ext, T>
         localctx.set_start(self.input.lt(1).map(Token::to_owned));
         //println!("{}",self.input.lt(1).map(Token::to_owned).unwrap());
         self.ctx = Some(localctx);
-        self.trigger_enter_rule_event()
     }
 
     pub fn push_new_recursion_context(&mut self, localctx: Rc<dyn ParserRuleContext>, state: isize, _rule_index: usize) {
