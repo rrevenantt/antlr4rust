@@ -484,7 +484,6 @@ where
         if self.build_parse_trees {
             self.add_context_to_parse_tree()
         }
-        self.trigger_enter_rule_event();
     }
 
     #[inline]
@@ -519,8 +518,10 @@ where
                 }
             }
 
-            self.ctx = Some(new_ctx)
+            self.ctx = Some(new_ctx);
         }
+
+        self.trigger_enter_rule_event();
     }
 
     pub fn enter_recursion_rule(
@@ -535,7 +536,6 @@ where
         localctx.set_start(self.input.lt(1).cloned());
         //println!("{}",self.input.lt(1).map(Token::to_owned).unwrap());
         self.ctx = Some(localctx);
-        self.trigger_enter_rule_event()
     }
 
     pub fn push_new_recursion_context(
