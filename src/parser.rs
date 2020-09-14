@@ -376,7 +376,6 @@ impl<T, Ext> BaseParser<Ext, T>
         if self.build_parse_trees {
             self.add_context_to_parse_tree()
         }
-        self.trigger_enter_rule_event();
     }
 
     pub fn exit_rule(&mut self) {
@@ -404,13 +403,10 @@ impl<T, Ext> BaseParser<Ext, T>
                 }
             }
 
-            // trigger `enter_XXX`, but not `enter_every_rule`
-            for listener in self.parse_listeners.iter_mut() {
-                new_ctx.enter_rule(listener as &mut dyn Any);
-            }
-
             self.ctx = Some(new_ctx);
         }
+
+        self.trigger_enter_rule_event();
     }
 
 
