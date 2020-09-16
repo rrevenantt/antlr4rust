@@ -1,5 +1,5 @@
 use std::borrow::{Borrow, Cow};
-use std::borrow::Cow::Owned;
+use std::borrow::Cow::{Borrowed, Owned};
 use std::cell::{Cell, RefCell};
 use std::ops::DerefMut;
 use std::rc::Rc;
@@ -173,11 +173,12 @@ impl<'input, T, Input, TF> BaseLexer<'input, T, Input, TF>
     pub fn get_char_index(&self) -> isize { self.input.as_ref().unwrap().index() }
 
     /// Current token text
-    pub fn get_text(&self) -> &str {
-        self.text.as_ref().map(|it| it.borrow()).unwrap()
-        // .unwrap_or_else(
-        //     || self.input.as_ref().unwrap().get_text(self.token_start_char_index, self.get_char_index() - 1)
-        // )
+    pub fn get_text(&self) -> Cow<str> {
+        self.text.as_ref().map(|it| Borrowed(it.borrow()))
+            // .unwrap_or("")
+        .unwrap_or_else(
+            || self.input.as_ref().unwrap().get_text(self.token_start_char_index, self.get_char_index() - 1).borrow().to_display().into()
+        )
     }
 
     /// Used from lexer actions to override text of the token that will be emitted next

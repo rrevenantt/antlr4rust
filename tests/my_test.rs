@@ -256,15 +256,27 @@ if (x < x && a > 0) then duh
     impl<'input> SimpleLRListener<'input> for Listener3 {}
 
     #[test]
-    fn lr_test() {
+    fn test_lr() {
         let mut _lexer = SimpleLRLexer::new(Box::new(InputStream::new("x y z".into())));
         let token_source = CommonTokenStream::new(_lexer);
         let mut parser = SimpleLRParser::new(Box::new(token_source));
         parser.add_parse_listener(Box::new(Listener3));
         println!("\nstart parsing lr_test");
-        let result = parser.s().expect("expected to parse successfully");
+        let result = parser.s().expect("failed recursion parsion");
         assert_eq!(result.to_string_tree(&*parser), "(s (a (a (a x) y) z))");
     }
+
+    #[test]
+    fn test_immediate_lr() {
+        let mut _lexer = SimpleLRLexer::new(Box::new(InputStream::new("x y z".into())));
+        let token_source = CommonTokenStream::new(_lexer);
+        let mut parser = SimpleLRParser::new(Box::new(token_source));
+        parser.add_parse_listener(Box::new(Listener3));
+        println!("\nstart parsing lr_test");
+        let result = parser.a().expect("failed immediate recursion parsing");
+        assert_eq!(result.to_string_tree(&*parser), "(a (a (a x) y) z)");
+    }
+
 
     struct Listener4 {
         data: String,

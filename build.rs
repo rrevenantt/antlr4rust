@@ -8,7 +8,7 @@ use std::path::Path;
 use std::process::Command;
 
 fn main() {
-    let grammars = vec!["CSV", "ReferenceToATN", "XMLLexer", "SimpleLR", "Labels"];
+    let grammars = vec!["CSV", "ReferenceToATN", "XMLLexer", "SimpleLR", "Labels", "FHIRPath"];
     let additional_args = vec![Some("-visitor"), None, None, None, None, ];
     let antlr_path = "/home/rrevenantt/dev/antlr4/tool/target/antlr4-4.8-2-SNAPSHOT-complete.jar";
 

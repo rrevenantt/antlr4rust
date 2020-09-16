@@ -27,64 +27,64 @@ use antlr_rust::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use antlr_rust::token_source::TokenSource;
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
 
-pub const T__0: isize = 1;
-pub const T__1: isize = 2;
-pub const T__2: isize = 3;
-pub const WS: isize = 4;
-pub const TEXT: isize = 5;
-pub const STRING: isize = 6;
-pub const channelNames: [&'static str; 0 + 2] = [
-    "DEFAULT_TOKEN_CHANNEL", "HIDDEN"
-];
+pub const T__0:isize=1;
+	pub const T__1:isize=2; 
+	pub const T__2:isize=3; 
+	pub const WS:isize=4; 
+	pub const TEXT:isize=5; 
+	pub const STRING:isize=6;
+	pub const channelNames: [&'static str;0+2] = [
+		"DEFAULT_TOKEN_CHANNEL", "HIDDEN"
+	];
 
-pub const modeNames: [&'static str; 1] = [
-    "DEFAULT_MODE"
-];
+	pub const modeNames: [&'static str;1] = [
+		"DEFAULT_MODE"
+	];
 
-pub const ruleNames: [&'static str; 6] = [
-    "T__0", "T__1", "T__2", "WS", "TEXT", "STRING"
-];
+	pub const ruleNames: [&'static str;6] = [
+		"T__0", "T__1", "T__2", "WS", "TEXT", "STRING"
+	];
 
 
-pub const _LITERAL_NAMES: [Option<&'static str>; 4] = [
-    None, Some("','"), Some("'\r'"), Some("'\n'")
-];
-pub const _SYMBOLIC_NAMES: [Option<&'static str>; 7] = [
-    None, None, None, None, Some("WS"), Some("TEXT"), Some("STRING")
-];
-lazy_static! {
+	pub const _LITERAL_NAMES: [Option<&'static str>;4] = [
+		None, Some("','"), Some("'\r'"), Some("'\n'")
+	];
+	pub const _SYMBOLIC_NAMES: [Option<&'static str>;7]  = [
+		None, None, None, None, Some("WS"), Some("TEXT"), Some("STRING")
+	];
+	lazy_static!{
 	    static ref _shared_context_cache: Arc<PredictionContextCache> = Arc::new(PredictionContextCache::new());
 		static ref VOCABULARY: Box<dyn Vocabulary> = Box::new(VocabularyImpl::new(_LITERAL_NAMES.iter(), _SYMBOLIC_NAMES.iter(), None));
 	}
 
 
-pub type LexerContext<'input> = BaseParserRuleContext<'input, EmptyCustomRuleContext<'input, LocalTokenFactory<'input>>>;
+pub type LexerContext<'input> = BaseParserRuleContext<'input,EmptyCustomRuleContext<'input,LocalTokenFactory<'input> >>;
 
 pub type LocalTokenFactory<'input> = antlr_rust::token_factory::ArenaCommonFactory<'input>;
 
-type From<'a> = <LocalTokenFactory<'a> as TokenFactory<'a>>::From;
+type From<'a> = <LocalTokenFactory<'a> as TokenFactory<'a> >::From;
 
-pub struct CSVLexer<'input, Input: CharStream<From<'input>>> {
-    base: BaseLexer<'input, CSVLexerActions, Input, LocalTokenFactory<'input>>,
+pub struct CSVLexer<'input, Input:CharStream<From<'input> >> {
+	base: BaseLexer<'input,CSVLexerActions,Input,LocalTokenFactory<'input>>,
 //	static { RuntimeMetaData.checkVersion("4.8", RuntimeMetaData.VERSION); }
 }
 
-impl<'input, Input: CharStream<From<'input>>> Deref for CSVLexer<'input, Input> {
-    type Target = BaseLexer<'input, CSVLexerActions, Input, LocalTokenFactory<'input>>;
+impl<'input, Input:CharStream<From<'input> >> Deref for CSVLexer<'input,Input>{
+	type Target = BaseLexer<'input,CSVLexerActions,Input,LocalTokenFactory<'input>>;
 
-    fn deref(&self) -> &Self::Target {
-        &self.base
-    }
+	fn deref(&self) -> &Self::Target {
+		&self.base
+	}
 }
 
-impl<'input, Input: CharStream<From<'input>>> DerefMut for CSVLexer<'input, Input> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.base
-    }
+impl<'input, Input:CharStream<From<'input> >> DerefMut for CSVLexer<'input,Input>{
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.base
+	}
 }
 
 
-impl<'input, Input: CharStream<From<'input>>> CSVLexer<'input, Input> {
+impl<'input, Input:CharStream<From<'input> >> CSVLexer<'input,Input>{
     fn get_rule_names(&self) -> &'static [&'static str] {
         &ruleNames
     }
@@ -100,48 +100,54 @@ impl<'input, Input: CharStream<From<'input>>> CSVLexer<'input, Input> {
         "CSVLexer.g4"
     }
 
-    pub fn new_with_token_factory(input: Box<Input>, tf: &'input LocalTokenFactory<'input>) -> Self {
-        antlr_rust::recognizer::check_version("0", "2");
-        Self {
-            base: BaseLexer::new_base_lexer(
-                input,
-                LexerATNSimulator::new_lexer_atnsimulator(
-                    _ATN.clone(),
-                    _decision_to_DFA.clone(),
-                    _shared_context_cache.clone(),
-                ),
-                CSVLexerActions {},
-                tf,
-            )
-        }
-    }
+	pub fn new_with_token_factory(input: Box<Input>,tf: &'input LocalTokenFactory<'input>) -> Self {
+		antlr_rust::recognizer::check_version("0","2");
+    	Self {
+			base: BaseLexer::new_base_lexer(
+				input,
+				LexerATNSimulator::new_lexer_atnsimulator(
+					_ATN.clone(),
+					_decision_to_DFA.clone(),
+					_shared_context_cache.clone(),
+				),
+				CSVLexerActions{},
+				tf
+			)
+	    }
+	}
 }
 
-impl<'input, Input: CharStream<From<'input>>> CSVLexer<'input, Input> where &'input LocalTokenFactory<'input>: Default {
-    pub fn new(input: Box<Input>) -> Self {
-        CSVLexer::new_with_token_factory(input, <&LocalTokenFactory<'input> as Default>::default())
-    }
+impl<'input, Input:CharStream<From<'input> >> CSVLexer<'input,Input> where &'input LocalTokenFactory<'input>:Default{
+	pub fn new(input: Box<Input>) -> Self{
+		CSVLexer::new_with_token_factory(input, <&LocalTokenFactory<'input> as Default>::default())
+	}
 }
 
-pub struct CSVLexerActions {}
-
-impl CSVLexerActions {}
-
-impl<'input, Input: CharStream<From<'input>>> Actions<'input, BaseLexer<'input, CSVLexerActions, Input, LocalTokenFactory<'input>>> for CSVLexerActions {}
-
-impl<'input, Input: CharStream<From<'input>>> CSVLexer<'input, Input> {}
-
-impl<'input, Input: CharStream<From<'input>>> LexerRecog<'input, BaseLexer<'input, CSVLexerActions, Input, LocalTokenFactory<'input>>> for CSVLexerActions {}
-
-impl<'input> TokenAware<'input> for CSVLexerActions {
-    type TF = LocalTokenFactory<'input>;
+pub struct CSVLexerActions {
 }
 
-impl<'input, Input: CharStream<From<'input>>> TokenAware<'input> for CSVLexer<'input, Input> {
-    type TF = LocalTokenFactory<'input>;
+impl CSVLexerActions{
 }
 
-impl<'input, Input: CharStream<From<'input>>> TokenSource<'input> for CSVLexer<'input, Input> {
+impl<'input, Input:CharStream<From<'input> >> Actions<'input,BaseLexer<'input,CSVLexerActions,Input,LocalTokenFactory<'input>>> for CSVLexerActions{
+	}
+
+	impl<'input, Input:CharStream<From<'input> >> CSVLexer<'input,Input>{
+
+}
+
+impl<'input, Input:CharStream<From<'input> >> LexerRecog<'input,BaseLexer<'input,CSVLexerActions,Input,LocalTokenFactory<'input>>> for CSVLexerActions{
+}
+impl<'input> TokenAware<'input> for CSVLexerActions{
+	type TF = LocalTokenFactory<'input>;
+}
+
+impl<'input, Input:CharStream<From<'input> >> TokenAware<'input> for CSVLexer<'input,Input>{
+	type TF = LocalTokenFactory<'input>;
+}
+
+impl<'input, Input:CharStream<From<'input> >> TokenSource<'input> for CSVLexer<'input,Input>{
+
     fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok {
         self.base.next_token()
     }
@@ -158,9 +164,9 @@ impl<'input, Input: CharStream<From<'input>>> TokenSource<'input> for CSVLexer<'
         self.base.get_input_stream()
     }
 
-    fn get_source_name(&self) -> String {
-        self.base.get_source_name()
-    }
+	fn get_source_name(&self) -> String {
+		self.base.get_source_name()
+	}
 
     fn get_token_factory(&self) -> &'input Self::TF {
         self.base.get_token_factory()
@@ -169,7 +175,7 @@ impl<'input, Input: CharStream<From<'input>>> TokenSource<'input> for CSVLexer<'
 
 
 
-lazy_static! {
+	lazy_static! {
 	    static ref _ATN: Arc<ATN> =
 	        Arc::new(ATNDeserializer::new(None).deserialize(_serializedATN.chars()));
 	    static ref _decision_to_DFA: Arc<Vec<DFA>> = {
@@ -188,8 +194,8 @@ lazy_static! {
 
 
 
-const _serializedATN: &'static str =
-    "\x03\u{608b}\u{a72a}\u{8133}\u{b9ed}\u{417c}\u{3be7}\u{7786}\u{5964}\x02\
+	const _serializedATN:&'static str =
+		"\x03\u{608b}\u{a72a}\u{8133}\u{b9ed}\u{417c}\u{3be7}\u{7786}\u{5964}\x02\
 		\x08\x2c\x08\x01\x04\x02\x09\x02\x04\x03\x09\x03\x04\x04\x09\x04\x04\x05\
 		\x09\x05\x04\x06\x09\x06\x04\x07\x09\x07\x03\x02\x03\x02\x03\x03\x03\x03\
 		\x03\x04\x03\x04\x03\x05\x06\x05\x17\x0a\x05\x0d\x05\x0e\x05\x18\x03\x05\

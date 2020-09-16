@@ -250,7 +250,7 @@ pub trait ParseTreeVisitor<'input, Node: ParserNodeType<'input>> {
 // }
 
 pub trait Visitable<Vis: ?Sized> {
-    fn accept(&self, visitor: &mut Vis);
+        fn accept(&self, visitor: &mut Vis) { unreachable!("should have been properly implemented by generated context when reachable") }
 }
 
 pub trait ParseTreeListener<'input, Node: ParserNodeType<'input>> {

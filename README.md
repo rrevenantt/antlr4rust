@@ -22,11 +22,13 @@ There are other unstable features in use but only `CoerceUnsized` is essential.
 
 Remaining things before merge:
  - API stabilization
+   - [ ] Change token factory with converter
+   - [ ] Finish generic data for tokens and Lexer::get_text 
    - [ ] Rust api guidelines compliance  
    - [ ] more tests for API because it is quite different from Java
 
 Can be done after merge: 
- - profiling and performance optimizations
+ - more profiling and performance optimizations
  - Documentation
    - [ ] Some things are already documented but still far from perfect, also more links needed.
  - Code quality

@@ -32,7 +32,7 @@ Index<Range<usize>, Output=Self>
 
     fn len(&self) -> usize;
 
-    fn from_text(text: &str) -> Self::Owned;
+    // fn from_text(text: &str) -> Self::Owned;
 
     fn to_display(&self) -> String;
 }
@@ -66,8 +66,8 @@ impl<T: Into<u32> + From<u8> + Copy + Debug + 'static> InputData for [T] {
     #[inline]
     fn len(&self) -> usize { self.len() }
 
-    #[inline]
-    fn from_text(text: &str) -> Self::Owned { text.bytes().map(|it| T::from(it)).collect() }
+    // #[inline]
+    // fn from_text(text: &str) -> Self::Owned { text.bytes().map(|it| T::from(it)).collect() }
 
     #[inline]
     default fn to_display(&self) -> String {
@@ -81,6 +81,8 @@ impl InputData for [u8] {
     #[inline]
     fn to_display(&self) -> String { String::from_utf8_lossy(self).into_owned() }
 }
+
+struct UTF16([u16]);
 
 impl InputData for str {
     // fn to_indexed_vec(&self) -> Vec<(u32, u32)> {
@@ -120,8 +122,8 @@ impl InputData for str {
     #[inline]
     fn len(&self) -> usize { self.len() }
 
-    #[inline]
-    fn from_text(text: &str) -> Self::Owned { text.to_owned() }
+    // #[inline]
+    // fn from_text(text: &str) -> Self::Owned { text.to_owned() }
 
     #[inline]
     fn to_display(&self) -> String { self.to_string() }
