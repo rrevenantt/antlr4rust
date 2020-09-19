@@ -3,7 +3,7 @@ use std::borrow::Cow::Borrowed;
 use std::cmp::{max, min, Ordering};
 
 use crate::token::{TOKEN_EOF, TOKEN_EPSILON};
-use crate::vocabulary::Vocabulary;
+use crate::vocabulary::{DUMMY_VOCAB, Vocabulary};
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Interval {
@@ -278,9 +278,9 @@ impl IntervalSet {
 //        unimplemented!()
 //    }
 //
-//    fn to_index_String(&self) -> String {
-//        unimplemented!()
-//    }
+    pub fn to_index_string(&self) -> String {
+        self.to_token_string(&DUMMY_VOCAB)
+    }
 
     pub fn to_token_string(&self, vocabulary: &dyn Vocabulary) -> String {
         if self.intervals.is_empty() {

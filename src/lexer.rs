@@ -86,7 +86,7 @@ pub struct BaseLexer<
     mode_stack: Vec<usize>,
     pub mode: usize,
     /// text of token if overridden by user action
-    pub text: Option<String>,
+    pub text: Option<<TF::Data as ToOwned>::Owned>,
 }
 
 pub(crate) struct LexerPosition {
@@ -173,16 +173,16 @@ impl<'input, T, Input, TF> BaseLexer<'input, T, Input, TF>
     pub fn get_char_index(&self) -> isize { self.input.as_ref().unwrap().index() }
 
     /// Current token text
-    pub fn get_text(&self) -> Cow<str> {
+    pub fn get_text<'a>(&'a self) -> Cow<'a,TF::Data> where 'input:'a {
         self.text.as_ref().map(|it| Borrowed(it.borrow()))
             // .unwrap_or("")
         .unwrap_or_else(
-            || self.input.as_ref().unwrap().get_text(self.token_start_char_index, self.get_char_index() - 1).borrow().to_display().into()
+            || self.input.as_ref().unwrap().get_text(self.token_start_char_index, self.get_char_index() - 1).into()
         )
     }
 
     /// Used from lexer actions to override text of the token that will be emitted next
-    pub fn set_text(&mut self, _text: String) { self.text = Some(_text); }
+    pub fn set_text(&mut self, _text: <TF::Data as ToOwned>::Owned) { self.text = Some(_text); }
 
     fn get_all_tokens(&mut self) -> Vec<TF::Tok> { unimplemented!() }
 

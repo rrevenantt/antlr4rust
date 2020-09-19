@@ -8,8 +8,15 @@ use std::path::Path;
 use std::process::Command;
 
 fn main() {
-    let grammars = vec!["CSV", "ReferenceToATN", "XMLLexer", "SimpleLR", "Labels", "FHIRPath"];
-    let additional_args = vec![Some("-visitor"), None, None, None, None, ];
+    let grammars = vec![
+        "CSV",
+        "ReferenceToATN",
+        "XMLLexer",
+        "SimpleLR",
+        "Labels",
+        "FHIRPath",
+    ];
+    let additional_args = vec![Some("-visitor"), None, None, None, None];
     let antlr_path = "/home/rrevenantt/dev/antlr4/tool/target/antlr4-4.8-2-SNAPSHOT-complete.jar";
 
     for (grammar, arg) in grammars.into_iter().zip(additional_args) {
@@ -22,7 +29,11 @@ fn main() {
     println!("cargo:rerun-if-changed=/home/rrevenantt/dev/antlr4/tool/target/antlr4-4.8-2-SNAPSHOT-complete.jar");
 }
 
-fn gen_for_grammar(grammar_file_name: &str, antlr_path: &str, additional_arg: Option<&str>) -> Result<(), Box<dyn Error>> {
+fn gen_for_grammar(
+    grammar_file_name: &str,
+    antlr_path: &str,
+    additional_arg: Option<&str>,
+) -> Result<(), Box<Error>> {
     // let out_dir = env::var("OUT_DIR").unwrap();
     // let dest_path = Path::new(&out_dir);
 
@@ -45,7 +56,6 @@ fn gen_for_grammar(grammar_file_name: &str, antlr_path: &str, additional_arg: Op
     // .unwrap()
     // .stdout;
     // eprintln!("xx{}",String::from_utf8(x).unwrap());
-
 
     println!("cargo:rerun-if-changed=grammars/{}", file_name);
     Ok(())

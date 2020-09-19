@@ -1,5 +1,5 @@
 use std::borrow::{Borrow, Cow};
-use std::char::{decode_utf16, REPLACEMENT_CHARACTER};
+use std::char::{decode_utf16, DecodeUtf16Error, REPLACEMENT_CHARACTER};
 use std::cmp::min;
 use std::convert::TryFrom;
 use std::io::Read;
@@ -12,47 +12,80 @@ use std::str::{CharIndices, Chars};
 
 use crate::char_stream::{CharStream, InputData};
 use crate::errors::ANTLRError;
-use crate::int_stream::IntStream;
+use crate::int_stream::{EOF, IntStream};
 use crate::interval_set::Interval;
 use crate::token::Token;
 
 /// Default rust target input stream.
 ///
-/// Since Rust uses UTF-8 format which does not support.
-/// has slightly different index behavior in compare to java runtime when there are
+/// Since Rust uses UTF-8 format which does not support indexing,
+/// `InputStream<str>` has slightly different index behavior in compare to java runtime when there are
 /// non-ASCII unicode characters.
+/// If you need it to generate exactly the same indexes as Java runtime, you have to use `CodePoint8/16/32BitCharStream`,
+/// which does not use rusts native `str` type,
 pub struct InputStream<'a, Data: ?Sized> {
     name: String,
     data_raw: &'a Data,
     index: isize,
 }
 
-impl<'a, Data: ?Sized + InputData, T: From<&'a Data>> CharStream<T> for InputStream<'a, Data> {
+impl<'a, T: From<&'a str>> CharStream<T> for InputStream<'a, str> {
     /// Returns text from underlying string for start..=stop range
     /// panics if provided indexes are invalid
     #[inline]
-    fn get_text(&self, start: isize, stop: isize) -> T {
+    fn get_text(&self, start: isize, stop: isize) -> T { self.get_text_inner(start, stop).into() }
+}
+
+pub type ByteCharStream<'a> = InputStream<'a,[u8]>;
+pub type CodePoint8BitCharStream<'a> = InputStream<'a,[u8]>;
+pub type CodePoint16BitCharStream<'a> = InputStream<'a,[u16]>;
+pub type CodePoint32BitCharStream<'a> = InputStream<'a,[u32]>;
+
+impl<'a, T> CharStream<&'a [T]> for InputStream<'a, [T]>
+where
+    [T]: InputData,
+{
+    fn get_text(&self, a: isize, b: isize) -> &'a [T] { self.get_text_inner(a, b).into() }
+}
+
+impl<'a, T> CharStream<String> for InputStream<'a, [T]>
+    where
+        [T]: InputData,
+{
+    fn get_text(&self, a: isize, b: isize) -> String {
+        self.get_text_inner(a, b).to_display()
+    }
+}
+
+impl<'a,'b, T> CharStream<Cow<'b,str>> for InputStream<'a, [T]>
+    where
+        [T]: InputData,
+{
+    fn get_text(&self, a: isize, b: isize) -> Cow<'b,str> {
+        self.get_text_inner(a, b).to_display().into()
+    }
+}
+
+
+impl<'a, Data> InputStream<'a, Data>
+where
+    Data: InputData + ?Sized,
+{
+    fn get_text_inner(&self, start: isize, stop: isize) -> &'a Data {
         // println!("get text {}..{} of {:?}",start,stop,self.data_raw.to_display());
         let start = start as usize;
-        let stop = self.data_raw.offset(stop,1).unwrap() as usize;
+        let stop = self.data_raw.offset(stop, 1).unwrap_or(stop) as usize;
         // println!("justed range {}..{} ",start,stop);
         // let start = self.data_raw.offset(0,start).unwrap() as usize;
         // let stop = self.data_raw.offset(0,stop + 1).unwrap() as usize;
 
-        let slice = if stop < self.data_raw.len() {
+        if stop < self.data_raw.len() {
             &self.data_raw[start..stop]
         } else {
             &self.data_raw[start..]
-        };
-
-        slice.into()
+        }
     }
-}
 
-impl<'a, Data> InputStream<'a, Data>
-    where
-        Data: InputData + ?Sized,
-{
     pub fn new(data_raw: &'a Data) -> Self {
         // let data_raw = data_raw.as_ref();
         // let data = data_raw.to_indexed_vec();
@@ -114,61 +147,6 @@ impl<'a, Data: InputData + ?Sized> IntStream for InputStream<'a, Data> {
 
     fn get_source_name(&self) -> String { self.name.clone() }
 }
-/// Only for full backwards compatibility with Java runtime.
-///
-/// Use it only if you **have to** have exactly the same index output as in Java runtime because
-/// there is an overhead to create underlying `Vec<u16>`.
-#[deprecated]
-pub struct UTF16InputStream{
-    name: String,
-    data: Vec<u16>,
-    index: usize
-}
-
-impl CharStream<String> for UTF16InputStream{
-    fn get_text(&self, a: isize, b: isize) -> String {
-        String::from_utf16_lossy(&self.data[a as usize..1 + b as usize])
-    }
-}
-
-impl IntStream for UTF16InputStream{
-    fn consume(&mut self) -> Result<(), ANTLRError> {
-        self.index += 1;
-        if self.index > self.data.len() {
-            Err(ANTLRError::IllegalStateError("cannot consume EOF".into()))
-        } else {
-            Ok(())
-        }
-    }
-
-    fn la(&mut self, mut i: isize) -> isize {
-        if i == 0 { panic!("invalid parameter") }
-
-        i =  i + (i < 0) as isize;
-
-        self.data[self.index + i as usize] as isize
-    }
-
-    fn mark(&mut self) -> isize { -1 }
-
-    fn release(&mut self, marker: isize) {}
-
-    fn index(&self) -> isize {
-        self.index as isize
-    }
-
-    fn seek(&mut self, index: isize) {
-        self.index = index as usize
-    }
-
-    fn size(&self) -> isize {
-        self.data.len() as isize
-    }
-
-    fn get_source_name(&self) -> String {
-        unimplemented!()
-    }
-}
 
 #[cfg(test)]
 mod test {
@@ -196,11 +174,11 @@ mod test {
         assert_eq!(input.index(), 5);
         assert_eq!(input.la(-2), '1' as isize);
         assert_eq!(input.la(2), EOF);
-        assert_eq!(input.get_text(1,1).deref(),"1");
-        assert_eq!(input.get_text(1,2).deref(),"1は");
-        assert_eq!(input.get_text(2,2).deref(),"は");
-        assert_eq!(input.get_text(2,5).deref(),"は3");
-        assert_eq!(input.get_text(5,5).deref(),"3");
+        assert_eq!(input.get_text(1, 1).deref(), "1");
+        assert_eq!(input.get_text(1, 2).deref(), "1は");
+        assert_eq!(input.get_text(2, 2).deref(), "は");
+        assert_eq!(input.get_text(2, 5).deref(), "は3");
+        assert_eq!(input.get_text(5, 5).deref(), "3");
     }
 
     #[test]

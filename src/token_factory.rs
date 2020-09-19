@@ -47,17 +47,18 @@ pub trait TokenFactory<'a>: Sized {
     type Inner: Token<Data=Self::Data> + ?Sized + 'a;
     /// ownership of the emitted tokens
     type Tok: Borrow<Self::Inner> + Clone + 'a + Debug;
+    // can relax InputData to just ToOwned here?
     /// type of the underlying storage
     type Data: InputData + ?Sized;
     /// type of the reference to `Self::Data` that factory needs for producing tokens
-    type From: Borrow<Self::Data>;
+    type From: Borrow<Self::Data> + Into<Cow<'a,Self::Data>>;
 
     /// Creates token
     fn create<T>(
         &'a self,
         source: Option<&mut T>,
         ttype: isize,
-        text: Option<String>,
+        text: Option<<Self::Data as ToOwned>::Owned>,
         channel: isize,
         start: isize,
         stop: isize,
@@ -83,7 +84,7 @@ impl<'a> TokenFactory<'a> for CommonTokenFactory {
     type Inner = CommonToken<'a>;
     type Tok = Box<Self::Inner>;
     type Data = str;
-    type From = &'a str;
+    type From = Cow<'a,str>;
 
     #[inline]
     fn create<T>(
@@ -232,7 +233,7 @@ impl<'input, TF, Tok> TokenFactory<'input> for ArenaFactory<'input, TF, Tok>
         &'input self,
         source: Option<&mut T>,
         ttype: isize,
-        text: Option<String>,
+        text: Option<<Self::Data as ToOwned>::Owned>,
         channel: isize,
         start: isize,
         stop: isize,

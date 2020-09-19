@@ -1,7 +1,9 @@
 use std::borrow::{Borrow, Cow};
+use std::char::REPLACEMENT_CHARACTER;
 use std::convert::{TryFrom, TryInto};
 use std::fmt::Debug;
 use std::iter::from_fn;
+use std::num::TryFromIntError;
 use std::ops::{Index, Range, RangeFrom};
 
 use crate::int_stream::IntStream;
@@ -32,12 +34,12 @@ Index<Range<usize>, Output=Self>
 
     fn len(&self) -> usize;
 
-    // fn from_text(text: &str) -> Self::Owned;
+    fn from_text(text: &str) -> Self::Owned;
 
     fn to_display(&self) -> String;
 }
 
-impl<T: Into<u32> + From<u8> + Copy + Debug + 'static> InputData for [T] {
+impl<T: Into<u32> + From<u8> + TryFrom<u32> + Copy + Debug + 'static> InputData for [T] where <T as TryFrom<u32>>::Error:Debug {
     // fn to_indexed_vec(&self) -> Vec<(u32, u32)> {
     //     self.into_iter()
     //         .enumerate()
@@ -66,23 +68,34 @@ impl<T: Into<u32> + From<u8> + Copy + Debug + 'static> InputData for [T] {
     #[inline]
     fn len(&self) -> usize { self.len() }
 
-    // #[inline]
-    // fn from_text(text: &str) -> Self::Owned { text.bytes().map(|it| T::from(it)).collect() }
+    #[inline]
+    fn from_text(text: &str) -> Self::Owned { text.chars().map(|it| T::try_from(it as u32).unwrap()).collect() }
 
     #[inline]
-    default fn to_display(&self) -> String {
-        self.into_iter()
-            .map(|&it| char::try_from(it.into()).unwrap_or(std::char::REPLACEMENT_CHARACTER))
+    // default
+    fn to_display(&self) -> String {
+        self.iter()
+            .map(|x| char::try_from((*x).into()).unwrap_or(REPLACEMENT_CHARACTER))
             .collect()
     }
 }
+//
+// impl InputData for [u8] {
+//     #[inline]
+//     fn to_display(&self) -> String { String::from_utf8_lossy(self).into_owned() }
+// }
 
-impl InputData for [u8] {
-    #[inline]
-    fn to_display(&self) -> String { String::from_utf8_lossy(self).into_owned() }
-}
-
-struct UTF16([u16]);
+// impl InputData for [u16] {
+// }
+//
+// impl InputData for [u32] {
+//     #[inline]
+//     fn to_display(&self) -> String {
+//         self.iter()
+//             .map(|x| char::try_from(*x).unwrap_or(REPLACEMENT_CHARACTER))
+//             .collect()
+//     }
+// }
 
 impl InputData for str {
     // fn to_indexed_vec(&self) -> Vec<(u32, u32)> {
@@ -121,6 +134,10 @@ impl InputData for str {
 
     #[inline]
     fn len(&self) -> usize { self.len() }
+
+    fn from_text(text: &str) -> Self::Owned {
+        text.to_owned()
+    }
 
     // #[inline]
     // fn from_text(text: &str) -> Self::Owned { text.to_owned() }

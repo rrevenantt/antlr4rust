@@ -225,7 +225,7 @@ impl<'input, Ctx: ParserNodeType<'input>> DefaultErrorStrategy<'input, Ctx> {
                     .get_display_name(expected_token_type)
             )
         };
-        //        let look_back =
+        let token_text = <T::TF as TokenFactory<'input>>::Data::from_text(&token_text);
         let mut curr = recognizer.get_current_token().borrow();
         if curr.get_token_type() == TOKEN_EOF {
             curr = recognizer
@@ -318,12 +318,12 @@ impl<'a, T: Parser<'a>> ErrorStrategy<'a, T> for DefaultErrorStrategy<'a, T::Nod
             return Ok(self.get_missing_symbol(recognizer));
         }
 
-        if let Some(next_tokens_state) = &self.next_tokens_ctx {
+        if let Some(next_tokens_ctx) = &self.next_tokens_ctx {
             Err(ANTLRError::InputMismatchError(
                 InputMisMatchError::with_state(
                     recognizer,
                     self.next_tokens_state,
-                    next_tokens_state.clone(),
+                    next_tokens_ctx.clone(),
                 ),
             ))
         } else {

@@ -2,6 +2,7 @@ use std::any::Any;
 use std::borrow::Borrow;
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
+use std::iter::from_fn;
 use std::marker::{PhantomData, Unsize};
 use std::mem;
 use std::ops::{CoerceUnsized, Deref, DerefMut};
@@ -18,7 +19,7 @@ use crate::interval_set::IntervalSet;
 use crate::parser_atn_simulator::ParserATNSimulator;
 use crate::parser_rule_context::{BaseParserRuleContext, ParserRuleContext};
 use crate::recognizer::{Actions, Recognizer};
-use crate::rule_context::{CustomRuleContext, RuleContext};
+use crate::rule_context::{CustomRuleContext, RuleContext, states_stack};
 use crate::token::{OwningToken, Token, TOKEN_EOF};
 use crate::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use crate::token_source::TokenSource;
@@ -270,9 +271,10 @@ where
     }
 
     fn get_expected_tokens(&self) -> IntervalSet {
+        let states_stack = states_stack(self.ctx.as_ref().unwrap().clone());
         self.interp
             .atn()
-            .get_expected_tokens::<'input, Ctx>(self.state, self.ctx.as_ref().unwrap())
+            .get_expected_tokens(self.state, states_stack)
     }
 
     fn add_error_listener(&mut self, listener: Box<dyn ErrorListener<'input, Self>>) {

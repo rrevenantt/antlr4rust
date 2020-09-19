@@ -10,6 +10,7 @@ use crate::atn_simulator::IATNSimulator;
 use crate::interval_set::IntervalSet;
 use crate::parser::{Parser, ParserNodeType};
 use crate::parser_rule_context::ParserRuleContext;
+use crate::rule_context::states_stack;
 use crate::token::{OwningToken, Token};
 use crate::transition::PredicateTransition;
 use crate::transition::TransitionType::TRANSITION_PREDICATE;
@@ -112,6 +113,7 @@ pub struct BaseRecognitionError {
     //    recognizer: Box<Recognizer>,
     pub offending_token: OwningToken,
     pub offending_state: isize,
+    states_stack:Vec<isize>
     // ctx: Rc<dyn ParserRuleContext>
     //    input: Box<IntStream>,
 }
@@ -119,7 +121,7 @@ pub struct BaseRecognitionError {
 impl BaseRecognitionError {
     pub fn get_expected_tokens<'a, T: Parser<'a>>(&self, recognizer: &T) -> IntervalSet {
         recognizer.get_interpreter().atn()
-            .get_expected_tokens::<'a, T::Node>(self.offending_state, recognizer.get_parser_rule_context())
+            .get_expected_tokens(self.offending_state, self.states_stack.iter().copied())
     }
 
     fn new<'a, T: Parser<'a>>(recog: &mut T) -> BaseRecognitionError {
@@ -128,6 +130,7 @@ impl BaseRecognitionError {
             offending_token: recog.get_current_token().borrow().to_owned(),
             offending_state: recog.get_state(),
             // ctx: recog.get_parser_rule_context().clone(),
+            states_stack: states_stack(recog.get_parser_rule_context().clone()).collect()
         }
     }
 }
@@ -155,6 +158,7 @@ impl NoViableAltError {
                 offending_token: recog.get_current_token().borrow().to_owned(),
                 offending_state: recog.get_state(),
                 // ctx: recog.get_parser_rule_context().clone(),
+                states_stack: states_stack(recog.get_parser_rule_context().clone()).collect()
             },
             start_token: recog.get_current_token().borrow().to_owned(),
 //            ctx: recog.get_parser_rule_context().clone()
@@ -166,6 +170,7 @@ impl NoViableAltError {
                 message: "".to_string(),
                 offending_token,
                 offending_state: recog.get_state(),
+                states_stack: states_stack(recog.get_parser_rule_context().clone()).collect()
                 // ctx: recog.get_parser_rule_context().clone(),
             },
             start_token,
@@ -191,6 +196,7 @@ impl InputMisMatchError {
         let mut a = Self::new(recognizer);
         // a.base.ctx = ctx;
         a.base.offending_state = offending_state;
+        a.base.states_stack = states_stack(ctx).collect();
         a
     }
 }
@@ -222,6 +228,7 @@ impl FailedPredicateError {
                 message: msg.unwrap_or_else(|| format!("failed predicate: {}", predicate.as_deref().unwrap_or("None"))),
                 offending_token: recog.get_current_token().borrow().to_owned(),
                 offending_state: recog.get_state(),
+                states_stack: states_stack(recog.get_parser_rule_context().clone()).collect()
                 // ctx: recog.get_parser_rule_context().clone()
             },
             rule_index,

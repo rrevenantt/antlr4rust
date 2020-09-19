@@ -4,6 +4,7 @@ use std::any::{Any, TypeId};
 use std::borrow::BorrowMut;
 use std::cell::{Cell, RefCell};
 use std::fmt::{Debug, Formatter};
+use std::iter::from_fn;
 use std::marker::PhantomData;
 use std::rc::{Rc, Weak};
 
@@ -27,6 +28,20 @@ pub trait RuleContext<'input>: CustomRuleContext<'input> {
     fn get_parent_ctx(&self) -> Option<Rc<<Self::Ctx as ParserNodeType<'input>>::Type>> { None }
 
     fn set_parent(&self, parent: &Option<Rc<<Self::Ctx as ParserNodeType<'input>>::Type>>) {}
+}
+
+pub(crate) fn states_stack<'input,T:ParserRuleContext<'input>+?Sized + 'input>(mut ctx:Rc<T>) -> impl Iterator<Item=isize>
+where T::Ctx:ParserNodeType<'input,Type=T>
+{
+    from_fn(move||
+        if ctx.get_invoking_state()<0{
+            None
+        } else {
+            let state = ctx.get_invoking_state();
+            ctx = ctx.get_parent_ctx().unwrap();
+            Some(state)
+        }
+    )
 }
 
 #[doc(hidden)]

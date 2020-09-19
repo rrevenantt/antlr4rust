@@ -22,8 +22,6 @@ There are other unstable features in use but only `CoerceUnsized` is essential.
 
 Remaining things before merge:
  - API stabilization
-   - [ ] Change token factory with converter
-   - [ ] Finish generic data for tokens and Lexer::get_text 
    - [ ] Rust api guidelines compliance  
    - [ ] more tests for API because it is quite different from Java
 
@@ -41,7 +39,7 @@ Can be done after merge:
 ###### Long term improvements
  - generate enum for labeled alternatives without redundant `Error` option
  - option to generate fields instead of getters by default
- - make tree generic over pointer type
+ - make tree generic over pointer type and allow tree nodes to arena.
  (requires GAT, otherwise it would be a problem for users that want ownership for parse tree)
  - support stable rust
  - support no_std(although alloc would still be required)  
@@ -89,16 +87,18 @@ It also is possible to disable generic parse tree creation to keep only selected
 Although Rust runtime API has been made as close as possible to Java, 
 there are quite some differences because Rust is not an OOP language and is much more explicit. 
 
- - All rule context variables (rule argument or rule return) should implement `Default + Clone`.
+ - Supports full zero-copy parsing including byte parsers.
  - If you are using labeled alternatives, 
- struct generated for rule is a enum with variant for each alternative
+ struct generated for rule is an enum with variant for each alternative
  - Parser needs to have ownership for listeners, but it is possible to get listener back via `ListenerId`
  otherwise `ParseTreeWalker` should be used.
  - In embedded actions to access parser you should use `recog` variable instead of `self`/`this`. 
  This is because predicate have to be inserted into two syntactically different places in generated parser
+ - `InputStream`s have different index behavior for unicode characters. 
+ If you need exactly the same behavior, use `[u32]` based `InputStream`, or implement custom `CharStream`.
  - In actions you have to escape `'` in rust lifetimes with `\ ` because ANTLR considers them as strings: `Struct<\'lifetime>`
  - For custom tokens you should use `@tokenfactory` custom action, instead of usual `TokenLabelType` parser option 
- 
+ - All rule context variables (rule argument or rule return) should implement `Default + Clone`.
  
 ### Unsafe
 Currently unsafe is used only to cast from trait object back to original type 

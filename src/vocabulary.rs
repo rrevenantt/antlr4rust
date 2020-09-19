@@ -112,3 +112,26 @@ impl Vocabulary for VocabularyImpl {
             .unwrap_or(Owned(token_type.to_string()))
     }
 }
+
+pub(crate) static DUMMY_VOCAB:DummyVocab = DummyVocab;
+
+#[derive(Debug)]
+pub(crate) struct DummyVocab;
+
+impl Vocabulary for DummyVocab{
+    fn get_max_token_type(&self) -> isize {
+        unimplemented!()
+    }
+
+    fn get_literal_name(&self, token_type: isize) -> Option<&str> {
+        unimplemented!()
+    }
+
+    fn get_symbolic_name(&self, token_type: isize) -> Option<&str> {
+        unimplemented!()
+    }
+
+    fn get_display_name(&self, token_type: isize) -> Cow<'_, str> {
+        token_type.to_string().into()
+    }
+}

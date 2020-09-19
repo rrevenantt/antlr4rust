@@ -5,7 +5,6 @@
 extern crate lazy_static;
 extern crate test;
 
-
 mod gen {
     use test::Bencher;
 
@@ -50,4 +49,3 @@ mod gen {
 		 between X1 and X2 or between X3 and X4
 		 ;";
 }
-

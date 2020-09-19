@@ -46,6 +46,8 @@ pub use lazy_static::lazy_static;
 pub use error_strategy::{BailErrorStrategy, DefaultErrorStrategy, ErrorStrategy};
 #[doc(inline)]
 pub use input_stream::InputStream;
+// #[doc(inline)]
+// pub use input_stream::CodePointInputStream;
 #[doc(inline)]
 pub use lexer::{BaseLexer, Lexer};
 #[doc(inline)]

@@ -121,12 +121,13 @@ impl ATN {
     /// @param context the full parse context
     /// @return The set of potentially valid input symbols which could follow the
     /// specified state in the specified context.
-    /// @throws IllegalArgumentException if the ATN does not contain a state with
+    /// Panics if the ATN does not contain a state with
     /// number {@code stateNumber}
-    pub fn get_expected_tokens<'a, Ctx: ParserNodeType<'a>>(
+    pub fn get_expected_tokens(
         &self,
         state_number: isize,
-        _ctx: &Rc<Ctx::Type>,
+        states_stack:impl Iterator<Item=isize>
+        // _ctx: &Rc<Ctx::Type>,
     ) -> IntervalSet {
         let s = self.states[state_number as usize].as_ref();
         let mut following = self.next_tokens(s);
@@ -136,20 +137,20 @@ impl ATN {
         let mut expected = IntervalSet::new();
         expected.add_set(&following);
         expected.remove_one(TOKEN_EPSILON);
-        let mut ctx = Some(Rc::clone(_ctx));
+        // let mut ctx = Some(Rc::clone(_ctx));
 
-        while let Some(c) = ctx {
-            if c.get_invoking_state() < 0 || !following.contains(TOKEN_EPSILON) {
+        for state in states_stack {
+            if !following.contains(TOKEN_EPSILON) {
                 break;
             }
 
-            let invoking_state = self.states[c.get_invoking_state() as usize].as_ref();
+            let invoking_state = self.states[state as usize].as_ref();
             let tr = invoking_state.get_transitions().first().unwrap().as_ref();
             let tr = tr.cast::<RuleTransition>();
             following = self.next_tokens(self.states[tr.follow_state].as_ref());
             expected.add_set(following);
             expected.remove_one(TOKEN_EPSILON);
-            ctx = c.get_parent_ctx();
+            // ctx = c.get_parent_ctx();
         }
 
         if following.contains(TOKEN_EPSILON) {

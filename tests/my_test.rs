@@ -11,8 +11,8 @@ mod gen {
     use std::io::Read;
     use std::iter::FromIterator;
 
-    use antlr_rust::common_token_stream::CommonTokenStream;
     use antlr_rust::InputStream;
+    use antlr_rust::common_token_stream::CommonTokenStream;
     use antlr_rust::int_stream::IntStream;
     use antlr_rust::lexer::Lexer;
     use antlr_rust::parser_rule_context::{BaseParserRuleContext, ParserRuleContext};
@@ -112,49 +112,42 @@ if (x < x && a > 0) then duh
         let tf = ArenaCommonFactory::default();
         let mut _lexer = CSVLexer::new_with_token_factory(
             Box::new(InputStream::new("V123,V2\nd1,d222".into())),
+            // Box::new(UTF16InputStream::from_str("V123,V2\nd1,d222","".into())),
             &tf,
         );
         let mut token_source = UnbufferedTokenStream::new_buffered(_lexer);
         let mut token_source_iter = token_source.token_iter();
-        println!(
-            "{} {}",
+        assert_eq!(
             token_source_iter.next().unwrap().to_string(),
             "[@0,0:3='V123',<5>,1:0]"
         );
-        println!(
-            "{} {}",
+        assert_eq!(
             token_source_iter.next().unwrap().to_string(),
             "[@1,4:4=',',<1>,1:4]"
         );
-        println!(
-            "{} {}",
+        assert_eq!(
             token_source_iter.next().unwrap().to_string(),
             "[@2,5:6='V2',<5>,1:5]"
         );
-        println!(
-            "{} {}",
+        assert_eq!(
             token_source_iter.next().unwrap().to_string(),
             "[@3,7:7='\\n',<3>,1:7]"
         );
-        println!(
-            "{} {}",
+        assert_eq!(
             token_source_iter.next().unwrap().to_string(),
             "[@4,8:9='d1',<5>,2:0]"
         );
-        println!(
-            "{} {}",
+        assert_eq!(
             token_source_iter.next().unwrap().to_string(),
             "[@5,10:10=',',<1>,2:2]"
         );
-        println!(
-            "{} {}",
+        assert_eq!(
             token_source_iter.next().unwrap().to_string(),
-            "[@6,11:12='d222',<5>,2:3]"
+            "[@6,11:14='d222',<5>,2:3]"
         );
-        println!(
-            "{} {}",
+        assert_eq!(
             token_source_iter.next().unwrap().to_string(),
-            "[@6,11:12='d222',<5>,2:3]"
+            "[@7,15:14='<EOF>',<-1>,2:7]"
         );
         assert!(token_source_iter.next().is_none());
     }
@@ -335,7 +328,10 @@ if (x < x && a > 0) then duh
 
     #[test]
     fn test_complex_convert() {
-        let mut lexer = LabelsLexer::new(Box::new(InputStream::new("(a+4)*2".into())));
+        let codepoints = "(a+4)*2".chars().map(|x|x as u32).collect::<Vec<_>>();
+        // let codepoints = "(a+4)*2";
+        let input = InputStream::new(&*codepoints);
+        let mut lexer = LabelsLexer::new(Box::new(input));
         let token_source = CommonTokenStream::new(lexer);
         let mut parser = LabelsParser::new(Box::new(token_source));
         let result = parser.s().expect("parser error");
