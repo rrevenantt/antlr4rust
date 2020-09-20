@@ -52,19 +52,13 @@ pub enum TransitionType {
 pub trait Transition: Sync + Send + Debug + Any {
     fn get_target(&self) -> ATNStateRef;
     fn set_target(&mut self, s: ATNStateRef);
-    fn is_epsilon(&self) -> bool {
-        false
-    }
-    fn get_label(&self) -> Option<Cow<IntervalSet>> {
-        None
-    }
+    fn is_epsilon(&self) -> bool { false }
+    fn get_label(&self) -> Option<Cow<IntervalSet>> { None }
     fn get_serialization_type(&self) -> TransitionType;
     fn matches(&self, symbol: isize, min_vocab_symbol: isize, max_vocab_symbol: isize) -> bool;
-    fn get_predicate(&self) -> Option<SemanticContext> {
-        None
-    }
+    fn get_predicate(&self) -> Option<SemanticContext> { None }
     fn get_reachable_target(&self, symbol: isize) -> Option<ATNStateRef> {
-//        println!("reachable target called on {:?}", self);
+        //        println!("reachable target called on {:?}", self);
         if self.matches(symbol, LEXER_MIN_CHAR_VALUE, LEXER_MAX_CHAR_VALUE) {
             return Some(self.get_target());
         }
@@ -87,13 +81,9 @@ pub struct AtomTransition {
 }
 
 impl Transition for AtomTransition {
-    fn get_target(&self) -> ATNStateRef {
-        self.target
-    }
+    fn get_target(&self) -> ATNStateRef { self.target }
 
-    fn set_target(&mut self, s: ATNStateRef) {
-        self.target = s
-    }
+    fn set_target(&mut self, s: ATNStateRef) { self.target = s }
 
     fn get_label(&self) -> Option<Cow<IntervalSet>> {
         let mut r = IntervalSet::new();
@@ -101,9 +91,7 @@ impl Transition for AtomTransition {
         Some(Cow::Owned(r))
     }
 
-    fn get_serialization_type(&self) -> TransitionType {
-        TransitionType::TRANSITION_ATOM
-    }
+    fn get_serialization_type(&self) -> TransitionType { TransitionType::TRANSITION_ATOM }
 
     fn matches(&self, _symbol: isize, _min_vocab_symbol: isize, _max_vocab_symbol: isize) -> bool {
         _symbol == self.label
@@ -119,20 +107,12 @@ pub struct RuleTransition {
 }
 
 impl Transition for RuleTransition {
-    fn get_target(&self) -> ATNStateRef {
-        self.target
-    }
-    fn set_target(&mut self, s: ATNStateRef) {
-        self.target = s
-    }
+    fn get_target(&self) -> ATNStateRef { self.target }
+    fn set_target(&mut self, s: ATNStateRef) { self.target = s }
 
-    fn is_epsilon(&self) -> bool {
-        true
-    }
+    fn is_epsilon(&self) -> bool { true }
 
-    fn get_serialization_type(&self) -> TransitionType {
-        TransitionType::TRANSITION_RULE
-    }
+    fn get_serialization_type(&self) -> TransitionType { TransitionType::TRANSITION_RULE }
 
     fn matches(&self, _symbol: isize, _min_vocab_symbol: isize, _max_vocab_symbol: isize) -> bool {
         unimplemented!()
@@ -146,20 +126,12 @@ pub struct EpsilonTransition {
 }
 
 impl Transition for EpsilonTransition {
-    fn get_target(&self) -> ATNStateRef {
-        self.target
-    }
-    fn set_target(&mut self, s: ATNStateRef) {
-        self.target = s
-    }
+    fn get_target(&self) -> ATNStateRef { self.target }
+    fn set_target(&mut self, s: ATNStateRef) { self.target = s }
 
-    fn is_epsilon(&self) -> bool {
-        true
-    }
+    fn is_epsilon(&self) -> bool { true }
 
-    fn get_serialization_type(&self) -> TransitionType {
-        TransitionType::TRANSITION_EPSILON
-    }
+    fn get_serialization_type(&self) -> TransitionType { TransitionType::TRANSITION_EPSILON }
 
     fn matches(&self, _symbol: isize, _min_vocab_symbol: isize, _max_vocab_symbol: isize) -> bool {
         false
@@ -174,12 +146,8 @@ pub struct RangeTransition {
 }
 
 impl Transition for RangeTransition {
-    fn get_target(&self) -> ATNStateRef {
-        self.target
-    }
-    fn set_target(&mut self, s: ATNStateRef) {
-        self.target = s
-    }
+    fn get_target(&self) -> ATNStateRef { self.target }
+    fn set_target(&mut self, s: ATNStateRef) { self.target = s }
 
     fn get_label(&self) -> Option<Cow<IntervalSet>> {
         let mut r = IntervalSet::new();
@@ -187,14 +155,11 @@ impl Transition for RangeTransition {
         Some(Cow::Owned(r))
     }
 
-    fn get_serialization_type(&self) -> TransitionType {
-        TransitionType::TRANSITION_RANGE
-    }
+    fn get_serialization_type(&self) -> TransitionType { TransitionType::TRANSITION_RANGE }
 
     fn matches(&self, _symbol: isize, _min_vocab_symbol: isize, _max_vocab_symbol: isize) -> bool {
         _symbol >= self.start && _symbol <= self.stop
     }
-
 }
 
 #[derive(Debug)]
@@ -207,20 +172,12 @@ pub struct ActionTransition {
 }
 
 impl Transition for ActionTransition {
-    fn get_target(&self) -> ATNStateRef {
-        self.target
-    }
-    fn set_target(&mut self, s: ATNStateRef) {
-        self.target = s
-    }
+    fn get_target(&self) -> ATNStateRef { self.target }
+    fn set_target(&mut self, s: ATNStateRef) { self.target = s }
 
-    fn is_epsilon(&self) -> bool {
-        true
-    }
+    fn is_epsilon(&self) -> bool { true }
 
-    fn get_serialization_type(&self) -> TransitionType {
-        TransitionType::TRANSITION_ACTION
-    }
+    fn get_serialization_type(&self) -> TransitionType { TransitionType::TRANSITION_ACTION }
 
     fn matches(&self, _symbol: isize, _min_vocab_symbol: isize, _max_vocab_symbol: isize) -> bool {
         false
@@ -234,25 +191,16 @@ pub struct SetTransition {
 }
 
 impl Transition for SetTransition {
-    fn get_target(&self) -> ATNStateRef {
-        self.target
-    }
-    fn set_target(&mut self, s: ATNStateRef) {
-        self.target = s
-    }
+    fn get_target(&self) -> ATNStateRef { self.target }
+    fn set_target(&mut self, s: ATNStateRef) { self.target = s }
 
-    fn get_label(&self) -> Option<Cow<IntervalSet>> {
-        Some(Cow::Borrowed(&self.set))
-    }
+    fn get_label(&self) -> Option<Cow<IntervalSet>> { Some(Cow::Borrowed(&self.set)) }
 
-    fn get_serialization_type(&self) -> TransitionType {
-        TransitionType::TRANSITION_SET
-    }
+    fn get_serialization_type(&self) -> TransitionType { TransitionType::TRANSITION_SET }
 
     fn matches(&self, _symbol: isize, _min_vocab_symbol: isize, _max_vocab_symbol: isize) -> bool {
         self.set.contains(_symbol)
     }
-
 }
 
 #[derive(Debug)]
@@ -262,24 +210,15 @@ pub struct NotSetTransition {
 }
 
 impl Transition for NotSetTransition {
-    fn get_target(&self) -> ATNStateRef {
-        self.target
-    }
-    fn set_target(&mut self, s: ATNStateRef) {
-        self.target = s
-    }
+    fn get_target(&self) -> ATNStateRef { self.target }
+    fn set_target(&mut self, s: ATNStateRef) { self.target = s }
 
-    fn get_label(&self) -> Option<Cow<IntervalSet>> {
-        Some(Cow::Borrowed(&self.set))
-    }
+    fn get_label(&self) -> Option<Cow<IntervalSet>> { Some(Cow::Borrowed(&self.set)) }
 
-    fn get_serialization_type(&self) -> TransitionType {
-        TransitionType::TRANSITION_NOTSET
-    }
+    fn get_serialization_type(&self) -> TransitionType { TransitionType::TRANSITION_NOTSET }
 
     fn matches(&self, _symbol: isize, _min_vocab_symbol: isize, _max_vocab_symbol: isize) -> bool {
-        _symbol >= _min_vocab_symbol && _symbol <= _max_vocab_symbol
-            && !self.set.contains(_symbol)
+        _symbol >= _min_vocab_symbol && _symbol <= _max_vocab_symbol && !self.set.contains(_symbol)
     }
 }
 
@@ -289,16 +228,10 @@ pub struct WildcardTransition {
 }
 
 impl Transition for WildcardTransition {
-    fn get_target(&self) -> ATNStateRef {
-        self.target
-    }
-    fn set_target(&mut self, s: ATNStateRef) {
-        self.target = s
-    }
+    fn get_target(&self) -> ATNStateRef { self.target }
+    fn set_target(&mut self, s: ATNStateRef) { self.target = s }
 
-    fn get_serialization_type(&self) -> TransitionType {
-        TransitionType::TRANSITION_WILDCARD
-    }
+    fn get_serialization_type(&self) -> TransitionType { TransitionType::TRANSITION_WILDCARD }
 
     fn matches(&self, _symbol: isize, _min_vocab_symbol: isize, _max_vocab_symbol: isize) -> bool {
         _symbol < _max_vocab_symbol && _symbol > _min_vocab_symbol
@@ -314,21 +247,13 @@ pub struct PredicateTransition {
 }
 
 impl Transition for PredicateTransition {
-    fn get_target(&self) -> ATNStateRef {
-        self.target
-    }
+    fn get_target(&self) -> ATNStateRef { self.target }
 
-    fn set_target(&mut self, s: ATNStateRef) {
-        self.target = s
-    }
+    fn set_target(&mut self, s: ATNStateRef) { self.target = s }
 
-    fn is_epsilon(&self) -> bool {
-        true
-    }
+    fn is_epsilon(&self) -> bool { true }
 
-    fn get_serialization_type(&self) -> TransitionType {
-        TransitionType::TRANSITION_PREDICATE
-    }
+    fn get_serialization_type(&self) -> TransitionType { TransitionType::TRANSITION_PREDICATE }
 
     fn matches(&self, _symbol: isize, _min_vocab_symbol: isize, _max_vocab_symbol: isize) -> bool {
         false
@@ -350,18 +275,12 @@ pub struct PrecedencePredicateTransition {
 }
 
 impl Transition for PrecedencePredicateTransition {
-    fn get_target(&self) -> ATNStateRef {
-        self.target
-    }
-    fn set_target(&mut self, s: ATNStateRef) {
-        self.target = s
-    }
+    fn get_target(&self) -> ATNStateRef { self.target }
+    fn set_target(&mut self, s: ATNStateRef) { self.target = s }
 
     fn is_epsilon(&self) -> bool { true }
 
-    fn get_serialization_type(&self) -> TransitionType {
-        TransitionType::TRANSITION_PRECEDENCE
-    }
+    fn get_serialization_type(&self) -> TransitionType { TransitionType::TRANSITION_PRECEDENCE }
 
     fn matches(&self, _symbol: isize, _min_vocab_symbol: isize, _max_vocab_symbol: isize) -> bool {
         false

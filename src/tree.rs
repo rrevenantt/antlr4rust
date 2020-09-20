@@ -7,17 +7,17 @@ use std::marker::PhantomData;
 use std::ops::{CoerceUnsized, Deref};
 use std::rc::Rc;
 
-use crate::{interval_set, trees};
 use crate::atn::INVALID_ALT;
 use crate::char_stream::InputData;
 use crate::int_stream::EOF;
 use crate::interval_set::Interval;
 use crate::parser::{Parser, ParserNodeType};
-use crate::parser_rule_context::{BaseParserRuleContext, cast, ParserRuleContext, RuleContextExt};
+use crate::parser_rule_context::{cast, BaseParserRuleContext, ParserRuleContext, RuleContextExt};
 use crate::recognizer::Recognizer;
 use crate::rule_context::{CustomRuleContext, EmptyContextType, RuleContext, Tid};
 use crate::token::{OwningToken, Token};
 use crate::token_factory::{CommonTokenFactory, TokenFactory};
+use crate::{interval_set, trees};
 
 //todo try to make in more generic
 pub trait Tree<'input>: NodeText + RuleContext<'input> {
@@ -30,9 +30,9 @@ pub trait Tree<'input>: NodeText + RuleContext<'input> {
     fn get_child_count(&self) -> usize { 0 }
     fn get_children<'a>(
         &'a self,
-    ) -> Box<dyn Iterator<Item=Rc<<Self::Ctx as ParserNodeType<'input>>::Type>> + 'a>
-        where
-            'input: 'a,
+    ) -> Box<dyn Iterator<Item = Rc<<Self::Ctx as ParserNodeType<'input>>::Type>> + 'a>
+    where
+        'input: 'a,
     {
         let mut index = 0;
         let iter = from_fn(move || {
@@ -70,7 +70,7 @@ pub trait ParseTree<'input>: Tree<'input> {
     /// We have to know the recognizer so we can get rule names.
     fn to_string_tree(
         &self,
-        r: &dyn Recognizer<'input, TF=Self::TF, Node=Self::Ctx>,
+        r: &dyn Recognizer<'input, TF = Self::TF, Node = Self::Ctx>,
     ) -> String {
         trees::string_tree(self, r.get_rule_names())
     }
@@ -108,7 +108,7 @@ pub struct LeafNode<'input, Node: ParserNodeType<'input>, T: 'static> {
 }
 
 impl<'input, Node: ParserNodeType<'input>, T: 'static> CustomRuleContext<'input>
-for LeafNode<'input, Node, T>
+    for LeafNode<'input, Node, T>
 {
     type TF = Node::TF;
     type Ctx = Node;
@@ -117,8 +117,9 @@ for LeafNode<'input, Node, T>
 }
 
 impl<'input, Node: ParserNodeType<'input>, T: 'static> ParserRuleContext<'input>
-for LeafNode<'input, Node, T>
-{}
+    for LeafNode<'input, Node, T>
+{
+}
 
 impl<'input, Node: ParserNodeType<'input>, T: 'static> Tree<'input> for LeafNode<'input, Node, T> {}
 
@@ -128,16 +129,17 @@ unsafe impl<'input, Node: ParserNodeType<'input>, T: 'static> Tid for LeafNode<'
     }
 
     fn id() -> TypeId
-        where
-            Self: Sized,
+    where
+        Self: Sized,
     {
         TypeId::of::<LeafNode<'static, EmptyContextType<CommonTokenFactory>, T>>()
     }
 }
 
 impl<'input, Node: ParserNodeType<'input>, T: 'static> RuleContext<'input>
-for LeafNode<'input, Node, T>
-{}
+    for LeafNode<'input, Node, T>
+{
+}
 
 impl<'input, Node: ParserNodeType<'input>, T: 'static> NodeText for LeafNode<'input, Node, T> {
     fn get_node_text(&self, _rule_names: &[&str]) -> String {
@@ -146,7 +148,7 @@ impl<'input, Node: ParserNodeType<'input>, T: 'static> NodeText for LeafNode<'in
 }
 
 impl<'input, Node: ParserNodeType<'input>, T: 'static> ParseTree<'input>
-for LeafNode<'input, Node, T>
+    for LeafNode<'input, Node, T>
 {
     fn get_source_interval(&self) -> Interval {
         let i = self.symbol.borrow().get_token_index();
@@ -182,7 +184,7 @@ impl<'input, Node: ParserNodeType<'input>, T: 'static> LeafNode<'input, Node, T>
 pub type TerminalNode<'input, NodeType> = LeafNode<'input, NodeType, NoError>;
 
 impl<'input, Node: ParserNodeType<'input>, Listener: ParseTreeListener<'input, Node> + ?Sized>
-Listenable<Listener> for TerminalNode<'input, Node>
+    Listenable<Listener> for TerminalNode<'input, Node>
 {
     fn enter(&self, listener: &mut Listener) { listener.visit_terminal(self) }
 
@@ -192,7 +194,7 @@ Listenable<Listener> for TerminalNode<'input, Node>
 }
 
 impl<'input, Node: ParserNodeType<'input>, Visitor: ParseTreeVisitor<'input, Node> + ?Sized>
-Visitable<Visitor> for TerminalNode<'input, Node>
+    Visitable<Visitor> for TerminalNode<'input, Node>
 {
     fn accept(&self, visitor: &mut Visitor) { visitor.visit_terminal(self) }
 }
@@ -202,7 +204,7 @@ Visitable<Visitor> for TerminalNode<'input, Node>
 pub type ErrorNode<'input, NodeType> = LeafNode<'input, NodeType, IsError>;
 
 impl<'input, Node: ParserNodeType<'input>, Listener: ParseTreeListener<'input, Node> + ?Sized>
-Listenable<Listener> for ErrorNode<'input, Node>
+    Listenable<Listener> for ErrorNode<'input, Node>
 {
     fn enter(&self, listener: &mut Listener) { listener.visit_error_node(self) }
 
@@ -212,7 +214,7 @@ Listenable<Listener> for ErrorNode<'input, Node>
 }
 
 impl<'input, Node: ParserNodeType<'input>, Visitor: ParseTreeVisitor<'input, Node> + ?Sized>
-Visitable<Visitor> for ErrorNode<'input, Node>
+    Visitable<Visitor> for ErrorNode<'input, Node>
 {
     fn accept(&self, visitor: &mut Visitor) { visitor.visit_error_node(self) }
 }
@@ -250,7 +252,9 @@ pub trait ParseTreeVisitor<'input, Node: ParserNodeType<'input>> {
 // }
 
 pub trait Visitable<Vis: ?Sized> {
-        fn accept(&self, visitor: &mut Vis) { unreachable!("should have been properly implemented by generated context when reachable") }
+    fn accept(&self, visitor: &mut Vis) {
+        unreachable!("should have been properly implemented by generated context when reachable")
+    }
 }
 
 pub trait ParseTreeListener<'input, Node: ParserNodeType<'input>> {
@@ -275,23 +279,23 @@ pub trait Listenable<T: ?Sized> {
 pub struct ParseTreeWalker<'input, 'a, Node, T = dyn ParseTreeListener<'input, Node> + 'a>(
     PhantomData<fn(&'a T) -> &'input Node::Type>,
 )
-    where
-        Node: ParserNodeType<'input>,
-        T: ParseTreeListener<'input, Node> + 'a + ?Sized;
+where
+    Node: ParserNodeType<'input>,
+    T: ParseTreeListener<'input, Node> + 'a + ?Sized;
 
 impl<'input, 'a, Node, T> ParseTreeWalker<'input, 'a, Node, T>
-    where
-        Node: ParserNodeType<'input>,
-        T: ParseTreeListener<'input, Node> + 'a + ?Sized,
-        Node::Type: Listenable<T>,
+where
+    Node: ParserNodeType<'input>,
+    T: ParseTreeListener<'input, Node> + 'a + ?Sized,
+    Node::Type: Listenable<T>,
 {
     // #[doc(hidden)]
     // pub fn new() -> Self{ Self(PhantomData) }
 
     pub fn walk<Listener, Ctx>(mut listener: Box<Listener>, t: &Ctx) -> Box<Listener>
-        where
-                for<'x> &'x mut Listener: CoerceUnsized<&'x mut T>,
-                for<'x> &'x Ctx: CoerceUnsized<&'x Node::Type>,
+    where
+        for<'x> &'x mut Listener: CoerceUnsized<&'x mut T>,
+        for<'x> &'x Ctx: CoerceUnsized<&'x Node::Type>,
     {
         // let mut listener = listener as Box<T>;
         Self::walk_inner(listener.as_mut(), t as &Node::Type);

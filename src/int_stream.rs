@@ -24,7 +24,7 @@ impl<'a, T: IntStream> Iterator for IterWrapper<'a, T> {
         self.0.consume();
         match result {
             EOF => None,
-            x => Some(x)
+            x => Some(x),
         }
     }
 }

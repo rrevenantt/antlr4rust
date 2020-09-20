@@ -10,11 +10,13 @@ fn full_ctx() -> bool { false }
 
 #[test]
 fn test_e_e() {
-    let r = PredictionContext::merge(&*EMPTY_PREDICTION_CONTEXT,
-                                     &*EMPTY_PREDICTION_CONTEXT,
-                                     root_is_wildcard(), &mut None);
-    let expecting =
-        "digraph G {
+    let r = PredictionContext::merge(
+        &*EMPTY_PREDICTION_CONTEXT,
+        &*EMPTY_PREDICTION_CONTEXT,
+        root_is_wildcard(),
+        &mut None,
+    );
+    let expecting = "digraph G {
 rankdir=LR;
   s0[label=\"*\"];
 }\n";
@@ -23,11 +25,13 @@ rankdir=LR;
 
 #[test]
 fn test_e_e_fullctx() {
-    let r = PredictionContext::merge(&*EMPTY_PREDICTION_CONTEXT,
-                                     &*EMPTY_PREDICTION_CONTEXT,
-                                     full_ctx(), &mut None);
-    let expecting =
-        "digraph G {
+    let r = PredictionContext::merge(
+        &*EMPTY_PREDICTION_CONTEXT,
+        &*EMPTY_PREDICTION_CONTEXT,
+        full_ctx(),
+        &mut None,
+    );
+    let expecting = "digraph G {
 rankdir=LR;
   s0[label=\"$\"];
 }\n";
@@ -36,29 +40,27 @@ rankdir=LR;
 
 #[test]
 fn test_x_e() {
-    let r = PredictionContext::merge(&x(),
-                                     &*EMPTY_PREDICTION_CONTEXT,
-                                     root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[label=\"*\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(
+        &x(),
+        &*EMPTY_PREDICTION_CONTEXT,
+        root_is_wildcard(),
+        &mut None,
+    );
+    let expecting =
+        String::new() + "digraph G {\n" + "rankdir=LR;\n" + "  s0[label=\"*\"];\n" + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
 #[test]
 fn test_x_e_fullctx() {
-    let r = PredictionContext::merge(&x(),
-                                     &*EMPTY_PREDICTION_CONTEXT,
-                                     full_ctx(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>$\"];\n" +
-        "  s1[label=\"$\"];\n" +
-        "  s0:p0->s1[label=\"9\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&x(), &*EMPTY_PREDICTION_CONTEXT, full_ctx(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>$\"];\n"
+        + "  s1[label=\"$\"];\n"
+        + "  s0:p0->s1[label=\"9\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, full_ctx()))
 }
 
@@ -67,44 +69,37 @@ fn test_e_x() {
     let r = PredictionContext::merge(
         &*EMPTY_PREDICTION_CONTEXT,
         &x(),
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[label=\"*\"];\n" +
-        "}\n";
+        root_is_wildcard(),
+        &mut None,
+    );
+    let expecting =
+        String::new() + "digraph G {\n" + "rankdir=LR;\n" + "  s0[label=\"*\"];\n" + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
 #[test]
 fn test_e_x_fullctx() {
-    let r = PredictionContext::merge(
-        &*EMPTY_PREDICTION_CONTEXT,
-        &x(),
-        full_ctx(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>$\"];\n" +
-        "  s1[label=\"$\"];\n" +
-        "  s0:p0->s1[label=\"9\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&*EMPTY_PREDICTION_CONTEXT, &x(), full_ctx(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>$\"];\n"
+        + "  s1[label=\"$\"];\n"
+        + "  s0:p0->s1[label=\"9\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, full_ctx()))
 }
 
 #[test]
 fn test_a_a() {
-    let r = PredictionContext::merge(
-        &a(),
-        &a(),
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[label=\"0\"];\n" +
-        "  s1[label=\"*\"];\n" +
-        "  s0->s1[label=\"1\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&a(), &a(), root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[label=\"0\"];\n"
+        + "  s1[label=\"*\"];\n"
+        + "  s0->s1[label=\"1\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -113,17 +108,14 @@ fn test_ae_ax() {
     let a1 = a();
     let x = x();
     let a2 = PredictionContext::new_singleton(Some(x), 1).alloc();
-    let r = PredictionContext::merge(
-        &a1,
-        &a2,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[label=\"0\"];\n" +
-        "  s1[label=\"*\"];\n" +
-        "  s0->s1[label=\"1\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&a1, &a2, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[label=\"0\"];\n"
+        + "  s1[label=\"*\"];\n"
+        + "  s0->s1[label=\"1\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -132,19 +124,16 @@ fn test_ae_ax_fullctx() {
     let a1 = a();
     let x = x();
     let a2 = PredictionContext::new_singleton(Some(x), 1).alloc();
-    let r = PredictionContext::merge(
-        &a1,
-        &a2,
-        full_ctx(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[label=\"0\"];\n" +
-        "  s1[shape=record, label=\"<p0>|<p1>$\"];\n" +
-        "  s2[label=\"$\"];\n" +
-        "  s0->s1[label=\"1\"];\n" +
-        "  s1:p0->s2[label=\"9\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&a1, &a2, full_ctx(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[label=\"0\"];\n"
+        + "  s1[shape=record, label=\"<p0>|<p1>$\"];\n"
+        + "  s2[label=\"$\"];\n"
+        + "  s0->s1[label=\"1\"];\n"
+        + "  s1:p0->s2[label=\"9\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, full_ctx()))
 }
 
@@ -153,17 +142,14 @@ fn test_axe_ae() {
     let x = x();
     let a1 = PredictionContext::new_singleton(Some(x), 1).alloc();
     let a2 = a();
-    let r = PredictionContext::merge(
-        &a1,
-        &a2,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[label=\"0\"];\n" +
-        "  s1[label=\"*\"];\n" +
-        "  s0->s1[label=\"1\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&a1, &a2, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[label=\"0\"];\n"
+        + "  s1[label=\"*\"];\n"
+        + "  s0->s1[label=\"1\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -173,19 +159,16 @@ fn test_aae_ae_e_fullctx() {
     let child1 = PredictionContext::new_singleton(Some(empty.clone()), 8).alloc();
     let right = PredictionContext::merge(&empty, &child1, false, &mut None);
     let left = PredictionContext::new_singleton(Some(right.clone()), 8).alloc();
-    let r = PredictionContext::merge(
-        &left,
-        &right,
-        false, &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>$\"];\n" +
-        "  s1[shape=record, label=\"<p0>|<p1>$\"];\n" +
-        "  s2[label=\"$\"];\n" +
-        "  s0:p0->s1[label=\"8\"];\n" +
-        "  s1:p0->s2[label=\"8\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&left, &right, false, &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>$\"];\n"
+        + "  s1[shape=record, label=\"<p0>|<p1>$\"];\n"
+        + "  s2[label=\"$\"];\n"
+        + "  s0:p0->s1[label=\"8\"];\n"
+        + "  s1:p0->s2[label=\"8\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, false))
 }
 
@@ -194,36 +177,30 @@ fn test_axe_ae_fullctx() {
     let x = x();
     let a1 = PredictionContext::new_singleton(Some(x), 1).alloc();
     let a2 = a();
-    let r = PredictionContext::merge(
-        &a1,
-        &a2,
-        full_ctx(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[label=\"0\"];\n" +
-        "  s1[shape=record, label=\"<p0>|<p1>$\"];\n" +
-        "  s2[label=\"$\"];\n" +
-        "  s0->s1[label=\"1\"];\n" +
-        "  s1:p0->s2[label=\"9\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&a1, &a2, full_ctx(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[label=\"0\"];\n"
+        + "  s1[shape=record, label=\"<p0>|<p1>$\"];\n"
+        + "  s2[label=\"$\"];\n"
+        + "  s0->s1[label=\"1\"];\n"
+        + "  s1:p0->s2[label=\"9\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, full_ctx()))
 }
 
 #[test]
 fn test_a_b() {
-    let r = PredictionContext::merge(
-        &a(),
-        &b(),
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>\"];\n" +
-        "  s1[label=\"*\"];\n" +
-        "  s0:p0->s1[label=\"1\"];\n" +
-        "  s0:p1->s1[label=\"2\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&a(), &b(), root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>\"];\n"
+        + "  s1[label=\"*\"];\n"
+        + "  s0:p0->s1[label=\"1\"];\n"
+        + "  s0:p1->s1[label=\"2\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -232,19 +209,16 @@ fn test_ax_ax_same() {
     let x = x();
     let a1 = PredictionContext::new_singleton(Some(x.clone()), 1).alloc();
     let a2 = PredictionContext::new_singleton(Some(x.clone()), 1).alloc();
-    let r = PredictionContext::merge(
-        &a1,
-        &a2,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[label=\"0\"];\n" +
-        "  s1[label=\"1\"];\n" +
-        "  s2[label=\"*\"];\n" +
-        "  s0->s1[label=\"1\"];\n" +
-        "  s1->s2[label=\"9\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&a1, &a2, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[label=\"0\"];\n"
+        + "  s1[label=\"1\"];\n"
+        + "  s2[label=\"*\"];\n"
+        + "  s0->s1[label=\"1\"];\n"
+        + "  s1->s2[label=\"9\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -252,19 +226,16 @@ fn test_ax_ax_same() {
 fn test_ax_ax() {
     let a1 = PredictionContext::new_singleton(Some(x()), 1).alloc();
     let a2 = PredictionContext::new_singleton(Some(x()), 1).alloc();
-    let r = PredictionContext::merge(
-        &a1,
-        &a2,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[label=\"0\"];\n" +
-        "  s1[label=\"1\"];\n" +
-        "  s2[label=\"*\"];\n" +
-        "  s0->s1[label=\"1\"];\n" +
-        "  s1->s2[label=\"9\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&a1, &a2, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[label=\"0\"];\n"
+        + "  s1[label=\"1\"];\n"
+        + "  s2[label=\"*\"];\n"
+        + "  s0->s1[label=\"1\"];\n"
+        + "  s1->s2[label=\"9\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -274,21 +245,18 @@ fn test_abx_abx() {
     let b2 = PredictionContext::new_singleton(Some(x()), 2).alloc();
     let a1 = PredictionContext::new_singleton(Some(b1), 1).alloc();
     let a2 = PredictionContext::new_singleton(Some(b2), 1).alloc();
-    let r = PredictionContext::merge(
-        &a1,
-        &a2,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[label=\"0\"];\n" +
-        "  s1[label=\"1\"];\n" +
-        "  s2[label=\"2\"];\n" +
-        "  s3[label=\"*\"];\n" +
-        "  s0->s1[label=\"1\"];\n" +
-        "  s1->s2[label=\"2\"];\n" +
-        "  s2->s3[label=\"9\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&a1, &a2, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[label=\"0\"];\n"
+        + "  s1[label=\"1\"];\n"
+        + "  s2[label=\"2\"];\n"
+        + "  s3[label=\"*\"];\n"
+        + "  s0->s1[label=\"1\"];\n"
+        + "  s1->s2[label=\"2\"];\n"
+        + "  s2->s3[label=\"9\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -298,22 +266,19 @@ fn test_abx_acx() {
     let c = PredictionContext::new_singleton(Some(x()), 3).alloc();
     let a1 = PredictionContext::new_singleton(Some(b1), 1).alloc();
     let a2 = PredictionContext::new_singleton(Some(c), 1).alloc();
-    let r = PredictionContext::merge(
-        &a1,
-        &a2,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[label=\"0\"];\n" +
-        "  s1[shape=record, label=\"<p0>|<p1>\"];\n" +
-        "  s2[label=\"2\"];\n" +
-        "  s3[label=\"*\"];\n" +
-        "  s0->s1[label=\"1\"];\n" +
-        "  s1:p0->s2[label=\"2\"];\n" +
-        "  s1:p1->s2[label=\"3\"];\n" +
-        "  s2->s3[label=\"9\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&a1, &a2, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[label=\"0\"];\n"
+        + "  s1[shape=record, label=\"<p0>|<p1>\"];\n"
+        + "  s2[label=\"2\"];\n"
+        + "  s3[label=\"*\"];\n"
+        + "  s0->s1[label=\"1\"];\n"
+        + "  s1:p0->s2[label=\"2\"];\n"
+        + "  s1:p1->s2[label=\"3\"];\n"
+        + "  s2->s3[label=\"9\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -322,20 +287,17 @@ fn test_ax_bx_same() {
     let x = x();
     let a = PredictionContext::new_singleton(Some(x.clone()), 1).alloc();
     let b = PredictionContext::new_singleton(Some(x.clone()), 2).alloc();
-    let r = PredictionContext::merge(
-        &a,
-        &b,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>\"];\n" +
-        "  s1[label=\"1\"];\n" +
-        "  s2[label=\"*\"];\n" +
-        "  s0:p0->s1[label=\"1\"];\n" +
-        "  s0:p1->s1[label=\"2\"];\n" +
-        "  s1->s2[label=\"9\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&a, &b, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>\"];\n"
+        + "  s1[label=\"1\"];\n"
+        + "  s2[label=\"*\"];\n"
+        + "  s0:p0->s1[label=\"1\"];\n"
+        + "  s0:p1->s1[label=\"2\"];\n"
+        + "  s1->s2[label=\"9\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -343,20 +305,17 @@ fn test_ax_bx_same() {
 fn test_ax_bx() {
     let a = PredictionContext::new_singleton(Some(x()), 1).alloc();
     let b = PredictionContext::new_singleton(Some(x()), 2).alloc();
-    let r = PredictionContext::merge(
-        &a,
-        &b,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>\"];\n" +
-        "  s1[label=\"1\"];\n" +
-        "  s2[label=\"*\"];\n" +
-        "  s0:p0->s1[label=\"1\"];\n" +
-        "  s0:p1->s1[label=\"2\"];\n" +
-        "  s1->s2[label=\"9\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&a, &b, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>\"];\n"
+        + "  s1[label=\"1\"];\n"
+        + "  s2[label=\"*\"];\n"
+        + "  s0:p0->s1[label=\"1\"];\n"
+        + "  s0:p1->s1[label=\"2\"];\n"
+        + "  s1->s2[label=\"9\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -365,20 +324,17 @@ fn test_ae_bx() {
     let x2 = x();
     let a = a();
     let b = PredictionContext::new_singleton(Some(x2), 2).alloc();
-    let r = PredictionContext::merge(
-        &a,
-        &b,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>\"];\n" +
-        "  s2[label=\"2\"];\n" +
-        "  s1[label=\"*\"];\n" +
-        "  s0:p0->s1[label=\"1\"];\n" +
-        "  s0:p1->s2[label=\"2\"];\n" +
-        "  s2->s1[label=\"9\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&a, &b, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>\"];\n"
+        + "  s2[label=\"2\"];\n"
+        + "  s1[label=\"*\"];\n"
+        + "  s0:p0->s1[label=\"1\"];\n"
+        + "  s0:p1->s2[label=\"2\"];\n"
+        + "  s2->s1[label=\"9\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -387,20 +343,17 @@ fn test_ae_bx_fullctx() {
     let x2 = x();
     let a = a();
     let b = PredictionContext::new_singleton(Some(x2), 2).alloc();
-    let r = PredictionContext::merge(
-        &a,
-        &b,
-        full_ctx(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>\"];\n" +
-        "  s2[label=\"2\"];\n" +
-        "  s1[label=\"$\"];\n" +
-        "  s0:p0->s1[label=\"1\"];\n" +
-        "  s0:p1->s2[label=\"2\"];\n" +
-        "  s2->s1[label=\"9\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&a, &b, full_ctx(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>\"];\n"
+        + "  s2[label=\"2\"];\n"
+        + "  s1[label=\"$\"];\n"
+        + "  s0:p0->s1[label=\"1\"];\n"
+        + "  s0:p1->s2[label=\"2\"];\n"
+        + "  s2->s1[label=\"9\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, full_ctx()))
 }
 
@@ -413,24 +366,21 @@ fn test_aex_bfx() {
     let f = PredictionContext::new_singleton(Some(x2), 6).alloc();
     let a = PredictionContext::new_singleton(Some(e), 1).alloc();
     let b = PredictionContext::new_singleton(Some(f), 2).alloc();
-    let r = PredictionContext::merge(
-        &a,
-        &b,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>\"];\n" +
-        "  s2[label=\"2\"];\n" +
-        "  s3[label=\"3\"];\n" +
-        "  s4[label=\"*\"];\n" +
-        "  s1[label=\"1\"];\n" +
-        "  s0:p0->s1[label=\"1\"];\n" +
-        "  s0:p1->s2[label=\"2\"];\n" +
-        "  s2->s3[label=\"6\"];\n" +
-        "  s3->s4[label=\"9\"];\n" +
-        "  s1->s3[label=\"5\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&a, &b, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>\"];\n"
+        + "  s2[label=\"2\"];\n"
+        + "  s3[label=\"3\"];\n"
+        + "  s4[label=\"*\"];\n"
+        + "  s1[label=\"1\"];\n"
+        + "  s0:p0->s1[label=\"1\"];\n"
+        + "  s0:p1->s2[label=\"2\"];\n"
+        + "  s2->s3[label=\"6\"];\n"
+        + "  s3->s4[label=\"9\"];\n"
+        + "  s1->s3[label=\"5\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -438,15 +388,9 @@ fn test_aex_bfx() {
 fn test_Ae_Ae_fullctx() {
     let A1 = array(vec![EMPTY_PREDICTION_CONTEXT.clone()]);
     let A2 = array(vec![EMPTY_PREDICTION_CONTEXT.clone()]);
-    let r = PredictionContext::merge(
-        &A1,
-        &A2,
-        full_ctx(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[label=\"$\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&A1, &A2, full_ctx(), &mut None);
+    let expecting =
+        String::new() + "digraph G {\n" + "rankdir=LR;\n" + "  s0[label=\"$\"];\n" + "}\n";
     assert_eq!(expecting, to_dot_string(r, full_ctx()))
 }
 
@@ -454,19 +398,16 @@ fn test_Ae_Ae_fullctx() {
 fn test_Aab_Ac() {
     let A1 = array(vec![a(), b()]);
     let A2 = array(vec![c()]);
-    let r = PredictionContext::merge(
-        &A1,
-        &A2,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>|<p2>\"];\n" +
-        "  s1[label=\"*\"];\n" +
-        "  s0:p0->s1[label=\"1\"];\n" +
-        "  s0:p1->s1[label=\"2\"];\n" +
-        "  s0:p2->s1[label=\"3\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&A1, &A2, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>|<p2>\"];\n"
+        + "  s1[label=\"*\"];\n"
+        + "  s0:p0->s1[label=\"1\"];\n"
+        + "  s0:p1->s1[label=\"2\"];\n"
+        + "  s0:p2->s1[label=\"3\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -474,17 +415,14 @@ fn test_Aab_Ac() {
 fn test_Aa_Aa() {
     let A1 = array(vec![a()]);
     let A2 = array(vec![a()]);
-    let r = PredictionContext::merge(
-        &A1,
-        &A2,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[label=\"0\"];\n" +
-        "  s1[label=\"*\"];\n" +
-        "  s0->s1[label=\"1\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&A1, &A2, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[label=\"0\"];\n"
+        + "  s1[label=\"*\"];\n"
+        + "  s0->s1[label=\"1\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -492,19 +430,16 @@ fn test_Aa_Aa() {
 fn test_Aa_Abc() {
     let A1 = array(vec![a()]);
     let A2 = array(vec![b(), c()]);
-    let r = PredictionContext::merge(
-        &A1,
-        &A2,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>|<p2>\"];\n" +
-        "  s1[label=\"*\"];\n" +
-        "  s0:p0->s1[label=\"1\"];\n" +
-        "  s0:p1->s1[label=\"2\"];\n" +
-        "  s0:p2->s1[label=\"3\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&A1, &A2, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>|<p2>\"];\n"
+        + "  s1[label=\"*\"];\n"
+        + "  s0:p0->s1[label=\"1\"];\n"
+        + "  s0:p1->s1[label=\"2\"];\n"
+        + "  s0:p2->s1[label=\"3\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -512,19 +447,16 @@ fn test_Aa_Abc() {
 fn test_Aac_Ab() {
     let A1 = array(vec![a(), c()]);
     let A2 = array(vec![b()]);
-    let r = PredictionContext::merge(
-        &A1,
-        &A2,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>|<p2>\"];\n" +
-        "  s1[label=\"*\"];\n" +
-        "  s0:p0->s1[label=\"1\"];\n" +
-        "  s0:p1->s1[label=\"2\"];\n" +
-        "  s0:p2->s1[label=\"3\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&A1, &A2, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>|<p2>\"];\n"
+        + "  s1[label=\"*\"];\n"
+        + "  s0:p0->s1[label=\"1\"];\n"
+        + "  s0:p1->s1[label=\"2\"];\n"
+        + "  s0:p2->s1[label=\"3\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -532,18 +464,15 @@ fn test_Aac_Ab() {
 fn test_Aab_Aa() {
     let A1 = array(vec![a(), b()]);
     let A2 = array(vec![a()]);
-    let r = PredictionContext::merge(
-        &A1,
-        &A2,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>\"];\n" +
-        "  s1[label=\"*\"];\n" +
-        "  s0:p0->s1[label=\"1\"];\n" +
-        "  s0:p1->s1[label=\"2\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&A1, &A2, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>\"];\n"
+        + "  s1[label=\"*\"];\n"
+        + "  s0:p0->s1[label=\"1\"];\n"
+        + "  s0:p1->s1[label=\"2\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -551,18 +480,15 @@ fn test_Aab_Aa() {
 fn test_Aab_Ab() {
     let A1 = array(vec![a(), b()]);
     let A2 = array(vec![b()]);
-    let r = PredictionContext::merge(
-        &A1,
-        &A2,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>\"];\n" +
-        "  s1[label=\"*\"];\n" +
-        "  s0:p0->s1[label=\"1\"];\n" +
-        "  s0:p1->s1[label=\"2\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&A1, &A2, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>\"];\n"
+        + "  s1[label=\"*\"];\n"
+        + "  s0:p0->s1[label=\"1\"];\n"
+        + "  s0:p1->s1[label=\"2\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -572,22 +498,19 @@ fn test_Aax_Aby() {
     let b = PredictionContext::new_singleton(y().into(), 2).alloc();
     let A1 = array(vec![a]);
     let A2 = array(vec![b]);
-    let r = PredictionContext::merge(
-        &A1,
-        &A2,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>\"];\n" +
-        "  s2[label=\"2\"];\n" +
-        "  s3[label=\"*\"];\n" +
-        "  s1[label=\"1\"];\n" +
-        "  s0:p0->s1[label=\"1\"];\n" +
-        "  s0:p1->s2[label=\"2\"];\n" +
-        "  s2->s3[label=\"10\"];\n" +
-        "  s1->s3[label=\"9\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&A1, &A2, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>\"];\n"
+        + "  s2[label=\"2\"];\n"
+        + "  s3[label=\"*\"];\n"
+        + "  s1[label=\"1\"];\n"
+        + "  s0:p0->s1[label=\"1\"];\n"
+        + "  s0:p1->s2[label=\"2\"];\n"
+        + "  s2->s3[label=\"10\"];\n"
+        + "  s1->s3[label=\"9\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -597,20 +520,17 @@ fn test_Aax_Aay() {
     let a2 = PredictionContext::new_singleton(y().into(), 1).alloc();
     let A1 = array(vec![a1]);
     let A2 = array(vec![a2]);
-    let r = PredictionContext::merge(
-        &A1,
-        &A2,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[label=\"0\"];\n" +
-        "  s1[shape=record, label=\"<p0>|<p1>\"];\n" +
-        "  s2[label=\"*\"];\n" +
-        "  s0->s1[label=\"1\"];\n" +
-        "  s1:p0->s2[label=\"9\"];\n" +
-        "  s1:p1->s2[label=\"10\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&A1, &A2, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[label=\"0\"];\n"
+        + "  s1[shape=record, label=\"<p0>|<p1>\"];\n"
+        + "  s2[label=\"*\"];\n"
+        + "  s0->s1[label=\"1\"];\n"
+        + "  s1:p0->s2[label=\"9\"];\n"
+        + "  s1:p1->s2[label=\"10\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -620,22 +540,19 @@ fn test_Aaxc_Aayd() {
     let a2 = PredictionContext::new_singleton(y().into(), 1).alloc();
     let A1 = array(vec![a1, c()]);
     let A2 = array(vec![a2, d()]);
-    let r = PredictionContext::merge(
-        &A1,
-        &A2,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>|<p2>\"];\n" +
-        "  s2[label=\"*\"];\n" +
-        "  s1[shape=record, label=\"<p0>|<p1>\"];\n" +
-        "  s0:p0->s1[label=\"1\"];\n" +
-        "  s0:p1->s2[label=\"3\"];\n" +
-        "  s0:p2->s2[label=\"4\"];\n" +
-        "  s1:p0->s2[label=\"9\"];\n" +
-        "  s1:p1->s2[label=\"10\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&A1, &A2, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>|<p2>\"];\n"
+        + "  s2[label=\"*\"];\n"
+        + "  s1[shape=record, label=\"<p0>|<p1>\"];\n"
+        + "  s0:p0->s1[label=\"1\"];\n"
+        + "  s0:p1->s2[label=\"3\"];\n"
+        + "  s0:p2->s2[label=\"4\"];\n"
+        + "  s1:p0->s2[label=\"9\"];\n"
+        + "  s1:p1->s2[label=\"10\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -647,28 +564,25 @@ fn test_Aaubv_Acwdx() {
     let d = PredictionContext::new_singleton(x().into(), 4).alloc();
     let A1 = array(vec![a, b]);
     let A2 = array(vec![c, d]);
-    let r = PredictionContext::merge(
-        &A1,
-        &A2,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>|<p2>|<p3>\"];\n" +
-        "  s4[label=\"4\"];\n" +
-        "  s5[label=\"*\"];\n" +
-        "  s3[label=\"3\"];\n" +
-        "  s2[label=\"2\"];\n" +
-        "  s1[label=\"1\"];\n" +
-        "  s0:p0->s1[label=\"1\"];\n" +
-        "  s0:p1->s2[label=\"2\"];\n" +
-        "  s0:p2->s3[label=\"3\"];\n" +
-        "  s0:p3->s4[label=\"4\"];\n" +
-        "  s4->s5[label=\"9\"];\n" +
-        "  s3->s5[label=\"8\"];\n" +
-        "  s2->s5[label=\"7\"];\n" +
-        "  s1->s5[label=\"6\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&A1, &A2, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>|<p2>|<p3>\"];\n"
+        + "  s4[label=\"4\"];\n"
+        + "  s5[label=\"*\"];\n"
+        + "  s3[label=\"3\"];\n"
+        + "  s2[label=\"2\"];\n"
+        + "  s1[label=\"1\"];\n"
+        + "  s0:p0->s1[label=\"1\"];\n"
+        + "  s0:p1->s2[label=\"2\"];\n"
+        + "  s0:p2->s3[label=\"3\"];\n"
+        + "  s0:p3->s4[label=\"4\"];\n"
+        + "  s4->s5[label=\"9\"];\n"
+        + "  s3->s5[label=\"8\"];\n"
+        + "  s2->s5[label=\"7\"];\n"
+        + "  s1->s5[label=\"6\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -680,25 +594,22 @@ fn test_Aaubv_Abvdx() {
     let d = PredictionContext::new_singleton(x().into(), 4).alloc();
     let A1 = array(vec![a, b1]);
     let A2 = array(vec![b2, d]);
-    let r = PredictionContext::merge(
-        &A1,
-        &A2,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>|<p2>\"];\n" +
-        "  s3[label=\"3\"];\n" +
-        "  s4[label=\"*\"];\n" +
-        "  s2[label=\"2\"];\n" +
-        "  s1[label=\"1\"];\n" +
-        "  s0:p0->s1[label=\"1\"];\n" +
-        "  s0:p1->s2[label=\"2\"];\n" +
-        "  s0:p2->s3[label=\"4\"];\n" +
-        "  s3->s4[label=\"9\"];\n" +
-        "  s2->s4[label=\"7\"];\n" +
-        "  s1->s4[label=\"6\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&A1, &A2, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>|<p2>\"];\n"
+        + "  s3[label=\"3\"];\n"
+        + "  s4[label=\"*\"];\n"
+        + "  s2[label=\"2\"];\n"
+        + "  s1[label=\"1\"];\n"
+        + "  s0:p0->s1[label=\"1\"];\n"
+        + "  s0:p1->s2[label=\"2\"];\n"
+        + "  s0:p2->s3[label=\"4\"];\n"
+        + "  s3->s4[label=\"9\"];\n"
+        + "  s2->s4[label=\"7\"];\n"
+        + "  s1->s4[label=\"6\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -710,26 +621,23 @@ fn test_Aaubv_Abwdx() {
     let d = PredictionContext::new_singleton(x().into(), 4).alloc();
     let A1 = array(vec![a, b1]);
     let A2 = array(vec![b2, d]);
-    let r = PredictionContext::merge(
-        &A1,
-        &A2,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>|<p2>\"];\n" +
-        "  s3[label=\"3\"];\n" +
-        "  s4[label=\"*\"];\n" +
-        "  s2[shape=record, label=\"<p0>|<p1>\"];\n" +
-        "  s1[label=\"1\"];\n" +
-        "  s0:p0->s1[label=\"1\"];\n" +
-        "  s0:p1->s2[label=\"2\"];\n" +
-        "  s0:p2->s3[label=\"4\"];\n" +
-        "  s3->s4[label=\"9\"];\n" +
-        "  s2:p0->s4[label=\"7\"];\n" +
-        "  s2:p1->s4[label=\"8\"];\n" +
-        "  s1->s4[label=\"6\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&A1, &A2, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>|<p2>\"];\n"
+        + "  s3[label=\"3\"];\n"
+        + "  s4[label=\"*\"];\n"
+        + "  s2[shape=record, label=\"<p0>|<p1>\"];\n"
+        + "  s1[label=\"1\"];\n"
+        + "  s0:p0->s1[label=\"1\"];\n"
+        + "  s0:p1->s2[label=\"2\"];\n"
+        + "  s0:p2->s3[label=\"4\"];\n"
+        + "  s3->s4[label=\"9\"];\n"
+        + "  s2:p0->s4[label=\"7\"];\n"
+        + "  s2:p1->s4[label=\"8\"];\n"
+        + "  s1->s4[label=\"6\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -741,23 +649,20 @@ fn test_Aaubv_Abvdu() {
     let d = PredictionContext::new_singleton(u().into(), 4).alloc();
     let A1 = array(vec![a, b1]);
     let A2 = array(vec![b2, d]);
-    let r = PredictionContext::merge(
-        &A1,
-        &A2,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>|<p2>\"];\n" +
-        "  s2[label=\"2\"];\n" +
-        "  s3[label=\"*\"];\n" +
-        "  s1[label=\"1\"];\n" +
-        "  s0:p0->s1[label=\"1\"];\n" +
-        "  s0:p1->s2[label=\"2\"];\n" +
-        "  s0:p2->s1[label=\"4\"];\n" +
-        "  s2->s3[label=\"7\"];\n" +
-        "  s1->s3[label=\"6\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&A1, &A2, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>|<p2>\"];\n"
+        + "  s2[label=\"2\"];\n"
+        + "  s3[label=\"*\"];\n"
+        + "  s1[label=\"1\"];\n"
+        + "  s0:p0->s1[label=\"1\"];\n"
+        + "  s0:p1->s2[label=\"2\"];\n"
+        + "  s0:p2->s1[label=\"4\"];\n"
+        + "  s2->s3[label=\"7\"];\n"
+        + "  s1->s3[label=\"6\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
 
@@ -769,25 +674,21 @@ fn test_Aaubu_Acudu() {
     let d = PredictionContext::new_singleton(u().into(), 4).alloc();
     let A1 = array(vec![a, b]);
     let A2 = array(vec![c, d]);
-    let r = PredictionContext::merge(
-        &A1,
-        &A2,
-        root_is_wildcard(), &mut None);
-    let expecting = String::new() +
-        "digraph G {\n" +
-        "rankdir=LR;\n" +
-        "  s0[shape=record, label=\"<p0>|<p1>|<p2>|<p3>\"];\n" +
-        "  s1[label=\"1\"];\n" +
-        "  s2[label=\"*\"];\n" +
-        "  s0:p0->s1[label=\"1\"];\n" +
-        "  s0:p1->s1[label=\"2\"];\n" +
-        "  s0:p2->s1[label=\"3\"];\n" +
-        "  s0:p3->s1[label=\"4\"];\n" +
-        "  s1->s2[label=\"6\"];\n" +
-        "}\n";
+    let r = PredictionContext::merge(&A1, &A2, root_is_wildcard(), &mut None);
+    let expecting = String::new()
+        + "digraph G {\n"
+        + "rankdir=LR;\n"
+        + "  s0[shape=record, label=\"<p0>|<p1>|<p2>|<p3>\"];\n"
+        + "  s1[label=\"1\"];\n"
+        + "  s2[label=\"*\"];\n"
+        + "  s0:p0->s1[label=\"1\"];\n"
+        + "  s0:p1->s1[label=\"2\"];\n"
+        + "  s0:p2->s1[label=\"3\"];\n"
+        + "  s0:p3->s1[label=\"4\"];\n"
+        + "  s1->s2[label=\"6\"];\n"
+        + "}\n";
     assert_eq!(expecting, to_dot_string(r, root_is_wildcard()))
 }
-
 
 fn array(nodes: Vec<Arc<PredictionContext>>) -> Arc<PredictionContext> {
     let mut parents = Vec::with_capacity(nodes.len());
@@ -800,23 +701,41 @@ fn array(nodes: Vec<Arc<PredictionContext>>) -> Arc<PredictionContext> {
     PredictionContext::new_array(parents, invoking_states).alloc()
 }
 
-fn y() -> Arc<PredictionContext> { PredictionContext::new_singleton(Some(EMPTY_PREDICTION_CONTEXT.clone()), 10).alloc() }
+fn y() -> Arc<PredictionContext> {
+    PredictionContext::new_singleton(Some(EMPTY_PREDICTION_CONTEXT.clone()), 10).alloc()
+}
 
-fn x() -> Arc<PredictionContext> { PredictionContext::new_singleton(Some(EMPTY_PREDICTION_CONTEXT.clone()), 9).alloc() }
+fn x() -> Arc<PredictionContext> {
+    PredictionContext::new_singleton(Some(EMPTY_PREDICTION_CONTEXT.clone()), 9).alloc()
+}
 
-fn w() -> Arc<PredictionContext> { PredictionContext::new_singleton(Some(EMPTY_PREDICTION_CONTEXT.clone()), 8).alloc() }
+fn w() -> Arc<PredictionContext> {
+    PredictionContext::new_singleton(Some(EMPTY_PREDICTION_CONTEXT.clone()), 8).alloc()
+}
 
-fn v() -> Arc<PredictionContext> { PredictionContext::new_singleton(Some(EMPTY_PREDICTION_CONTEXT.clone()), 7).alloc() }
+fn v() -> Arc<PredictionContext> {
+    PredictionContext::new_singleton(Some(EMPTY_PREDICTION_CONTEXT.clone()), 7).alloc()
+}
 
-fn u() -> Arc<PredictionContext> { PredictionContext::new_singleton(Some(EMPTY_PREDICTION_CONTEXT.clone()), 6).alloc() }
+fn u() -> Arc<PredictionContext> {
+    PredictionContext::new_singleton(Some(EMPTY_PREDICTION_CONTEXT.clone()), 6).alloc()
+}
 
-fn d() -> Arc<PredictionContext> { PredictionContext::new_singleton(Some(EMPTY_PREDICTION_CONTEXT.clone()), 4).alloc() }
+fn d() -> Arc<PredictionContext> {
+    PredictionContext::new_singleton(Some(EMPTY_PREDICTION_CONTEXT.clone()), 4).alloc()
+}
 
-fn c() -> Arc<PredictionContext> { PredictionContext::new_singleton(Some(EMPTY_PREDICTION_CONTEXT.clone()), 3).alloc() }
+fn c() -> Arc<PredictionContext> {
+    PredictionContext::new_singleton(Some(EMPTY_PREDICTION_CONTEXT.clone()), 3).alloc()
+}
 
-fn b() -> Arc<PredictionContext> { PredictionContext::new_singleton(Some(EMPTY_PREDICTION_CONTEXT.clone()), 2).alloc() }
+fn b() -> Arc<PredictionContext> {
+    PredictionContext::new_singleton(Some(EMPTY_PREDICTION_CONTEXT.clone()), 2).alloc()
+}
 
-fn a() -> Arc<PredictionContext> { PredictionContext::new_singleton(Some(EMPTY_PREDICTION_CONTEXT.clone()), 1).alloc() }
+fn a() -> Arc<PredictionContext> {
+    PredictionContext::new_singleton(Some(EMPTY_PREDICTION_CONTEXT.clone()), 1).alloc()
+}
 
 fn to_dot_string(context: Arc<PredictionContext>, is_root_wildcard: bool) -> String {
     let mut nodes = String::new();
@@ -878,12 +797,15 @@ fn to_dot_string(context: Arc<PredictionContext>, is_root_wildcard: bool) -> Str
                 edges += &i.to_string();
             }
 
-            edges += &format!("->s{}[label=\"{}\"];\n"
-                              , context_ids.get(&(current.get_parent(i).unwrap().deref() as *const PredictionContext)).unwrap()
-                              , current.get_return_state(i));
+            edges += &format!(
+                "->s{}[label=\"{}\"];\n",
+                context_ids
+                    .get(&(current.get_parent(i).unwrap().deref() as *const PredictionContext))
+                    .unwrap(),
+                current.get_return_state(i)
+            );
         }
     }
 
     return format!("digraph G {{\nrankdir=LR;\n{}{}}}\n", nodes, edges);
 }
-

@@ -12,7 +12,7 @@ use std::str::{CharIndices, Chars};
 
 use crate::char_stream::{CharStream, InputData};
 use crate::errors::ANTLRError;
-use crate::int_stream::{EOF, IntStream};
+use crate::int_stream::{IntStream, EOF};
 use crate::interval_set::Interval;
 use crate::token::Token;
 
@@ -36,10 +36,10 @@ impl<'a, T: From<&'a str>> CharStream<T> for InputStream<'a, str> {
     fn get_text(&self, start: isize, stop: isize) -> T { self.get_text_inner(start, stop).into() }
 }
 
-pub type ByteCharStream<'a> = InputStream<'a,[u8]>;
-pub type CodePoint8BitCharStream<'a> = InputStream<'a,[u8]>;
-pub type CodePoint16BitCharStream<'a> = InputStream<'a,[u16]>;
-pub type CodePoint32BitCharStream<'a> = InputStream<'a,[u32]>;
+pub type ByteCharStream<'a> = InputStream<'a, [u8]>;
+pub type CodePoint8BitCharStream<'a> = InputStream<'a, [u8]>;
+pub type CodePoint16BitCharStream<'a> = InputStream<'a, [u16]>;
+pub type CodePoint32BitCharStream<'a> = InputStream<'a, [u32]>;
 
 impl<'a, T> CharStream<&'a [T]> for InputStream<'a, [T]>
 where
@@ -49,23 +49,20 @@ where
 }
 
 impl<'a, T> CharStream<String> for InputStream<'a, [T]>
-    where
-        [T]: InputData,
+where
+    [T]: InputData,
 {
-    fn get_text(&self, a: isize, b: isize) -> String {
-        self.get_text_inner(a, b).to_display()
-    }
+    fn get_text(&self, a: isize, b: isize) -> String { self.get_text_inner(a, b).to_display() }
 }
 
-impl<'a,'b, T> CharStream<Cow<'b,str>> for InputStream<'a, [T]>
-    where
-        [T]: InputData,
+impl<'a, 'b, T> CharStream<Cow<'b, str>> for InputStream<'a, [T]>
+where
+    [T]: InputData,
 {
-    fn get_text(&self, a: isize, b: isize) -> Cow<'b,str> {
+    fn get_text(&self, a: isize, b: isize) -> Cow<'b, str> {
         self.get_text_inner(a, b).to_display().into()
     }
 }
-
 
 impl<'a, Data> InputStream<'a, Data>
 where
@@ -153,7 +150,7 @@ mod test {
     use std::ops::Deref;
 
     use crate::char_stream::CharStream;
-    use crate::int_stream::{EOF, IntStream};
+    use crate::int_stream::{IntStream, EOF};
 
     use super::InputStream;
 

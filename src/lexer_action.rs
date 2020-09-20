@@ -33,25 +33,30 @@ pub(crate) enum LexerAction {
 
 impl LexerAction {
     //    fn get_action_type(&self) -> isize {
-//        unimplemented!()
-////        unsafe {discriminant_value(self)} as isize
-//    }
+    //        unimplemented!()
+    ////        unsafe {discriminant_value(self)} as isize
+    //    }
     pub fn is_position_dependent(&self) -> bool {
         match self {
-            LexerAction::LexerCustomAction { .. } |
-            LexerAction::LexerIndexedCustomAction { .. } => true,
-            _ => false
+            LexerAction::LexerCustomAction { .. }
+            | LexerAction::LexerIndexedCustomAction { .. } => true,
+            _ => false,
         }
     }
     pub(crate) fn execute<'input, T: Lexer<'input>>(&self, lexer: &mut T) {
         match self {
             &LexerAction::LexerChannelAction(channel) => lexer.set_channel(channel),
-            &LexerAction::LexerCustomAction { rule_index, action_index } => {
+            &LexerAction::LexerCustomAction {
+                rule_index,
+                action_index,
+            } => {
                 lexer.action(&*empty_ctx::<T::TF>(), rule_index, action_index);
-            },
+            }
             &LexerAction::LexerModeAction(mode) => lexer.set_mode(mode as usize),
             &LexerAction::LexerMoreAction => lexer.more(),
-            &LexerAction::LexerPopModeAction => { lexer.pop_mode(); },
+            &LexerAction::LexerPopModeAction => {
+                lexer.pop_mode();
+            }
             &LexerAction::LexerPushModeAction(mode) => lexer.push_mode(mode as usize),
             &LexerAction::LexerSkipAction => lexer.skip(),
             &LexerAction::LexerTypeAction(ty) => lexer.set_type(ty),
@@ -59,4 +64,3 @@ impl LexerAction {
         }
     }
 }
-

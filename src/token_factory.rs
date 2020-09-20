@@ -1,5 +1,5 @@
-use std::borrow::{Borrow, BorrowMut, Cow};
 use std::borrow::Cow::{Borrowed, Owned};
+use std::borrow::{Borrow, BorrowMut, Cow};
 use std::cell::Cell;
 use std::fmt::Debug;
 use std::marker::{PhantomData, Unsize};
@@ -9,8 +9,8 @@ use std::sync::atomic::AtomicIsize;
 use typed_arena::Arena;
 
 use crate::char_stream::{CharStream, InputData};
-use crate::token::{CommonToken, OwningToken, TOKEN_INVALID_TYPE};
 use crate::token::Token;
+use crate::token::{CommonToken, OwningToken, TOKEN_INVALID_TYPE};
 
 lazy_static! {
     pub static ref CommonTokenFactoryDEFAULT: Box<CommonTokenFactory> =
@@ -44,14 +44,14 @@ lazy_static! {
 /// Trait for creating tokens
 pub trait TokenFactory<'a>: Sized {
     /// type of tokens emitted by this factory
-    type Inner: Token<Data=Self::Data> + ?Sized + 'a;
+    type Inner: Token<Data = Self::Data> + ?Sized + 'a;
     /// ownership of the emitted tokens
     type Tok: Borrow<Self::Inner> + Clone + 'a + Debug;
     // can relax InputData to just ToOwned here?
     /// type of the underlying storage
     type Data: InputData + ?Sized;
     /// type of the reference to `Self::Data` that factory needs for producing tokens
-    type From: Borrow<Self::Data> + Into<Cow<'a,Self::Data>>;
+    type From: Borrow<Self::Data> + Into<Cow<'a, Self::Data>>;
 
     /// Creates token
     fn create<T>(
@@ -65,8 +65,8 @@ pub trait TokenFactory<'a>: Sized {
         line: isize,
         column: isize,
     ) -> Self::Tok
-        where
-            T: CharStream<Self::From> + ?Sized;
+    where
+        T: CharStream<Self::From> + ?Sized;
 
     /// Creates invalid token
     /// Invalid tokens must have `TOKEN_INVALID_TYPE` token type.
@@ -84,7 +84,7 @@ impl<'a> TokenFactory<'a> for CommonTokenFactory {
     type Inner = CommonToken<'a>;
     type Tok = Box<Self::Inner>;
     type Data = str;
-    type From = Cow<'a,str>;
+    type From = Cow<'a, str>;
 
     #[inline]
     fn create<T>(
@@ -98,8 +98,8 @@ impl<'a> TokenFactory<'a> for CommonTokenFactory {
         line: isize,
         column: isize,
     ) -> Self::Tok
-        where
-            T: CharStream<Self::From> + ?Sized,
+    where
+        T: CharStream<Self::From> + ?Sized,
     {
         let text = match (text, source) {
             (Some(t), _) => Owned(t),
@@ -149,8 +149,8 @@ impl<'a> TokenFactory<'a> for OwningTokenFactory {
         line: isize,
         column: isize,
     ) -> Self::Tok
-        where
-            T: CharStream<String> + ?Sized,
+    where
+        T: CharStream<String> + ?Sized,
     {
         let text = match (text, source) {
             (Some(t), _) => t,
@@ -194,8 +194,8 @@ pub type ArenaCommonFactory<'a> = ArenaFactory<'a, CommonTokenFactory, CommonTok
 // Box is used here because it is almost always should be used for token factory
 pub struct ArenaFactory<
     'input,
-    TF: TokenFactory<'input, Tok=Box<T>, Inner=T>,
-    T: Token<Data=TF::Data> + Clone + 'input,
+    TF: TokenFactory<'input, Tok = Box<T>, Inner = T>,
+    T: Token<Data = TF::Data> + Clone + 'input,
 > {
     arena: Arena<T>,
     factory: TF,
@@ -203,10 +203,10 @@ pub struct ArenaFactory<
 }
 
 impl<
-    'input,
-    TF: TokenFactory<'input, Tok=Box<T>, Inner=T> + Default,
-    T: Token<Data=TF::Data> + Clone + 'input,
-> Default for ArenaFactory<'input, TF, T>
+        'input,
+        TF: TokenFactory<'input, Tok = Box<T>, Inner = T> + Default,
+        T: Token<Data = TF::Data> + Clone + 'input,
+    > Default for ArenaFactory<'input, TF, T>
 {
     fn default() -> Self {
         Self {
@@ -218,10 +218,10 @@ impl<
 }
 
 impl<'input, TF, Tok> TokenFactory<'input> for ArenaFactory<'input, TF, Tok>
-    where
-        TF: TokenFactory<'input, Tok=Box<Tok>, Inner=Tok>,
-        Tok: Token<Data=TF::Data> + Clone + 'input,
-        for<'a> &'a Tok: Default,
+where
+    TF: TokenFactory<'input, Tok = Box<Tok>, Inner = Tok>,
+    Tok: Token<Data = TF::Data> + Clone + 'input,
+    for<'a> &'a Tok: Default,
 {
     type Inner = Tok;
     type Tok = &'input Tok;
@@ -240,8 +240,8 @@ impl<'input, TF, Tok> TokenFactory<'input> for ArenaFactory<'input, TF, Tok>
         line: isize,
         column: isize,
     ) -> Self::Tok
-        where
-            T: CharStream<Self::From> + ?Sized,
+    where
+        T: CharStream<Self::From> + ?Sized,
     {
         let token = self
             .factory

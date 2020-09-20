@@ -1,5 +1,5 @@
-use std::borrow::{Borrow, Cow};
 use std::borrow::Cow::{Borrowed, Owned};
+use std::borrow::{Borrow, Cow};
 use std::cell::{Cell, RefCell};
 use std::ops::DerefMut;
 use std::rc::Rc;
@@ -18,8 +18,8 @@ use crate::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use crate::token_source::TokenSource;
 
 pub trait Lexer<'input>:
-TokenSource<'input>
-+ Recognizer<'input, Node=EmptyContextType<'input, <Self as TokenAware<'input>>::TF>>
+    TokenSource<'input>
+    + Recognizer<'input, Node = EmptyContextType<'input, <Self as TokenAware<'input>>::TF>>
 {
     /// Sets channel where current token will be pushed
     ///
@@ -95,10 +95,10 @@ pub(crate) struct LexerPosition {
 }
 
 impl<'input, T, Input, TF> Recognizer<'input> for BaseLexer<'input, T, Input, TF>
-    where
-        T: LexerRecog<'input, Self> + 'static,
-        Input: CharStream<TF::From>,
-        TF: TokenFactory<'input>,
+where
+    T: LexerRecog<'input, Self> + 'static,
+    Input: CharStream<TF::From>,
+    TF: TokenFactory<'input>,
 {
     type Node = EmptyContextType<'input, TF>;
 
@@ -131,10 +131,10 @@ pub const LEXER_MIN_CHAR_VALUE: isize = 0x0000;
 pub const LEXER_MAX_CHAR_VALUE: isize = 0x10FFFF;
 
 impl<'input, T, Input, TF> BaseLexer<'input, T, Input, TF>
-    where
-        T: LexerRecog<'input, Self> + 'static,
-        Input: CharStream<TF::From>,
-        TF: TokenFactory<'input>,
+where
+    T: LexerRecog<'input, Self> + 'static,
+    Input: CharStream<TF::From>,
+    TF: TokenFactory<'input>,
 {
     fn emit_token(&mut self, token: TF::Tok) { self.token = Some(token); }
 
@@ -173,12 +173,21 @@ impl<'input, T, Input, TF> BaseLexer<'input, T, Input, TF>
     pub fn get_char_index(&self) -> isize { self.input.as_ref().unwrap().index() }
 
     /// Current token text
-    pub fn get_text<'a>(&'a self) -> Cow<'a,TF::Data> where 'input:'a {
-        self.text.as_ref().map(|it| Borrowed(it.borrow()))
+    pub fn get_text<'a>(&'a self) -> Cow<'a, TF::Data>
+    where
+        'input: 'a,
+    {
+        self.text
+            .as_ref()
+            .map(|it| Borrowed(it.borrow()))
             // .unwrap_or("")
-        .unwrap_or_else(
-            || self.input.as_ref().unwrap().get_text(self.token_start_char_index, self.get_char_index() - 1).into()
-        )
+            .unwrap_or_else(|| {
+                self.input
+                    .as_ref()
+                    .unwrap()
+                    .get_text(self.token_start_char_index, self.get_char_index() - 1)
+                    .into()
+            })
     }
 
     /// Used from lexer actions to override text of the token that will be emitted next
@@ -230,19 +239,19 @@ impl<'input, T, Input, TF> BaseLexer<'input, T, Input, TF>
 }
 
 impl<'input, T, Input, TF> TokenAware<'input> for BaseLexer<'input, T, Input, TF>
-    where
-        T: LexerRecog<'input, Self> + 'static,
-        Input: CharStream<TF::From>,
-        TF: TokenFactory<'input>,
+where
+    T: LexerRecog<'input, Self> + 'static,
+    Input: CharStream<TF::From>,
+    TF: TokenFactory<'input>,
 {
     type TF = TF;
 }
 
 impl<'input, T, Input, TF> TokenSource<'input> for BaseLexer<'input, T, Input, TF>
-    where
-        T: LexerRecog<'input, Self> + 'static,
-        Input: CharStream<TF::From>,
-        TF: TokenFactory<'input>,
+where
+    T: LexerRecog<'input, Self> + 'static,
+    Input: CharStream<TF::From>,
+    TF: TokenFactory<'input>,
 {
     #[inline]
     #[allow(unused_labels)]
@@ -377,10 +386,10 @@ fn notify_listeners<'input, T, Input, TF>(
 }
 
 impl<'input, T, Input, TF> Lexer<'input> for BaseLexer<'input, T, Input, TF>
-    where
-        T: LexerRecog<'input, Self> + 'static,
-        Input: CharStream<TF::From>,
-        TF: TokenFactory<'input>,
+where
+    T: LexerRecog<'input, Self> + 'static,
+    Input: CharStream<TF::From>,
+    TF: TokenFactory<'input>,
 {
     fn set_channel(&mut self, v: isize) { self.channel = v; }
 

@@ -11,7 +11,6 @@ mod gen {
     use std::io::Read;
     use std::iter::FromIterator;
 
-    use antlr_rust::InputStream;
     use antlr_rust::common_token_stream::CommonTokenStream;
     use antlr_rust::int_stream::IntStream;
     use antlr_rust::lexer::Lexer;
@@ -20,6 +19,7 @@ mod gen {
     use antlr_rust::token_factory::{ArenaCommonFactory, CommonTokenFactory, OwningTokenFactory};
     use antlr_rust::token_stream::{TokenStream, UnbufferedTokenStream};
     use antlr_rust::tree::{ParseTree, ParseTreeListener, ParseTreeWalker, TerminalNode};
+    use antlr_rust::InputStream;
     use csvlexer::*;
     use csvlistener::*;
     use csvparser::CSVParser;
@@ -88,7 +88,7 @@ if (x < x && a > 0) then duh
                                 data.chars().skip(token.get_start() as usize).take(len)
                             )
                         )
-                            .chars(),
+                        .chars(),
                     );
                 }
                 token_source.consume();
@@ -270,7 +270,6 @@ if (x < x && a > 0) then duh
         assert_eq!(result.to_string_tree(&*parser), "(a (a (a x) y) z)");
     }
 
-
     struct Listener4 {
         data: String,
     }
@@ -328,7 +327,7 @@ if (x < x && a > 0) then duh
 
     #[test]
     fn test_complex_convert() {
-        let codepoints = "(a+4)*2".chars().map(|x|x as u32).collect::<Vec<_>>();
+        let codepoints = "(a+4)*2".chars().map(|x| x as u32).collect::<Vec<_>>();
         // let codepoints = "(a+4)*2";
         let input = InputStream::new(&*codepoints);
         let mut lexer = LabelsLexer::new(Box::new(input));

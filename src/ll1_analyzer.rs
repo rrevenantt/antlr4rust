@@ -10,12 +10,12 @@ use crate::atn_state::{ATNState, ATNStateType};
 use crate::interval_set::IntervalSet;
 use crate::parser::ParserNodeType;
 use crate::parser_rule_context::ParserRuleContext;
-use crate::prediction_context::EMPTY_PREDICTION_CONTEXT;
 use crate::prediction_context::PredictionContext;
+use crate::prediction_context::EMPTY_PREDICTION_CONTEXT;
 use crate::token::{TOKEN_EOF, TOKEN_EPSILON, TOKEN_INVALID_TYPE, TOKEN_MIN_USER_TOKEN_TYPE};
 use crate::token_factory::TokenFactory;
-use crate::transition::{RuleTransition, TransitionType};
 use crate::transition::TransitionType::TRANSITION_NOTSET;
+use crate::transition::{RuleTransition, TransitionType};
 
 pub struct LL1Analyzer<'a> {
     atn: &'a ATN,

@@ -21,10 +21,7 @@ pub trait CharStream<Data>: IntStream {
 /// Trait for input that can be accepted by `InputStream` to be able to provide lexer with data.
 /// Is sealed for now just in case.
 pub trait InputData:
-Index<Range<usize>, Output=Self>
-+ Index<RangeFrom<usize>, Output=Self>
-+ ToOwned
-+ 'static
+    Index<Range<usize>, Output = Self> + Index<RangeFrom<usize>, Output = Self> + ToOwned + 'static
 {
     // fn to_indexed_vec(&self) -> Vec<(u32, u32)>;
 
@@ -39,7 +36,10 @@ Index<Range<usize>, Output=Self>
     fn to_display(&self) -> String;
 }
 
-impl<T: Into<u32> + From<u8> + TryFrom<u32> + Copy + Debug + 'static> InputData for [T] where <T as TryFrom<u32>>::Error:Debug {
+impl<T: Into<u32> + From<u8> + TryFrom<u32> + Copy + Debug + 'static> InputData for [T]
+where
+    <T as TryFrom<u32>>::Error: Debug,
+{
     // fn to_indexed_vec(&self) -> Vec<(u32, u32)> {
     //     self.into_iter()
     //         .enumerate()
@@ -69,7 +69,11 @@ impl<T: Into<u32> + From<u8> + TryFrom<u32> + Copy + Debug + 'static> InputData 
     fn len(&self) -> usize { self.len() }
 
     #[inline]
-    fn from_text(text: &str) -> Self::Owned { text.chars().map(|it| T::try_from(it as u32).unwrap()).collect() }
+    fn from_text(text: &str) -> Self::Owned {
+        text.chars()
+            .map(|it| T::try_from(it as u32).unwrap())
+            .collect()
+    }
 
     #[inline]
     // default
@@ -135,9 +139,7 @@ impl InputData for str {
     #[inline]
     fn len(&self) -> usize { self.len() }
 
-    fn from_text(text: &str) -> Self::Owned {
-        text.to_owned()
-    }
+    fn from_text(text: &str) -> Self::Owned { text.to_owned() }
 
     // #[inline]
     // fn from_text(text: &str) -> Self::Owned { text.to_owned() }

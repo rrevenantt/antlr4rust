@@ -178,7 +178,7 @@ impl ATNConfigSet {
 
     pub fn add(&mut self, config: Box<ATNConfig>) -> bool { self.add_cached(config, None) }
 
-    pub fn get_items(&self) -> impl Iterator<Item=&ATNConfig> {
+    pub fn get_items(&self) -> impl Iterator<Item = &ATNConfig> {
         self.configs.iter().map(|c| c.as_ref())
     }
 

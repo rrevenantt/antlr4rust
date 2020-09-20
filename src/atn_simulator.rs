@@ -13,7 +13,6 @@ pub trait IATNSimulator {
     fn decision_to_dfa(&self) -> &Vec<DFA>;
 }
 
-
 pub struct BaseATNSimulator {
     pub atn: Arc<ATN>,
     pub shared_context_cache: Arc<PredictionContextCache>,
@@ -45,15 +44,9 @@ impl BaseATNSimulator {
 }
 
 impl IATNSimulator for BaseATNSimulator {
-    fn shared_context_cache(&self) -> &PredictionContextCache {
-        self.shared_context_cache.deref()
-    }
+    fn shared_context_cache(&self) -> &PredictionContextCache { self.shared_context_cache.deref() }
 
-    fn atn(&self) -> &ATN {
-        self.atn.as_ref()
-    }
+    fn atn(&self) -> &ATN { self.atn.as_ref() }
 
-    fn decision_to_dfa(&self) -> &Vec<DFA> {
-        self.decision_to_dfa.as_ref()
-    }
+    fn decision_to_dfa(&self) -> &Vec<DFA> { self.decision_to_dfa.as_ref() }
 }

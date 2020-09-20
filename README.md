@@ -11,7 +11,7 @@ and [tests/my_tests.rs](tests/my_test.rs) for actual usage examples
 ### Implementation status
 
 Everything is implemented, "business" logic is quite stable and well tested, but user facing 
-API is not very robust yet an very likely will have some changes.
+API is not very robust yet and very likely will have some changes.
 
 For now development is going on in this repository 
 but eventually it will be merged to main ANTLR4 repo
@@ -46,7 +46,7 @@ Can be done after merge:
   
 ### Usage
 
-You use the ANTLR4 "tool" to generate a parser, that will use the ANTLR 
+You should use the ANTLR4 "tool" to generate a parser, that will use the ANTLR 
 runtime, located here. You can run it with the following command:
 ```bash
 java -jar <path to ANTLR4 tool> -Dlanguage=Rust MyGrammar.g4
@@ -94,15 +94,19 @@ there are quite some differences because Rust is not an OOP language and is much
  otherwise `ParseTreeWalker` should be used.
  - In embedded actions to access parser you should use `recog` variable instead of `self`/`this`. 
  This is because predicate have to be inserted into two syntactically different places in generated parser
- - `InputStream`s have different index behavior for unicode characters. 
+ - String `InputStream` have different index behavior when there are unicode characters. 
  If you need exactly the same behavior, use `[u32]` based `InputStream`, or implement custom `CharStream`.
- - In actions you have to escape `'` in rust lifetimes with `\ ` because ANTLR considers them as strings: `Struct<\'lifetime>`
+ - In actions you have to escape `'` in rust lifetimes with `\ ` because ANTLR considers them as strings, e.g. `Struct<\'lifetime>`
  - For custom tokens you should use `@tokenfactory` custom action, instead of usual `TokenLabelType` parser option 
  - All rule context variables (rule argument or rule return) should implement `Default + Clone`.
  
 ### Unsafe
 Currently unsafe is used only to cast from trait object back to original type 
 and to update data inside Rc via `get_mut_unchecked`(returned mutable reference is used immediately and not stored anywhere)
+
+### Versioning
+In addition to usual Rust semantic versioning, 
+patch version changes of the crate should not require updating of generator part 
   
 ## Licence
 

@@ -23,7 +23,7 @@ pub struct VocabularyImpl {
 }
 
 fn collect_to_string<'b, T: Borrow<str> + 'b>(
-    iter: impl IntoIterator<Item=&'b Option<T>>,
+    iter: impl IntoIterator<Item = &'b Option<T>>,
 ) -> Vec<Option<String>> {
     iter.into_iter()
         .map(|x| x.as_ref().map(|it| it.borrow().to_owned()))
@@ -31,7 +31,7 @@ fn collect_to_string<'b, T: Borrow<str> + 'b>(
 }
 
 impl VocabularyImpl {
-    pub fn new<'b, T: Borrow<str> + 'b, Iter: IntoIterator<Item=&'b Option<T>>>(
+    pub fn new<'b, T: Borrow<str> + 'b, Iter: IntoIterator<Item = &'b Option<T>>>(
         literal_names: Iter,
         symbolic_names: Iter,
         display_names: Option<Iter>,
@@ -43,13 +43,13 @@ impl VocabularyImpl {
             display_names: collect_to_string(display_names.into_iter().flatten()),
             max_token_type: 0,
         }
-            .modify_with(|it| {
-                it.max_token_type = max(
-                    it.literal_names.len(),
-                    max(it.symbolic_names.len(), it.display_names.len()),
-                ) as isize
-                    - 1
-            })
+        .modify_with(|it| {
+            it.max_token_type = max(
+                it.literal_names.len(),
+                max(it.symbolic_names.len(), it.display_names.len()),
+            ) as isize
+                - 1
+        })
     }
 
     pub fn from_token_names(token_names: &[Option<&str>]) -> VocabularyImpl {
@@ -113,25 +113,17 @@ impl Vocabulary for VocabularyImpl {
     }
 }
 
-pub(crate) static DUMMY_VOCAB:DummyVocab = DummyVocab;
+pub(crate) static DUMMY_VOCAB: DummyVocab = DummyVocab;
 
 #[derive(Debug)]
 pub(crate) struct DummyVocab;
 
-impl Vocabulary for DummyVocab{
-    fn get_max_token_type(&self) -> isize {
-        unimplemented!()
-    }
+impl Vocabulary for DummyVocab {
+    fn get_max_token_type(&self) -> isize { unimplemented!() }
 
-    fn get_literal_name(&self, token_type: isize) -> Option<&str> {
-        unimplemented!()
-    }
+    fn get_literal_name(&self, token_type: isize) -> Option<&str> { unimplemented!() }
 
-    fn get_symbolic_name(&self, token_type: isize) -> Option<&str> {
-        unimplemented!()
-    }
+    fn get_symbolic_name(&self, token_type: isize) -> Option<&str> { unimplemented!() }
 
-    fn get_display_name(&self, token_type: isize) -> Cow<'_, str> {
-        token_type.to_string().into()
-    }
+    fn get_display_name(&self, token_type: isize) -> Cow<'_, str> { token_type.to_string().into() }
 }

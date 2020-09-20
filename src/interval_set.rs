@@ -3,7 +3,7 @@ use std::borrow::Cow::Borrowed;
 use std::cmp::{max, min, Ordering};
 
 use crate::token::{TOKEN_EOF, TOKEN_EPSILON};
-use crate::vocabulary::{DUMMY_VOCAB, Vocabulary};
+use crate::vocabulary::{Vocabulary, DUMMY_VOCAB};
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Interval {
@@ -15,17 +15,11 @@ pub const INVALID: Interval = Interval { a: -1, b: -2 };
 
 impl Interval {
     /* stop is not included! */
-    fn new(a: isize, b: isize) -> Interval {
-        Interval { a, b }
-    }
+    fn new(a: isize, b: isize) -> Interval { Interval { a, b } }
 
-    fn contains(&self, _item: isize) -> bool {
-        unimplemented!()
-    }
+    fn contains(&self, _item: isize) -> bool { unimplemented!() }
 
-    fn length(&self) -> isize {
-        self.b - self.a
-    }
+    fn length(&self) -> isize { self.b - self.a }
 
     fn union(&self, another: &Interval) -> Interval {
         Interval {
@@ -45,14 +39,10 @@ impl Interval {
     }
 
     /** Does self.a start after other.b? May or may not be disjoint */
-    pub fn startsAfter(&self, other: &Interval) -> bool {
-        return self.a > other.a;
-    }
+    pub fn startsAfter(&self, other: &Interval) -> bool { return self.a > other.a; }
 
     /** Does self start completely after other? Disjoint */
-    pub fn startsAfterDisjoint(&self, other: &Interval) -> bool {
-        return self.a > other.b;
-    }
+    pub fn startsAfterDisjoint(&self, other: &Interval) -> bool { return self.a > other.b; }
 
     /** Does self start after other? NonDisjoint */
     pub fn startsAfterNonDisjoint(&self, other: &Interval) -> bool {
@@ -98,17 +88,11 @@ impl IntervalSet {
         }
     }
 
-    pub fn get_min(&self) -> Option<isize> {
-        self.intervals.first().map(|x| x.a)
-    }
+    pub fn get_min(&self) -> Option<isize> { self.intervals.first().map(|x| x.a) }
 
-    pub fn add_one(&mut self, _v: isize) {
-        self.add_range(_v, _v)
-    }
+    pub fn add_one(&mut self, _v: isize) { self.add_range(_v, _v) }
 
-    pub fn add_range(&mut self, l: isize, h: isize) {
-        self.add_interval(Interval { a: l, b: h })
-    }
+    pub fn add_range(&mut self, l: isize, h: isize) { self.add_interval(Interval { a: l, b: h }) }
 
     pub fn add_interval(&mut self, added: Interval) {
         if added.length() < 0 {
@@ -171,20 +155,24 @@ impl IntervalSet {
 
             if right_interval.b < result_interval.a {
                 right_i += 1;
-                continue
+                continue;
             }
 
             if right_interval.a > result_interval.b {
                 result_i += 1;
-                continue
+                continue;
             }
 
             let before_curr = if right_interval.a > result_interval.a {
                 Some(Interval::new(result_interval.a, right_interval.a - 1))
-            } else { None };
+            } else {
+                None
+            };
             let after_curr = if right_interval.b < result_interval.b {
                 Some(Interval::new(right_interval.b + 1, result_interval.b))
-            } else { None };
+            } else {
+                None
+            };
 
             match (before_curr, after_curr) {
                 (Some(before_curr), Some(after_curr)) => {
@@ -201,11 +189,13 @@ impl IntervalSet {
                     result.intervals[result_i] = after_curr;
                     right_i += 1;
                 }
-                (None, None) => { result.intervals.remove(result_i); }
+                (None, None) => {
+                    result.intervals.remove(result_i);
+                }
             }
         }
 
-//        return result;
+        //        return result;
     }
 
     pub fn complement(&self, start: isize, stop: isize) -> IntervalSet {
@@ -216,27 +206,37 @@ impl IntervalSet {
     }
 
     pub fn contains(&self, _item: isize) -> bool {
-        self.intervals.binary_search_by(|x| {
-            if _item < x.a { return Ordering::Greater; }
-            if _item > x.b { return Ordering::Less; }
-            Ordering::Equal
-        }).is_ok()
+        self.intervals
+            .binary_search_by(|x| {
+                if _item < x.a {
+                    return Ordering::Greater;
+                }
+                if _item > x.b {
+                    return Ordering::Less;
+                }
+                Ordering::Equal
+            })
+            .is_ok()
     }
 
     fn length(&self) -> isize {
-        self.intervals.iter().fold(0, |acc, it| acc + it.b - it.a + 1)
+        self.intervals
+            .iter()
+            .fold(0, |acc, it| acc + it.b - it.a + 1)
     }
 
-    fn remove_range(&self, _v: &Interval) {
-        unimplemented!()
-    }
+    fn remove_range(&self, _v: &Interval) { unimplemented!() }
 
     pub fn remove_one(&mut self, el: isize) {
-        if self.read_only { panic!("can't alter readonly IntervalSet") }
+        if self.read_only {
+            panic!("can't alter readonly IntervalSet")
+        }
 
         for i in 0..self.intervals.len() {
             let int = &mut self.intervals[i];
-            if el < int.a { break }
+            if el < int.a {
+                break;
+            }
 
             if el == int.a && el == int.b {
                 self.intervals.remove(i);
@@ -245,12 +245,12 @@ impl IntervalSet {
 
             if el == int.a {
                 int.a += 1;
-                break
+                break;
             }
 
             if el == int.b {
                 int.b -= 1;
-                break
+                break;
             }
 
             if el > int.a && el < int.b {
@@ -261,26 +261,24 @@ impl IntervalSet {
         }
     }
 
-//    fn String(&self) -> String {
-//        unimplemented!()
-//    }
-//
-//    fn String_verbose(
-//        &self,
-//        _literalNames: Vec<String>,
-//        _symbolicNames: Vec<String>,
-//        _elemsAreChar: bool,
-//    ) -> String {
-//        unimplemented!()
-//    }
-//
-//    fn to_char_String(&self) -> String {
-//        unimplemented!()
-//    }
-//
-    pub fn to_index_string(&self) -> String {
-        self.to_token_string(&DUMMY_VOCAB)
-    }
+    //    fn String(&self) -> String {
+    //        unimplemented!()
+    //    }
+    //
+    //    fn String_verbose(
+    //        &self,
+    //        _literalNames: Vec<String>,
+    //        _symbolicNames: Vec<String>,
+    //        _elemsAreChar: bool,
+    //    ) -> String {
+    //        unimplemented!()
+    //    }
+    //
+    //    fn to_char_String(&self) -> String {
+    //        unimplemented!()
+    //    }
+    //
+    pub fn to_index_string(&self) -> String { self.to_token_string(&DUMMY_VOCAB) }
 
     pub fn to_token_string(&self, vocabulary: &dyn Vocabulary) -> String {
         if self.intervals.is_empty() {
@@ -296,7 +294,9 @@ impl IntervalSet {
                 buf += self.element_name(vocabulary, int.a).as_ref();
             } else {
                 for i in int.a..(int.b + 1) {
-                    if i > int.a { buf += ", "; }
+                    if i > int.a {
+                        buf += ", ";
+                    }
                     buf += self.element_name(vocabulary, i).as_ref();
                 }
             }
@@ -312,10 +312,7 @@ impl IntervalSet {
         return buf;
     }
 
-    fn element_name<'a>(&self,
-                        vocabulary: &'a dyn Vocabulary,
-                        a: isize,
-    ) -> Cow<'a, str> {
+    fn element_name<'a>(&self, vocabulary: &'a dyn Vocabulary, a: isize) -> Cow<'a, str> {
         if a == TOKEN_EOF {
             Borrowed("<EOF>")
         } else if a == TOKEN_EPSILON {
@@ -346,7 +343,10 @@ mod test {
         let mut set = IntervalSet::new();
         set.add_range(1, 3);
         set.add_range(5, 6);
-        assert_eq!(&set.intervals, &[Interval { a: 1, b: 3 }, Interval { a: 5, b: 6 }]);
+        assert_eq!(
+            &set.intervals,
+            &[Interval { a: 1, b: 3 }, Interval { a: 5, b: 6 }]
+        );
         set.add_range(3, 4);
         assert_eq!(&set.intervals, &[Interval { a: 1, b: 6 }]);
     }
@@ -356,7 +356,10 @@ mod test {
         let mut set = IntervalSet::new();
         set.add_range(1, 5);
         set.remove_one(3);
-        assert_eq!(&set.intervals, &[Interval { a: 1, b: 2 }, Interval { a: 4, b: 5 }]);
+        assert_eq!(
+            &set.intervals,
+            &[Interval { a: 1, b: 2 }, Interval { a: 4, b: 5 }]
+        );
     }
 
     #[test]
@@ -367,6 +370,9 @@ mod test {
         let mut set2 = IntervalSet::new();
         set2.add_range(2, 4);
         set1.substract(&set2);
-        assert_eq!(&set1.intervals, &[Interval { a: 1, b: 1 }, Interval { a: 5, b: 5 }]);
+        assert_eq!(
+            &set1.intervals,
+            &[Interval { a: 1, b: 1 }, Interval { a: 5, b: 5 }]
+        );
     }
 }

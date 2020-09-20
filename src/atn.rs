@@ -126,8 +126,7 @@ impl ATN {
     pub fn get_expected_tokens(
         &self,
         state_number: isize,
-        states_stack:impl Iterator<Item=isize>
-        // _ctx: &Rc<Ctx::Type>,
+        states_stack: impl Iterator<Item = isize>, // _ctx: &Rc<Ctx::Type>,
     ) -> IntervalSet {
         let s = self.states[state_number as usize].as_ref();
         let mut following = self.next_tokens(s);

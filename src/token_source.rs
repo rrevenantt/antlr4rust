@@ -3,7 +3,7 @@ use std::marker::Unsize;
 use std::ops::Deref;
 
 use crate::char_stream::CharStream;
-use crate::int_stream::{EOF, IntStream};
+use crate::int_stream::{IntStream, EOF};
 use crate::token::{Token, TOKEN_DEFAULT_CHANNEL};
 use crate::token_factory::{TokenAware, TokenFactory};
 
@@ -39,16 +39,16 @@ pub trait TokenSource<'input>: TokenAware<'input> {
 }
 
 impl<'input, T> TokenAware<'input> for &mut T
-    where
-        T: TokenSource<'input>,
+where
+    T: TokenSource<'input>,
 {
     type TF = T::TF;
 }
 
 // allows user to call parser with &mut reference to Lexer
 impl<'input, T> TokenSource<'input> for &mut T
-    where
-        T: TokenSource<'input>,
+where
+    T: TokenSource<'input>,
 {
     #[inline(always)]
     fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok { (**self).next_token() }

@@ -2,7 +2,7 @@ use std::convert::TryInto;
 use std::env;
 use std::env::VarError;
 use std::error::Error;
-use std::fs::{DirEntry, File, read_dir};
+use std::fs::{read_dir, DirEntry, File};
 use std::io::Write;
 use std::path::Path;
 use std::process::Command;

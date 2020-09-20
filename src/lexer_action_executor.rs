@@ -14,29 +14,32 @@ pub(crate) struct LexerActionExecutor {
 }
 
 impl Hash for LexerActionExecutor {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write_u64(self.cached_hash)
-    }
+    fn hash<H: Hasher>(&self, state: &mut H) { state.write_u64(self.cached_hash) }
 }
 
 impl LexerActionExecutor {
     pub(crate) fn new(lexer_actions: Vec<LexerAction>) -> LexerActionExecutor {
-//        let mut hasher = ;
-        let cached_hash = lexer_actions.iter().fold(
-            MurmurHasher::default(),
-            |mut acc, x| {
+        //        let mut hasher = ;
+        let cached_hash = lexer_actions
+            .iter()
+            .fold(MurmurHasher::default(), |mut acc, x| {
                 x.hash(&mut acc);
                 acc
-            },
-        ).finish();
+            })
+            .finish();
         LexerActionExecutor {
             lexer_actions,
             cached_hash,
         }
     }
 
-    pub(crate) fn new_copy_append(old: Option<&Self>, lexer_action: LexerAction) -> LexerActionExecutor {
-        let mut new = old.cloned().unwrap_or_else(|| LexerActionExecutor::new(Vec::new()));
+    pub(crate) fn new_copy_append(
+        old: Option<&Self>,
+        lexer_action: LexerAction,
+    ) -> LexerActionExecutor {
+        let mut new = old
+            .cloned()
+            .unwrap_or_else(|| LexerActionExecutor::new(Vec::new()));
         new.lexer_actions.push(lexer_action);
         new
     }
@@ -44,9 +47,17 @@ impl LexerActionExecutor {
     pub fn fix_offset_before_match(mut self, offset: isize) -> LexerActionExecutor {
         for action in self.lexer_actions.iter_mut() {
             match action {
-                LexerAction::LexerIndexedCustomAction { .. } => {},
-                _ => if action.is_position_dependent() {
-                    mem::replace(action, LexerIndexedCustomAction { offset, action: Box::new(action.clone()) });
+                LexerAction::LexerIndexedCustomAction { .. } => {}
+                _ => {
+                    if action.is_position_dependent() {
+                        mem::replace(
+                            action,
+                            LexerIndexedCustomAction {
+                                offset,
+                                action: Box::new(action.clone()),
+                            },
+                        );
+                    }
                 }
             }
         }
@@ -72,7 +83,5 @@ impl LexerActionExecutor {
         }
     }
 
-//    fn hash(&self) -> int { unimplemented!() }
-
+    //    fn hash(&self) -> int { unimplemented!() }
 }
- 

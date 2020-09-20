@@ -14,63 +14,156 @@ use crate::token::Token;
 use crate::token_factory::TokenFactory;
 
 pub trait ErrorListener<'a, T: Recognizer<'a>> {
-    fn syntax_error(&self, _recognizer: &T, _offending_symbol: Option<&<T::TF as TokenFactory<'a>>::Inner>,
-                    _line: isize, _column: isize, _msg: &str, _e: Option<&ANTLRError>, ) {}
+    fn syntax_error(
+        &self,
+        _recognizer: &T,
+        _offending_symbol: Option<&<T::TF as TokenFactory<'a>>::Inner>,
+        _line: isize,
+        _column: isize,
+        _msg: &str,
+        _e: Option<&ANTLRError>,
+    ) {
+    }
 
-    fn report_ambiguity(&self, _recognizer: &T, _dfa: &DFA, _start_index: isize, _stop_index: isize,
-                        _exact: bool, _ambig_alts: &BitSet, _configs: &ATNConfigSet) {}
+    fn report_ambiguity(
+        &self,
+        _recognizer: &T,
+        _dfa: &DFA,
+        _start_index: isize,
+        _stop_index: isize,
+        _exact: bool,
+        _ambig_alts: &BitSet,
+        _configs: &ATNConfigSet,
+    ) {
+    }
 
-    fn report_attempting_full_context(&self, _recognizer: &T, _dfa: &DFA, _start_index: isize, _stop_index: isize,
-                                      _conflicting_alts: &BitSet, _configs: &ATNConfigSet) {}
+    fn report_attempting_full_context(
+        &self,
+        _recognizer: &T,
+        _dfa: &DFA,
+        _start_index: isize,
+        _stop_index: isize,
+        _conflicting_alts: &BitSet,
+        _configs: &ATNConfigSet,
+    ) {
+    }
 
-    fn report_context_sensitivity(&self, _recognizer: &T, _dfa: &DFA, _start_index: isize,
-                                  _stop_index: isize, _prediction: isize, _configs: &ATNConfigSet) {}
+    fn report_context_sensitivity(
+        &self,
+        _recognizer: &T,
+        _dfa: &DFA,
+        _start_index: isize,
+        _stop_index: isize,
+        _prediction: isize,
+        _configs: &ATNConfigSet,
+    ) {
+    }
 }
 
 #[derive(Debug)]
 pub struct ConsoleErrorListener {}
 
 impl<'a, T: Recognizer<'a>> ErrorListener<'a, T> for ConsoleErrorListener {
-    fn syntax_error(&self, _recognizer: &T, _offending_symbol: Option<&<T::TF as TokenFactory<'a>>::Inner>,
-                    line: isize, column: isize, msg: &str, _e: Option<&ANTLRError>) {
+    fn syntax_error(
+        &self,
+        _recognizer: &T,
+        _offending_symbol: Option<&<T::TF as TokenFactory<'a>>::Inner>,
+        line: isize,
+        column: isize,
+        msg: &str,
+        _e: Option<&ANTLRError>,
+    ) {
         eprintln!("line {}:{} {}", line, column, msg);
     }
 }
 
 pub(crate) struct ProxyErrorListener<'b, 'a, T> {
-    pub delegates: Ref<'b, Vec<Box<dyn ErrorListener<'a, T>>>>
+    pub delegates: Ref<'b, Vec<Box<dyn ErrorListener<'a, T>>>>,
 }
 
 impl<'b, 'a, T: Recognizer<'a>> ErrorListener<'a, T> for ProxyErrorListener<'b, 'a, T> {
-    fn syntax_error(&self, _recognizer: &T, offending_symbol: Option<&<T::TF as TokenFactory<'a>>::Inner>, line: isize, column: isize, msg: &str, e: Option<&ANTLRError>) {
+    fn syntax_error(
+        &self,
+        _recognizer: &T,
+        offending_symbol: Option<&<T::TF as TokenFactory<'a>>::Inner>,
+        line: isize,
+        column: isize,
+        msg: &str,
+        e: Option<&ANTLRError>,
+    ) {
         for listener in self.delegates.deref() {
             listener.syntax_error(_recognizer, offending_symbol, line, column, msg, e)
         }
     }
 
-    fn report_ambiguity(&self, recognizer: &T, dfa: &DFA, start_index: isize, stop_index: isize, exact: bool, ambig_alts: &BitSet<u32>, configs: &ATNConfigSet) {
+    fn report_ambiguity(
+        &self,
+        recognizer: &T,
+        dfa: &DFA,
+        start_index: isize,
+        stop_index: isize,
+        exact: bool,
+        ambig_alts: &BitSet<u32>,
+        configs: &ATNConfigSet,
+    ) {
         for listener in self.delegates.deref() {
-            listener.report_ambiguity(recognizer, dfa, start_index, stop_index, exact, ambig_alts, configs)
+            listener.report_ambiguity(
+                recognizer,
+                dfa,
+                start_index,
+                stop_index,
+                exact,
+                ambig_alts,
+                configs,
+            )
         }
     }
 
-    fn report_attempting_full_context(&self, recognizer: &T, dfa: &DFA, start_index: isize, stop_index: isize,
-                                      conflicting_alts: &BitSet<u32>, configs: &ATNConfigSet) {
+    fn report_attempting_full_context(
+        &self,
+        recognizer: &T,
+        dfa: &DFA,
+        start_index: isize,
+        stop_index: isize,
+        conflicting_alts: &BitSet<u32>,
+        configs: &ATNConfigSet,
+    ) {
         for listener in self.delegates.deref() {
-            listener.report_attempting_full_context(recognizer, dfa, start_index, stop_index,
-                                                    conflicting_alts, configs)
+            listener.report_attempting_full_context(
+                recognizer,
+                dfa,
+                start_index,
+                stop_index,
+                conflicting_alts,
+                configs,
+            )
         }
     }
 
-    fn report_context_sensitivity(&self, recognizer: &T, dfa: &DFA, start_index: isize, stop_index: isize, prediction: isize, configs: &ATNConfigSet) {
+    fn report_context_sensitivity(
+        &self,
+        recognizer: &T,
+        dfa: &DFA,
+        start_index: isize,
+        stop_index: isize,
+        prediction: isize,
+        configs: &ATNConfigSet,
+    ) {
         for listener in self.delegates.deref() {
-            listener.report_context_sensitivity(recognizer, dfa, start_index, stop_index, prediction, configs)
+            listener.report_context_sensitivity(
+                recognizer,
+                dfa,
+                start_index,
+                stop_index,
+                prediction,
+                configs,
+            )
         }
     }
 }
 
 pub struct DiagnosticErrorListener {
-    exact_only: bool
+    exact_only: bool,
 }
 
 impl DiagnosticErrorListener {
@@ -95,29 +188,64 @@ impl DiagnosticErrorListener {
 }
 
 impl<'a, T: Parser<'a>> ErrorListener<'a, T> for DiagnosticErrorListener {
-    fn report_ambiguity(&self, recognizer: &T, dfa: &DFA, start_index: isize, stop_index: isize, exact: bool, ambig_alts: &BitSet<u32>, _configs: &ATNConfigSet) {
-        if self.exact_only && !exact { return }
-        let msg = format!("reportAmbiguity d={}: ambigAlts={:?}, input='{}'",
-                          self.get_decision_description(recognizer, dfa),
-                          ambig_alts,
-                          recognizer.get_input_stream().get_text_from_interval(start_index, stop_index)
+    fn report_ambiguity(
+        &self,
+        recognizer: &T,
+        dfa: &DFA,
+        start_index: isize,
+        stop_index: isize,
+        exact: bool,
+        ambig_alts: &BitSet<u32>,
+        _configs: &ATNConfigSet,
+    ) {
+        if self.exact_only && !exact {
+            return;
+        }
+        let msg = format!(
+            "reportAmbiguity d={}: ambigAlts={:?}, input='{}'",
+            self.get_decision_description(recognizer, dfa),
+            ambig_alts,
+            recognizer
+                .get_input_stream()
+                .get_text_from_interval(start_index, stop_index)
         );
         recognizer.notify_error_listeners(msg, None, None);
     }
 
-    fn report_attempting_full_context(&self, recognizer: &T, dfa: &DFA, start_index: isize, stop_index: isize,
-                                      _conflicting_alts: &BitSet<u32>, _configs: &ATNConfigSet) {
-        let msg = format!("reportAttemptingFullContext d={}, input='{}'",
-                          self.get_decision_description(recognizer, dfa),
-                          recognizer.get_input_stream().get_text_from_interval(start_index, stop_index)
+    fn report_attempting_full_context(
+        &self,
+        recognizer: &T,
+        dfa: &DFA,
+        start_index: isize,
+        stop_index: isize,
+        _conflicting_alts: &BitSet<u32>,
+        _configs: &ATNConfigSet,
+    ) {
+        let msg = format!(
+            "reportAttemptingFullContext d={}, input='{}'",
+            self.get_decision_description(recognizer, dfa),
+            recognizer
+                .get_input_stream()
+                .get_text_from_interval(start_index, stop_index)
         );
         recognizer.notify_error_listeners(msg, None, None);
     }
 
-    fn report_context_sensitivity(&self, recognizer: &T, dfa: &DFA, start_index: isize, stop_index: isize, _prediction: isize, _configs: &ATNConfigSet) {
-        let msg = format!("reportContextSensitivity d={}, input='{}'",
-                          self.get_decision_description(recognizer, dfa),
-                          recognizer.get_input_stream().get_text_from_interval(start_index, stop_index)
+    fn report_context_sensitivity(
+        &self,
+        recognizer: &T,
+        dfa: &DFA,
+        start_index: isize,
+        stop_index: isize,
+        _prediction: isize,
+        _configs: &ATNConfigSet,
+    ) {
+        let msg = format!(
+            "reportContextSensitivity d={}, input='{}'",
+            self.get_decision_description(recognizer, dfa),
+            recognizer
+                .get_input_stream()
+                .get_text_from_interval(start_index, stop_index)
         );
         recognizer.notify_error_listeners(msg, None, None);
     }

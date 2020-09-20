@@ -21,7 +21,6 @@ bit-set = "=0.5.*"
 once_cell = "^1.2.*"
 backtrace = "=0.3"
 typed-arena = "^2.0.*"
-git2 = "0.12.*"
 
 [lib]
 

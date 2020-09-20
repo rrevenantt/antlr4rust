@@ -166,7 +166,7 @@ impl PredictionContext {
             parent_ctx,
             return_state,
         })
-            .modify_with(|x| x.calc_hash())
+        .modify_with(|x| x.calc_hash())
     }
 
     pub fn new_empty() -> PredictionContext {
@@ -183,10 +183,10 @@ impl PredictionContext {
         let mut hasher = MurmurHasher::default();
         match self {
             PredictionContext::Singleton(SingletonPredictionContext {
-                                             parent_ctx,
-                                             return_state,
-                                             ..
-                                         }) => {
+                parent_ctx,
+                return_state,
+                ..
+            }) => {
                 hasher.write_i32(match parent_ctx {
                     None => 0,
                     Some(x) => x.hash_code(),
@@ -194,10 +194,10 @@ impl PredictionContext {
                 hasher.write_i32(*return_state as i32);
             }
             PredictionContext::Array(ArrayPredictionContext {
-                                         parents,
-                                         return_states,
-                                         ..
-                                     }) => {
+                parents,
+                return_states,
+                ..
+            }) => {
                 parents.iter().for_each(|x| {
                     hasher.write_i32(match x {
                         None => 0,
@@ -391,7 +391,7 @@ impl PredictionContext {
                 }
                 Array(result)
             }
-                .alloc()
+            .alloc()
         })
     }
 
@@ -414,7 +414,7 @@ impl PredictionContext {
                         vec![b.parent_ctx.clone(), None],
                         vec![b.return_state, PREDICTION_CONTEXT_EMPTY_RETURN_STATE],
                     )
-                        .alloc(),
+                    .alloc(),
                 );
             }
             if b.is_empty() {
@@ -423,7 +423,7 @@ impl PredictionContext {
                         vec![a.parent_ctx.clone(), None],
                         vec![a.return_state, PREDICTION_CONTEXT_EMPTY_RETURN_STATE],
                     )
-                        .alloc(),
+                    .alloc(),
                 );
             }
         }

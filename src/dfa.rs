@@ -12,12 +12,8 @@ use crate::vocabulary::Vocabulary;
 
 ///Helper trait for scope management and temporary values not living long enough
 pub(crate) trait ScopeExt: Sized {
-    fn convert_with<T, F: FnOnce(Self) -> T>(self, f: F) -> T {
-        f(self)
-    }
-    fn run<T, F: FnOnce(&Self) -> T>(&self, f: F) -> T {
-        f(self)
-    }
+    fn convert_with<T, F: FnOnce(Self) -> T>(self, f: F) -> T { f(self) }
+    fn run<T, F: FnOnce(&Self) -> T>(&self, f: F) -> T { f(self) }
 
     //apply
     fn modify_with<F: FnOnce(&mut Self)>(mut self, f: F) -> Self {
@@ -34,7 +30,6 @@ pub(crate) trait ScopeExt: Sized {
 }
 
 impl<Any: Sized> ScopeExt for Any {}
-
 
 pub struct DFA {
     /// ATN state from which this DFA creation was started from
@@ -73,7 +68,11 @@ impl DFA {
             Box::new(ATNConfigSet::new_base_atnconfig_set(true)),
         ));
         if let ATNStateType::DecisionState {
-            state: ATNDecisionState::StarLoopEntry { is_precedence: true, .. },
+            state:
+                ATNDecisionState::StarLoopEntry {
+                    is_precedence: true,
+                    ..
+                },
             ..
         } = atn.states[atn_start_state].get_state_type()
         {
@@ -97,19 +96,16 @@ impl DFA {
             panic!("dfa is supposed to be precedence here");
         }
 
-        self.s0.read().unwrap()
-            .and_then(|s0| {
-                self.states
-                    .read().unwrap()[s0]
-                    .edges
-                    .get(_precedence as usize)
-                    .copied()
-                    .and_then(|it| match it {
-                        0 => None,
-                        x => Some(x)
-                    })
-            }
-            )
+        self.s0.read().unwrap().and_then(|s0| {
+            self.states.read().unwrap()[s0]
+                .edges
+                .get(_precedence as usize)
+                .copied()
+                .and_then(|it| match it {
+                    0 => None,
+                    x => Some(x),
+                })
+        })
     }
 
     pub fn set_precedence_start_state(&self, precedence: isize, _start_state: DFAStateRef) {
@@ -123,40 +119,40 @@ impl DFA {
         let precedence = precedence as usize;
 
         if let Some(x) = self.s0.write().unwrap().deref() {
-            self.states
-                .write().unwrap()[*x]
-                .edges
-                .apply(|edges| {
-                    if edges.len() <= precedence {
-                        edges.resize(precedence + 1, 0);
-                    }
-                    edges[precedence] = _start_state;
-                });
+            self.states.write().unwrap()[*x].edges.apply(|edges| {
+                if edges.len() <= precedence {
+                    edges.resize(precedence + 1, 0);
+                }
+                edges[precedence] = _start_state;
+            });
         }
     }
 
-    pub fn is_precedence_dfa(&self) -> bool {
-        self.is_precedence_dfa
-    }
+    pub fn is_precedence_dfa(&self) -> bool { self.is_precedence_dfa }
 
     pub fn set_precedence_dfa(&mut self, precedence_dfa: bool) {
         self.is_precedence_dfa = precedence_dfa
     }
 
-    fn num_states(&self) -> isize {
-        unimplemented!()
-    }
+    fn num_states(&self) -> isize { unimplemented!() }
 
     pub fn to_string(&self, vocabulary: &dyn Vocabulary) -> String {
-        if self.s0.read().unwrap().is_none() { return String::new(); }
+        if self.s0.read().unwrap().is_none() {
+            return String::new();
+        }
 
-        return format!("{}", DFASerializer::new(self, &|x|
-            vocabulary.get_display_name(x as isize - 1).into_owned(),
-        ));
+        return format!(
+            "{}",
+            DFASerializer::new(self, &|x| vocabulary
+                .get_display_name(x as isize - 1)
+                .into_owned(),)
+        );
     }
 
     pub fn to_lexer_string(&self) -> String {
-        if self.s0.read().unwrap().is_none() { return String::new(); }
+        if self.s0.read().unwrap().is_none() {
+            return String::new();
+        }
         format!(
             "{}",
             DFASerializer::new(self, &|x| format!(

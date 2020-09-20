@@ -40,15 +40,11 @@ pub struct DFAState {
 }
 
 impl PartialEq for DFAState {
-    fn eq(&self, other: &Self) -> bool {
-        self.configs == other.configs
-    }
+    fn eq(&self, other: &Self) -> bool { self.configs == other.configs }
 }
 
 impl Hash for DFAState {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.configs.hash(state);
-    }
+    fn hash<H: Hasher>(&self, state: &mut H) { self.configs.hash(state); }
 }
 
 impl DFAState {
@@ -62,7 +58,7 @@ impl DFAState {
         DFAState {
             state_number: stateNumber,
             configs,
-//            edges: Vec::with_capacity((MAX_DFA_EDGE - MIN_DFA_EDGE + 1) as usize),
+            //            edges: Vec::with_capacity((MAX_DFA_EDGE - MIN_DFA_EDGE + 1) as usize),
             edges: Vec::new(),
             is_accept_state: false,
             prediction: 0,
@@ -74,7 +70,5 @@ impl DFAState {
 
     //    fn get_alt_set(&self) -> &Set { unimplemented!() }
 
-    fn set_prediction(&self, _v: isize) {
-        unimplemented!()
-    }
+    fn set_prediction(&self, _v: isize) { unimplemented!() }
 }

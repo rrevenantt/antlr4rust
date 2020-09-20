@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 use std::ops::Deref;
 
 use crate::errors::ANTLRError;
-use crate::int_stream::{EOF, IntStream, IterWrapper};
+use crate::int_stream::{IntStream, IterWrapper, EOF};
 use crate::token::{OwningToken, Token, TOKEN_DEFAULT_CHANNEL, TOKEN_INVALID_TYPE};
 use crate::token_factory::TokenFactory;
 use crate::token_source::TokenSource;
@@ -55,7 +55,7 @@ impl<'input, T: TokenSource<'input>> TokenStream<'input> for CommonTokenStream<'
         }
         let mut i = self.base.p;
         let mut n = 1; // we know tokens[p] is a good one
-        // find k good tokens
+                       // find k good tokens
         while n < k {
             // skip off-channel tokens, but make sure to not look past EOF
             if self.sync(i + 1) {
@@ -73,7 +73,7 @@ impl<'input, T: TokenSource<'input>> TokenStream<'input> for CommonTokenStream<'
         self.base.get_inner(index)
     }
 
-    fn get_token_source(&self) -> &dyn TokenSource<'input, TF=Self::TF> {
+    fn get_token_source(&self) -> &dyn TokenSource<'input, TF = Self::TF> {
         self.base.get_token_source()
     }
 

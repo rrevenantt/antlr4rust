@@ -19,7 +19,7 @@ use crate::interval_set::IntervalSet;
 use crate::parser_atn_simulator::ParserATNSimulator;
 use crate::parser_rule_context::{BaseParserRuleContext, ParserRuleContext};
 use crate::recognizer::{Actions, Recognizer};
-use crate::rule_context::{CustomRuleContext, RuleContext, states_stack};
+use crate::rule_context::{states_stack, CustomRuleContext, RuleContext};
 use crate::token::{OwningToken, Token, TOKEN_EOF};
 use crate::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use crate::token_source::TokenSource;

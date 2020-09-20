@@ -1,8 +1,8 @@
 use std::borrow::{Borrow, BorrowMut, Cow};
 use std::cell::Cell;
 use std::convert::identity;
-use std::fmt::{Debug, Display};
 use std::fmt::Formatter;
+use std::fmt::{Debug, Display};
 use std::ops::{CoerceUnsized, Deref, DerefMut};
 use std::sync::atomic::{AtomicIsize, AtomicUsize, Ordering};
 

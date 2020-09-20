@@ -13,7 +13,7 @@ pub fn escape_whitespaces(data: impl Borrow<str>, escape_spaces: bool) -> String
         '\t' => res.extend("\\t".chars()),
         '\n' => res.extend("\\n".chars()),
         '\r' => res.extend("\\r".chars()),
-        _ => res.push(ch)
+        _ => res.push(ch),
     });
     res
 }
