@@ -1,6 +1,7 @@
 #![feature(try_blocks)]
 #![feature(inner_deref)]
 #![feature(specialization)]
+#![feature(coerce_unsized)]
 //! Integration tests
 
 // #[macro_use]
@@ -18,7 +19,10 @@ mod gen {
     use antlr_rust::token::{Token, TOKEN_EOF};
     use antlr_rust::token_factory::{ArenaCommonFactory, CommonTokenFactory, OwningTokenFactory};
     use antlr_rust::token_stream::{TokenStream, UnbufferedTokenStream};
-    use antlr_rust::tree::{ParseTree, ParseTreeListener, ParseTreeWalker, TerminalNode};
+    use antlr_rust::tree::{
+        ParseTree, ParseTreeListener, ParseTreeVisitor, ParseTreeWalker, TerminalNode, Tree,
+        Visitable,
+    };
     use antlr_rust::InputStream;
     use csvlexer::*;
     use csvlistener::*;
@@ -28,7 +32,8 @@ mod gen {
     use referencetoatnparser::ReferenceToATNParser;
     use xmllexer::XMLLexer;
 
-    use crate::gen::csvparser::{CSVParserContext, CSVParserContextType};
+    use crate::gen::csvparser::{CSVParserContext, CSVParserContextType, HdrContext, RowContext};
+    use crate::gen::csvvisitor::CSVVisitor;
     use crate::gen::labelslexer::LabelsLexer;
     use crate::gen::labelsparser::{AddContext, EContextAll, LabelsParser};
     use crate::gen::referencetoatnparser::{
@@ -343,6 +348,43 @@ if (x < x && a > 0) then duh
         }
     }
 
+    struct MyCSVVisitor(String);
+
+    impl<'i> ParseTreeVisitor<'i, CSVParserContextType> for MyCSVVisitor {
+        fn visit_terminal(&mut self, node: &TerminalNode<'i, CSVParserContextType>) {
+            if node.symbol.get_token_type() == csvparser::TEXT {
+                write!(&mut self.0, "{} ", node.get_text());
+            }
+        }
+    }
+
+    use csvparser::RowContextAttrs;
+
+    impl<'i> CSVVisitor<'i> for MyCSVVisitor {
+        fn visit_hdr(&mut self, ctx: &HdrContext<'i>) {}
+
+        fn visit_row(&mut self, ctx: &RowContext<'i>) {
+            if ctx.field_all().len() > 1 {
+                self.visit_children(ctx)
+            }
+        }
+    }
+
     #[test]
-    fn test_visitor() {}
+    fn test_visitor() {
+        let tf = ArenaCommonFactory::default();
+        let mut _lexer = CSVLexer::new_with_token_factory(
+            Box::new(InputStream::new("h1,h2\nd1,d2\nd3\n".into())),
+            &tf,
+        );
+        let token_source = CommonTokenStream::new(_lexer);
+        let mut parser = CSVParser::new(Box::new(token_source));
+        let result = parser.csvFile().expect("parsed unsuccessfully");
+
+        let mut visitor = MyCSVVisitor(String::new());
+
+        result.accept(&mut visitor);
+
+        assert_eq!(visitor.0, "d1 d2 ");
+    }
 }

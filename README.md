@@ -16,8 +16,8 @@ API is not very robust yet and very likely will have some changes.
 For now development is going on in this repository 
 but eventually it will be merged to main ANTLR4 repo
 
-Currently requires nightly version of rust. 
-This likely will be the case until `coerce_unsize` or some kind of coersion trait is stabilized. 
+Currently, requires nightly version of rust. 
+This likely will be the case until `coerce_unsize` or some kind of coercion trait is stabilized. 
 There are other unstable features in use but only `CoerceUnsized` is essential. 
 
 Remaining things before merge:
@@ -97,11 +97,12 @@ there are quite some differences because Rust is not an OOP language and is much
  - String `InputStream` have different index behavior when there are unicode characters. 
  If you need exactly the same behavior, use `[u32]` based `InputStream`, or implement custom `CharStream`.
  - In actions you have to escape `'` in rust lifetimes with `\ ` because ANTLR considers them as strings, e.g. `Struct<\'lifetime>`
- - For custom tokens you should use `@tokenfactory` custom action, instead of usual `TokenLabelType` parser option 
+ - To make custom tokens you should use `@tokenfactory` custom action, instead of usual `TokenLabelType` parser option.
+ In Rust target TokenFactory is main customisation interface that allows to specify input type of token type. 
  - All rule context variables (rule argument or rule return) should implement `Default + Clone`.
  
 ### Unsafe
-Currently unsafe is used only to cast from trait object back to original type 
+Currently, unsafe is used only to cast from trait object back to original type 
 and to update data inside Rc via `get_mut_unchecked`(returned mutable reference is used immediately and not stored anywhere)
 
 ### Versioning

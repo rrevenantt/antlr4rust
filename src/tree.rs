@@ -233,14 +233,15 @@ pub trait ParseTreeVisitor<'input, Node: ParserNodeType<'input>> {
 //     fn visit_children(&mut self, node: &Node::Type);
 // }
 //
-// impl <'input, Node,T> VisitChildren<'input,Node> for T
-//     where Node: ParserNodeType<'input>,
-//           T: ParseTreeVisitor<'input, Node>,
-//           // Node::Type
+// impl<'input, Node, T> ParseTreeVisitor<'input, Node> for T
+// where
+//     Node: ParserNodeType<'input>,
+//     T: ParseTreeVisitor<'input, Node> + ?Sized,
+//     Node::Type: Visitable<T>,
 // {
-//     default fn visit_children(&mut self, node: &Node::Type) {
-//
-//     }
+//     fn visit_terminal(&mut self, node: &TerminalNode<'input, Node>) {}
+//     fn visit_error_node(&mut self, node: &ErrorNode<'input, Node>) {}
+//     default fn visit_children(&mut self, node: &Node::Type) {}
 // }
 
 // impl<'input, Node, T> ParseTreeVisitor<'input, Node> for T
