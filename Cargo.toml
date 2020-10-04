@@ -12,6 +12,10 @@ license = "BSD-3-Clause"
 keywords = ["ANTLR","ANTLR4","parsing","runtime"]
 categories = ["parsing"]
 
+[features]
+default = []
+generate_test_grammars = []
+
 [dependencies]
 lazy_static = "^1.4.*"
 uuid = "=0.6.*"
