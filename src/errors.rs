@@ -43,13 +43,17 @@ pub enum ANTLRError {
     /// prediction.
     PredicateError(FailedPredicateError),
 
-    /// Internal error.
+    /// Internal error. Or user provided type returned data that is
+    /// incompatible with current parser state
     IllegalStateError(String),
 
-    /// Indicates that error should not be processed and parser should immediately return to caller
+    /// Unrecoverable error. Indicates that error should not be processed by parser
+    /// and it should abort parsing and immediately return to caller
     FallThrough(Box<dyn Error>),
 
-    /// Used to allow user to emit his own errors from parser actions or from custom error strategy
+    /// Potentially recoverable error.
+    /// Used to allow user to emit his own errors from parser actions or from custom error strategy.
+    /// Parser will try to recover with provided `ErrorStrategy`
     OtherError(Box<dyn Error>),
 }
 

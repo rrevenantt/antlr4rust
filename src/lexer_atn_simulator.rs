@@ -49,6 +49,7 @@ pub trait ILexerATNSimulator: IATNSimulator {
     fn get_line(&self) -> isize;
     fn set_line(&mut self, line: isize);
     fn consume(&self, input: &mut dyn IntStream);
+    #[cold]
     fn recover(&mut self, _re: ANTLRError, input: &mut dyn IntStream) {
         if input.la(1) != EOF {
             self.consume(input)

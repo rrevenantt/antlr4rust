@@ -475,18 +475,17 @@ impl<'input, Ctx: CustomRuleContext<'input> + 'input> BaseParserRuleContext<'inp
 
 ///////////////////////////////////////////////
 // Needed to significantly reduce boilerplate in the generated code,
-// because there is no simple way to implement trait for enum
+// because there is no simple way to delegate trait for enum
 // will not be necessary if some kind of variant types RFC will be merged
 //////////////////////////////////////////////
 /// workaround trait to overcome conflicting implementations error
 #[doc(hidden)]
 pub trait DerefSeal: Deref {}
 
-impl<
-        'input,
-        T: DerefSeal<Target = I> + 'input + Debug + Tid,
-        I: ParserRuleContext<'input> + 'input + ?Sized,
-    > ParserRuleContext<'input> for T
+impl<'input, T, I> ParserRuleContext<'input> for T
+where
+    T: DerefSeal<Target = I> + 'input + Debug + Tid,
+    I: ParserRuleContext<'input> + 'input + ?Sized,
 {
     fn set_exception(&self, e: ANTLRError) { self.deref().set_exception(e) }
 
@@ -539,11 +538,10 @@ impl<
     // fn upcast(&self) -> &dyn ParserRuleContext<'input, TF=Self::TF> { self.deref().upcast() }
 }
 
-impl<
-        'input,
-        T: DerefSeal<Target = I> + 'input + Debug + Tid,
-        I: ParserRuleContext<'input> + 'input + ?Sized,
-    > RuleContext<'input> for T
+impl<'input, T, I> RuleContext<'input> for T
+where
+    T: DerefSeal<Target = I> + 'input + Debug + Tid,
+    I: ParserRuleContext<'input> + 'input + ?Sized,
 {
     fn get_invoking_state(&self) -> isize { self.deref().get_invoking_state() }
 
@@ -560,22 +558,20 @@ impl<
     }
 }
 
-impl<
-        'input,
-        T: DerefSeal<Target = I> + 'input + Debug + Tid,
-        I: ParserRuleContext<'input> + 'input + ?Sized,
-    > ParseTree<'input> for T
+impl<'input, T, I> ParseTree<'input> for T
+where
+    T: DerefSeal<Target = I> + 'input + Debug + Tid,
+    I: ParserRuleContext<'input> + 'input + ?Sized,
 {
     fn get_source_interval(&self) -> Interval { self.deref().get_source_interval() }
 
     fn get_text(&self) -> String { self.deref().get_text() }
 }
 
-impl<
-        'input,
-        T: DerefSeal<Target = I> + 'input + Debug + Tid,
-        I: ParserRuleContext<'input> + 'input + ?Sized,
-    > Tree<'input> for T
+impl<'input, T, I> Tree<'input> for T
+where
+    T: DerefSeal<Target = I> + 'input + Debug + Tid,
+    I: ParserRuleContext<'input> + 'input + ?Sized,
 {
     fn get_parent(&self) -> Option<Rc<<I::Ctx as ParserNodeType<'input>>::Type>> {
         self.deref().get_parent()
@@ -603,11 +599,10 @@ impl<
     // fn get_children_full(&self) -> &RefCell<Vec<Rc<<I::Ctx as ParserNodeType<'input>>::Type>>> { self.deref().get_children_full() }
 }
 
-impl<
-        'input,
-        T: DerefSeal<Target = I> + 'input + Debug + Tid,
-        I: ParserRuleContext<'input> + 'input + ?Sized,
-    > CustomRuleContext<'input> for T
+impl<'input, T, I> CustomRuleContext<'input> for T
+where
+    T: DerefSeal<Target = I> + 'input + Debug + Tid,
+    I: ParserRuleContext<'input> + 'input + ?Sized,
 {
     type TF = I::TF;
     type Ctx = I::Ctx;

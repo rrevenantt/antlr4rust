@@ -119,7 +119,7 @@ where
     /// <p>Note that if we are not building parse trees, rule contexts only point
     /// upwards. When a rule exits, it returns the context but that gets garbage
     /// collected if nobody holds a reference. It points upwards but nobody
-    /// points at it.</p>
+    /// points at it. </p>
     ///
     /// <p>When we build parse trees, we are adding all of these contexts to
     /// {@link ParserRuleContext#children} list. Contexts are then not candidates
@@ -132,7 +132,7 @@ where
     pub matched_eof: bool,
 
     state: isize,
-    pub input: Box<I>,
+    pub input: I,
     precedence_stack: Vec<isize>,
 
     parse_listeners: Vec<Box<T>>,
@@ -260,10 +260,10 @@ where
     }
 
     fn get_input_stream_mut(&mut self) -> &mut dyn TokenStream<'input, TF = Self::TF> {
-        self.input.as_mut()
+        &mut self.input //.as_mut()
     }
 
-    fn get_input_stream(&self) -> &dyn TokenStream<'input, TF = Self::TF> { self.input.as_ref() }
+    fn get_input_stream(&self) -> &dyn TokenStream<'input, TF = Self::TF> { &self.input }
 
     #[inline]
     fn get_current_token(&self) -> &<Self::TF as TokenFactory<'input>>::Tok {
@@ -347,7 +347,7 @@ where
     Rc<TerminalNode<'input, Ctx>>: CoerceUnsized<Rc<Ctx::Type>>,
     Rc<ErrorNode<'input, Ctx>>: CoerceUnsized<Rc<Ctx::Type>>,
 {
-    pub fn new_base_parser(input: Box<I>, interpreter: Arc<ParserATNSimulator>, ext: Ext) -> Self {
+    pub fn new_base_parser(input: I, interpreter: Arc<ParserATNSimulator>, ext: Ext) -> Self {
         Self {
             interp: interpreter,
             ctx: None,
@@ -393,6 +393,7 @@ where
         return Ok(token);
     }
 
+    #[inline]
     pub fn match_wildcard(
         &mut self,
         err_handler: &mut dyn ErrorStrategy<'input, Self>,
@@ -506,6 +507,7 @@ where
     }
 
     // todo make new_ctx not option
+    #[inline]
     pub fn enter_outer_alt(&mut self, new_ctx: Option<Rc<Ctx::Type>>, alt_num: isize) {
         if let Some(new_ctx) = new_ctx {
             new_ctx.set_alt_number(alt_num);

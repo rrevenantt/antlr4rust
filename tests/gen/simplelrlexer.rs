@@ -76,10 +76,7 @@ impl<'input, Input: CharStream<From<'input>>> SimpleLRLexer<'input, Input> {
 
     fn get_grammar_file_name(&self) -> &'static str { "SimpleLRLexer.g4" }
 
-    pub fn new_with_token_factory(
-        input: Box<Input>,
-        tf: &'input LocalTokenFactory<'input>,
-    ) -> Self {
+    pub fn new_with_token_factory(input: Input, tf: &'input LocalTokenFactory<'input>) -> Self {
         antlr_rust::recognizer::check_version("0", "2");
         Self {
             base: BaseLexer::new_base_lexer(
@@ -100,7 +97,7 @@ impl<'input, Input: CharStream<From<'input>>> SimpleLRLexer<'input, Input>
 where
     &'input LocalTokenFactory<'input>: Default,
 {
-    pub fn new(input: Box<Input>) -> Self {
+    pub fn new(input: Input) -> Self {
         SimpleLRLexer::new_with_token_factory(
             input,
             <&LocalTokenFactory<'input> as Default>::default(),

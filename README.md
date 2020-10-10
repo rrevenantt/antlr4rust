@@ -30,7 +30,6 @@ Can be done after merge:
  - Documentation
    - [ ] Some things are already documented but still far from perfect, also more links needed.
  - Code quality
-   - [ ] Rustfmt fails to run currently
    - [ ] Clippy sanitation 
    - [ ] Not all warning are fixed
  - cfg to not build potentially unnecessary parts 

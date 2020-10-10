@@ -68,7 +68,7 @@ pub struct BaseLexer<
     TF: TokenFactory<'input> = CommonTokenFactory,
 > {
     pub interpreter: Option<LexerATNSimulator>,
-    pub input: Option<Box<Input>>,
+    pub input: Option<Input>,
     recog: T,
 
     factory: &'input TF,
@@ -142,7 +142,7 @@ where
         <T as LexerRecog<Self>>::before_emit(self);
         let stop = self.get_char_index() - 1;
         let token = self.factory.create(
-            Some(self.input.as_mut().unwrap().as_mut()),
+            Some(self.input.as_mut().unwrap()),
             self.token_type,
             self.text.take(),
             self.channel,
@@ -205,7 +205,7 @@ where
     pub fn remove_error_listeners(&mut self) { self.error_listeners.borrow_mut().clear(); }
 
     pub fn new_base_lexer(
-        input: Box<Input>,
+        input: Input,
         interpreter: LexerATNSimulator,
         recog: T,
         factory: &'input TF,
@@ -334,15 +334,15 @@ where
     fn get_char_position_in_line(&self) -> isize { self.current_pos.char_position_in_line.get() }
 
     fn get_input_stream(&mut self) -> Option<&mut dyn IntStream> {
-        match self.input {
+        match &mut self.input {
             None => None,
-            Some(ref mut x) => Some(x.deref_mut()),
+            Some(x) => Some(x as _),
         }
     }
 
     fn get_source_name(&self) -> String {
         self.input
-            .as_deref()
+            .as_ref()
             .map(|it| it.get_source_name())
             .unwrap_or("<none>".to_string())
     }
@@ -354,6 +354,8 @@ where
     fn get_token_factory(&self) -> &'input TF { self.factory }
 }
 
+#[cold]
+#[inline(never)]
 fn notify_listeners<'input, T, Input, TF>(
     liseners: &mut Vec<Box<dyn ErrorListener<'input, BaseLexer<'input, T, Input, TF>>>>,
     e: &ANTLRError,
