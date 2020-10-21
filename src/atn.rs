@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use crate::atn_state::ATNState;
 use crate::atn_state::ATNStateRef;
@@ -9,10 +8,9 @@ use crate::interval_set::IntervalSet;
 use crate::lexer_action::LexerAction;
 use crate::ll1_analyzer::LL1Analyzer;
 use crate::parser::ParserNodeType;
-use crate::parser_rule_context::ParserRuleContext;
-use crate::rule_context::{EmptyContextType, RuleContext};
+use crate::rule_context::EmptyContextType;
 use crate::token::{TOKEN_EOF, TOKEN_EPSILON};
-use crate::token_factory::{CommonTokenFactory, TokenFactory};
+use crate::token_factory::CommonTokenFactory;
 use crate::transition::RuleTransition;
 
 pub const INVALID_ALT: isize = 0;
@@ -60,7 +58,7 @@ impl ATN {
     ///rule.
     pub fn next_tokens<'a>(&self, s: &'a dyn ATNState) -> &'a IntervalSet {
         s.get_next_tokens_within_rule().get_or_init(|| {
-            self.next_tokens_in_ctx::<EmptyContextType<CommonTokenFactory>>(s, None)
+            self.next_tokens_in_ctx::<EmptyContextType<'_, CommonTokenFactory>>(s, None)
                 .modify_with(|r| r.read_only = true)
         })
     }

@@ -11,6 +11,7 @@ use typed_arena::Arena;
 use crate::char_stream::{CharStream, InputData};
 use crate::token::Token;
 use crate::token::{CommonToken, OwningToken, TOKEN_INVALID_TYPE};
+use better_any::{Tid, TidAble};
 
 lazy_static! {
     pub static ref CommonTokenFactoryDEFAULT: Box<CommonTokenFactory> =
@@ -42,7 +43,7 @@ lazy_static! {
 // todo remove redundant allocation for arenas
 
 /// Trait for creating tokens
-pub trait TokenFactory<'a>: Sized {
+pub trait TokenFactory<'a>: TidAble<'a> + Sized {
     /// type of tokens emitted by this factory
     type Inner: Token<Data = Self::Data> + ?Sized + 'a;
     /// ownership of the emitted tokens
@@ -73,7 +74,7 @@ pub trait TokenFactory<'a>: Sized {
     fn create_invalid() -> Self::Tok;
 }
 
-#[derive(Default)]
+#[derive(Default, Tid)]
 pub struct CommonTokenFactory;
 
 impl Default for &'_ CommonTokenFactory {
@@ -128,7 +129,7 @@ impl<'a> TokenFactory<'a> for CommonTokenFactory {
     fn create_invalid() -> Self::Tok { INVALID_COMMON.clone() }
 }
 
-#[derive(Default)]
+#[derive(Default, Tid)]
 pub struct OwningTokenFactory;
 
 impl<'a> TokenFactory<'a> for OwningTokenFactory {
@@ -192,21 +193,21 @@ pub type ArenaCommonFactory<'a> = ArenaFactory<'a, CommonTokenFactory, CommonTok
 /// This is a wrapper for Token factory that allows to allocate tokens in separate arena.
 /// It can allow to significantly improve performance by passing Tokens by references everywhere.
 // Box is used here because it is almost always should be used for token factory
-pub struct ArenaFactory<
-    'input,
+#[derive(Tid)]
+pub struct ArenaFactory<'input, TF, T>
+where
     TF: TokenFactory<'input, Tok = Box<T>, Inner = T>,
     T: Token<Data = TF::Data> + Clone + 'input,
-> {
+{
     arena: Arena<T>,
     factory: TF,
     pd: PhantomData<&'input str>,
 }
 
-impl<
-        'input,
-        TF: TokenFactory<'input, Tok = Box<T>, Inner = T> + Default,
-        T: Token<Data = TF::Data> + Clone + 'input,
-    > Default for ArenaFactory<'input, TF, T>
+impl<'input, TF, T> Default for ArenaFactory<'input, TF, T>
+where
+    TF: TokenFactory<'input, Tok = Box<T>, Inner = T> + Default,
+    T: Token<Data = TF::Data> + Clone + 'input,
 {
     fn default() -> Self {
         Self {
@@ -220,7 +221,7 @@ impl<
 impl<'input, TF, Tok> TokenFactory<'input> for ArenaFactory<'input, TF, Tok>
 where
     TF: TokenFactory<'input, Tok = Box<Tok>, Inner = Tok>,
-    Tok: Token<Data = TF::Data> + Clone + 'input,
+    Tok: Token<Data = TF::Data> + Clone + TidAble<'input>,
     for<'a> &'a Tok: Default,
 {
     type Inner = Tok;

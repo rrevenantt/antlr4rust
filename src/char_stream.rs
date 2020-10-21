@@ -14,6 +14,7 @@ use crate::utils::Sealed;
 /// Provides underlying data for Tokens.
 pub trait CharStream<Data>: IntStream {
     /// Returns underlying data piece, either slice or owned copy.
+    /// Panics if provided indexes are invalid
     fn get_text(&self, a: isize, b: isize) -> Data;
     fn get_text_from_interval(&self, i: &Interval) -> Data { self.get_text(i.a, i.b) }
 }

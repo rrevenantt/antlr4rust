@@ -24,8 +24,11 @@ use crate::token::{OwningToken, Token, TOKEN_EOF};
 use crate::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use crate::token_source::TokenSource;
 use crate::token_stream::TokenStream;
-use crate::tree::{ErrorNode, Listenable, ParseTree, ParseTreeListener, TerminalNode};
+use crate::tree::{
+    ErrorNode, Listenable, ParseTree, ParseTreeListener, ParseTreeVisitor, TerminalNode,
+};
 use crate::vocabulary::Vocabulary;
+use better_any::{Tid, TidAble};
 
 pub trait Parser<'input>: Recognizer<'input> {
     fn get_interpreter(&self) -> &ParserATNSimulator;
@@ -89,9 +92,10 @@ pub trait Parser<'input>: Recognizer<'input> {
 /// trait GenratedParserContext:ParserRuleContext<Ctx=dyn GeneratedParserContext>{ ... }
 /// ```
 /// which is not possible, hence this a bit ugly workaround.
-pub trait ParserNodeType<'input>: Sized {
+pub trait ParserNodeType<'input>: TidAble<'input> + Sized {
     type TF: TokenFactory<'input> + 'input;
     type Type: ?Sized + ParserRuleContext<'input, Ctx = Self, TF = Self::TF> + 'input;
+    type Visitor: ?Sized + ParseTreeVisitor<'input, Self>;
 }
 
 /// ### Main underlying Parser struct
@@ -100,14 +104,14 @@ pub trait ParserNodeType<'input>: Sized {
 /// almost always you don't need to create it yourself.
 /// Generated parser hides complexity of this struct and expose required flexibility via generic parameters
 ///
-pub struct BaseParser<'input, Ext, I, Ctx, T = dyn ParseTreeListener<'input, Ctx>>
-where
-    Ext: ParserRecog<'input, Self> + 'static, // user provided behavior, such as semantic predicates
-    I: TokenStream<'input>,                   // input stream
+#[derive(Tid)]
+pub struct BaseParser<
+    'input,
+    Ext: 'static, //: ParserRecog<'input, Self> + 'static, // user provided behavior, such as semantic predicates
+    I: TokenStream<'input>, // input stream
     Ctx: ParserNodeType<'input, TF = I::TF>, // Ctx::Type is trait object type for tree node of the parser
-    T: ParseTreeListener<'input, Ctx> + ?Sized, // listener type
-    Ctx::Type: Listenable<T>,
-{
+    T: ParseTreeListener<'input, Ctx> + ?Sized = dyn ParseTreeListener<'input, Ctx>,
+> {
     interp: Arc<ParserATNSimulator>,
     pub ctx: Option<Rc<Ctx::Type>>,
 
@@ -117,7 +121,7 @@ where
     /// rule represents the root of the parse tree.
     ///
     /// <p>Note that if we are not building parse trees, rule contexts only point
-    /// upwards. When a rule exits, it returns the context but that gets garbage
+    /// upwards. When a rule exits, it returns the context bute that gets garbage
     /// collected if nobody holds a reference. It points upwards but nobody
     /// points at it. </p>
     ///
@@ -149,7 +153,7 @@ where
     I: TokenStream<'input>,
     Ctx: ParserNodeType<'input, TF = I::TF>,
     T: ParseTreeListener<'input, Ctx> + ?Sized,
-    Ctx::Type: Listenable<T>,
+    // Ctx::Type: Listenable<T>,
 {
     type Target = Ext;
 
@@ -162,7 +166,7 @@ where
     I: TokenStream<'input>,
     Ctx: ParserNodeType<'input, TF = I::TF>,
     T: ParseTreeListener<'input, Ctx> + ?Sized,
-    Ctx::Type: Listenable<T>,
+    // Ctx::Type: Listenable<T>,
 {
     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.ext }
 }
@@ -176,11 +180,16 @@ where
     I: TokenStream<'input>,
     Ctx: ParserNodeType<'input, TF = I::TF>,
     T: ParseTreeListener<'input, Ctx> + ?Sized,
-    Ctx::Type: Listenable<T>,
+    // Ctx::Type: Listenable<T>,
 {
     type Node = Ctx;
 
-    fn sempred(&mut self, localctx: &Ctx::Type, rule_index: isize, action_index: isize) -> bool {
+    fn sempred(
+        &mut self,
+        localctx: Option<&Ctx::Type>,
+        rule_index: isize,
+        action_index: isize,
+    ) -> bool {
         <Ext as Actions<'input, Self>>::sempred(localctx, rule_index, action_index, self)
     }
 
@@ -199,7 +208,7 @@ where
     I: TokenStream<'input>,
     Ctx: ParserNodeType<'input, TF = I::TF>,
     T: ParseTreeListener<'input, Ctx> + ?Sized,
-    Ctx::Type: Listenable<T>,
+    // Ctx::Type: Listenable<T>,
 {
     type TF = I::TF;
 }
@@ -417,7 +426,7 @@ where
     /// Adds parse listener for this parser
     /// returns `listener_id` that can be used later to get listener back
     ///
-    /// Embedded listener currently must be 'static. If you need to have non-static listener use ParseTreeWalker.
+    /// Embedded listener currently must outlive `'input`. If you need to have arbitrary listener use ParseTreeWalker.
     ///
     /// ### Example for listener usage:
     /// todo

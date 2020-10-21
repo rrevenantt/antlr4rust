@@ -23,11 +23,12 @@ use antlr_rust::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use antlr_rust::token_source::TokenSource;
 use antlr_rust::token_stream::TokenStream;
 use antlr_rust::tree::{
-    ErrorNode, LeafNode, Listenable, ParseTree, ParseTreeListener, ParseTreeWalker, TerminalNode,
-    Visitable,
+    ErrorNode, LeafNode, Listenable, ParseTree, ParseTreeListener, ParseTreeVisitor,
+    ParseTreeWalker, TerminalNode, Visitable,
 };
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
 use antlr_rust::PredictionContextCache;
+use antlr_rust::{TidAble, TidExt};
 
 use std::any::{Any, TypeId};
 use std::borrow::{Borrow, BorrowMut};
@@ -61,7 +62,7 @@ type BaseParserType<'input, I> = BaseParser<
     ReferenceToATNParserExt,
     I,
     ReferenceToATNParserContextType,
-    dyn ReferenceToATNListener<'input> + 'static,
+    dyn ReferenceToATNListener<'input> + 'input,
 >;
 
 type TokenType<'input> = <LocalTokenFactory<'input> as TokenFactory<'input>>::Tok;
@@ -78,7 +79,7 @@ pub type ReferenceToATNTreeWalker<'input, 'a> = ParseTreeWalker<
 /// Parser for ReferenceToATN grammar
 pub struct ReferenceToATNParser<'input, I, H>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
     base: BaseParserType<'input, I>,
@@ -89,10 +90,10 @@ where
 
 impl<'input, I, H> ReferenceToATNParser<'input, I, H>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
-    pub fn get_serialized_atn() -> &'static str { unimplemented!() }
+    pub fn get_serialized_atn() -> &'static str { _serializedATN }
 
     pub fn set_error_strategy(&mut self, strategy: H) { self.err_handler = strategy }
 
@@ -116,14 +117,11 @@ where
     }
 }
 
-impl<'input, I>
-    ReferenceToATNParser<
-        'input,
-        I,
-        Box<dyn ErrorStrategy<'input, BaseParserType<'input, I>> + 'input>,
-    >
+type DynStrategy<'input, I> = Box<dyn ErrorStrategy<'input, BaseParserType<'input, I>> + 'input>;
+
+impl<'input, I> ReferenceToATNParser<'input, I, DynStrategy<'input, I>>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
 {
     pub fn with_dyn_strategy(input: I) -> Self {
         Self::with_strategy(input, Box::new(DefaultErrorStrategy::new()))
@@ -131,13 +129,9 @@ where
 }
 
 impl<'input, I>
-    ReferenceToATNParser<
-        'input,
-        I,
-        DefaultErrorStrategy<dyn ReferenceToATNParserContext<'input> + 'input>,
-    >
+    ReferenceToATNParser<'input, I, DefaultErrorStrategy<'input, ReferenceToATNParserContextType>>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
 {
     pub fn new(input: I) -> Self { Self::with_strategy(input, DefaultErrorStrategy::new()) }
 }
@@ -157,16 +151,24 @@ impl<'input> ReferenceToATNParserContext<'input>
 {
 }
 
+#[antlr_rust::impl_tid]
+impl<'input> antlr_rust::TidAble<'input> for dyn ReferenceToATNParserContext<'input> + 'input {}
+
+#[antlr_rust::impl_tid]
+impl<'input> antlr_rust::TidAble<'input> for dyn ReferenceToATNListener<'input> + 'input {}
+
 pub struct ReferenceToATNParserContextType;
+antlr_rust::type_id! {ReferenceToATNParserContextType}
 
 impl<'input> ParserNodeType<'input> for ReferenceToATNParserContextType {
     type TF = LocalTokenFactory<'input>;
     type Type = dyn ReferenceToATNParserContext<'input> + 'input;
+    type Visitor = dyn ParseTreeVisitor<'input, Self> + 'input;
 }
 
 impl<'input, I, H> Deref for ReferenceToATNParser<'input, I, H>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
     type Target = BaseParserType<'input, I>;
@@ -176,7 +178,7 @@ where
 
 impl<'input, I, H> DerefMut for ReferenceToATNParser<'input, I, H>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.base }
@@ -190,12 +192,12 @@ impl<'input> TokenAware<'input> for ReferenceToATNParserExt {
     type TF = LocalTokenFactory<'input>;
 }
 
-impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>>>
+impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
     ParserRecog<'input, BaseParserType<'input, I>> for ReferenceToATNParserExt
 {
 }
 
-impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>>>
+impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
     Actions<'input, BaseParserType<'input, I>> for ReferenceToATNParserExt
 {
     fn get_grammar_file_name(&self) -> &str { "ReferenceToATN.g4" }
@@ -229,7 +231,7 @@ impl<'input> CustomRuleContext<'input> for AContextExt<'input> {
     fn get_rule_index(&self) -> usize { RULE_a }
     //fn type_rule_index() -> usize where Self: Sized { RULE_a }
 }
-antlr_rust::type_id! {AContextExt}
+antlr_rust::type_id! {AContextExt<'a>}
 
 impl<'input> AContextExt<'input> {
     fn new(
@@ -283,7 +285,7 @@ impl<'input> AContextAttrs<'input> for AContext<'input> {}
 
 impl<'input, I, H> ReferenceToATNParser<'input, I, H>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
     pub fn a(&mut self) -> Result<Rc<AContextAll<'input>>, ANTLRError> {

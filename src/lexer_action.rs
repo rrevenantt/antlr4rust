@@ -1,7 +1,6 @@
 use std::hash::Hash;
 
 use crate::lexer::Lexer;
-use crate::parser_rule_context::empty_ctx;
 
 pub(crate) const LEXER_ACTION_TYPE_CHANNEL: isize = 0;
 pub(crate) const LEXER_ACTION_TYPE_CUSTOM: isize = 1;
@@ -50,7 +49,7 @@ impl LexerAction {
                 rule_index,
                 action_index,
             } => {
-                lexer.action(&*empty_ctx::<T::TF>(), rule_index, action_index);
+                lexer.action(None, rule_index, action_index);
             }
             &LexerAction::LexerModeAction(mode) => lexer.set_mode(mode as usize),
             &LexerAction::LexerMoreAction => lexer.more(),

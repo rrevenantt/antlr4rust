@@ -53,7 +53,7 @@ pub trait Transition: Sync + Send + Debug + Any {
     fn get_target(&self) -> ATNStateRef;
     fn set_target(&mut self, s: ATNStateRef);
     fn is_epsilon(&self) -> bool { false }
-    fn get_label(&self) -> Option<Cow<IntervalSet>> { None }
+    fn get_label(&self) -> Option<Cow<'_, IntervalSet>> { None }
     fn get_serialization_type(&self) -> TransitionType;
     fn matches(&self, symbol: isize, min_vocab_symbol: isize, max_vocab_symbol: isize) -> bool;
     fn get_predicate(&self) -> Option<SemanticContext> { None }
@@ -85,7 +85,7 @@ impl Transition for AtomTransition {
 
     fn set_target(&mut self, s: ATNStateRef) { self.target = s }
 
-    fn get_label(&self) -> Option<Cow<IntervalSet>> {
+    fn get_label(&self) -> Option<Cow<'_, IntervalSet>> {
         let mut r = IntervalSet::new();
         r.add_one(self.label);
         Some(Cow::Owned(r))
@@ -149,7 +149,7 @@ impl Transition for RangeTransition {
     fn get_target(&self) -> ATNStateRef { self.target }
     fn set_target(&mut self, s: ATNStateRef) { self.target = s }
 
-    fn get_label(&self) -> Option<Cow<IntervalSet>> {
+    fn get_label(&self) -> Option<Cow<'_, IntervalSet>> {
         let mut r = IntervalSet::new();
         r.add_range(self.start, self.stop);
         Some(Cow::Owned(r))
@@ -194,7 +194,7 @@ impl Transition for SetTransition {
     fn get_target(&self) -> ATNStateRef { self.target }
     fn set_target(&mut self, s: ATNStateRef) { self.target = s }
 
-    fn get_label(&self) -> Option<Cow<IntervalSet>> { Some(Cow::Borrowed(&self.set)) }
+    fn get_label(&self) -> Option<Cow<'_, IntervalSet>> { Some(Cow::Borrowed(&self.set)) }
 
     fn get_serialization_type(&self) -> TransitionType { TransitionType::TRANSITION_SET }
 
@@ -213,7 +213,7 @@ impl Transition for NotSetTransition {
     fn get_target(&self) -> ATNStateRef { self.target }
     fn set_target(&mut self, s: ATNStateRef) { self.target = s }
 
-    fn get_label(&self) -> Option<Cow<IntervalSet>> { Some(Cow::Borrowed(&self.set)) }
+    fn get_label(&self) -> Option<Cow<'_, IntervalSet>> { Some(Cow::Borrowed(&self.set)) }
 
     fn get_serialization_type(&self) -> TransitionType { TransitionType::TRANSITION_NOTSET }
 

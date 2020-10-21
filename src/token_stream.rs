@@ -10,6 +10,7 @@ use crate::int_stream::{IntStream, IterWrapper};
 use crate::token::{OwningToken, Token, TOKEN_EOF, TOKEN_INVALID_TYPE};
 use crate::token_factory::{CommonTokenFactory, TokenFactory};
 use crate::token_source::TokenSource;
+use better_any::{Tid, TidAble};
 
 /// An `IntSteam` of `Token`s
 ///
@@ -58,6 +59,7 @@ impl<'a, 'input: 'a, T: TokenStream<'input>> Iterator for TokenIter<'a, 'input, 
     }
 }
 
+#[derive(Tid)]
 pub struct UnbufferedTokenStream<'input, T: TokenSource<'input>> {
     token_source: T,
     pub(crate) tokens: Vec<<T::TF as TokenFactory<'input>>::Tok>,
@@ -208,20 +210,24 @@ impl<'input, T: TokenSource<'input>> IntStream for UnbufferedTokenStream<'input,
         self.markers_count -= 1;
         if self.markers_count == 0 {
             if self.p > 0 {
-                let new_len = self.tokens.len() - self.p as usize;
-                unsafe {
-                    // drop first p elements
-                    for i in 0..(self.p as usize) {
-                        drop_in_place(&mut self.tokens[i]);
-                    }
-                    // move len-p elements to beginning
-                    std::intrinsics::copy(
-                        &self.tokens[self.p as usize],
-                        &mut self.tokens[0],
-                        new_len,
-                    );
-                    self.tokens.set_len(new_len);
-                }
+                self.tokens.drain(0..self.p as usize);
+                //todo drain assembly is almost 2x longer than
+                // unsafe manual copy but need to bench before using unsafe
+                //let new_len = self.tokens.len() - self.p as usize;
+                // unsafe {
+                //     // drop first p elements
+                //     for i in 0..(self.p as usize) {
+                //         drop_in_place(&mut self.tokens[i]);
+                //     }
+                //     // move len-p elements to beginning
+                //     std::intrinsics::copy(
+                //         &self.tokens[self.p as usize],
+                //         &mut self.tokens[0],
+                //         new_len,
+                //     );
+                //     self.tokens.set_len(new_len);
+                // }
+
                 self.p = 0;
             }
         }

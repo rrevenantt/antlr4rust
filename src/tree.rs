@@ -14,10 +14,11 @@ use crate::interval_set::Interval;
 use crate::parser::{Parser, ParserNodeType};
 use crate::parser_rule_context::{cast, BaseParserRuleContext, ParserRuleContext, RuleContextExt};
 use crate::recognizer::Recognizer;
-use crate::rule_context::{CustomRuleContext, EmptyContextType, RuleContext, Tid};
+use crate::rule_context::{CustomRuleContext, EmptyContextType, RuleContext};
 use crate::token::{OwningToken, Token};
 use crate::token_factory::{CommonTokenFactory, TokenFactory};
 use crate::{interval_set, trees};
+use better_any::{Tid, TidAble};
 
 //todo try to make in more generic
 pub trait Tree<'input>: NodeText + RuleContext<'input> {
@@ -97,11 +98,14 @@ impl<'input, T: CustomRuleContext<'input>> NodeText for T {
 }
 
 #[doc(hidden)]
+#[derive(Tid)]
 pub struct NoError;
 
 #[doc(hidden)]
+#[derive(Tid)]
 pub struct IsError;
 
+#[derive(Tid)]
 pub struct LeafNode<'input, Node: ParserNodeType<'input>, T: 'static> {
     pub symbol: <Node::TF as TokenFactory<'input>>::Tok,
     iserror: PhantomData<T>,
@@ -116,25 +120,12 @@ impl<'input, Node: ParserNodeType<'input>, T: 'static> CustomRuleContext<'input>
     fn get_rule_index(&self) -> usize { usize::max_value() }
 }
 
-impl<'input, Node: ParserNodeType<'input>, T: 'static> ParserRuleContext<'input>
-    for LeafNode<'input, Node, T>
+impl<'input, Node: ParserNodeType<'input> + TidAble<'input>, T: 'static + TidAble<'input>>
+    ParserRuleContext<'input> for LeafNode<'input, Node, T>
 {
 }
 
 impl<'input, Node: ParserNodeType<'input>, T: 'static> Tree<'input> for LeafNode<'input, Node, T> {}
-
-unsafe impl<'input, Node: ParserNodeType<'input>, T: 'static> Tid for LeafNode<'input, Node, T> {
-    fn self_id(&self) -> TypeId {
-        TypeId::of::<LeafNode<'static, EmptyContextType<CommonTokenFactory>, T>>()
-    }
-
-    fn id() -> TypeId
-    where
-        Self: Sized,
-    {
-        TypeId::of::<LeafNode<'static, EmptyContextType<CommonTokenFactory>, T>>()
-    }
-}
 
 impl<'input, Node: ParserNodeType<'input>, T: 'static> RuleContext<'input>
     for LeafNode<'input, Node, T>
@@ -219,38 +210,36 @@ impl<'input, Node: ParserNodeType<'input>, Visitor: ParseTreeVisitor<'input, Nod
     fn accept(&self, visitor: &mut Visitor) { visitor.visit_error_node(self) }
 }
 
-pub trait ParseTreeVisitor<'input, Node: ParserNodeType<'input>> {
+///
+pub trait ParseTreeVisitor<'input, Node: ParserNodeType<'input>>:
+    VisitChildren<'input, Node>
+{
+    /// Called on terminal node
     fn visit_terminal(&mut self, node: &TerminalNode<'input, Node>) {}
     fn visit_error_node(&mut self, node: &ErrorNode<'input, Node>) {}
-    // fn visit_children(&mut self, node: &Node::Type) {}
+    /// Implement this only if you want to change children visiting algorithm
+    fn visit_children(&mut self, node: &Node::Type) { self.visit_children_inner(node) }
 }
 
-// /// How visitor is supposed to visit children
-// ///
-// /// Default implementation visits children recursively
-// /// To override it you would need to enable specialization feature
-// pub trait VisitChildren<'input, Node: ParserNodeType<'input>>{
-//     fn visit_children(&mut self, node: &Node::Type);
-// }
-//
-// impl<'input, Node, T> ParseTreeVisitor<'input, Node> for T
-// where
-//     Node: ParserNodeType<'input>,
-//     T: ParseTreeVisitor<'input, Node> + ?Sized,
-//     Node::Type: Visitable<T>,
-// {
-//     fn visit_terminal(&mut self, node: &TerminalNode<'input, Node>) {}
-//     fn visit_error_node(&mut self, node: &ErrorNode<'input, Node>) {}
-//     default fn visit_children(&mut self, node: &Node::Type) {}
-// }
+/// How visitor is supposed to visit children
+///
+/// Default implementation visits children recursively
+/// To override it you would need to enable specialization feature
+///
+/// It is already implemented for visitors that are bound by `'input`.
+pub trait VisitChildren<'input, Node: ParserNodeType<'input>> {
+    fn visit_children_inner(&mut self, node: &Node::Type);
+}
 
-// impl<'input, Node, T> ParseTreeVisitor<'input, Node> for T
-// where
-//     T: ParseTreeVisitor<'input, Node>,
-//     Node: ParserNodeType<'input>,
-// {
-//     default fn visit_children(&mut self, node: &Node::Type) { node.accept_children(self) }
-// }
+impl<'input, Node, T> VisitChildren<'input, Node> for T
+where
+    Node: ParserNodeType<'input>,
+    T: ParseTreeVisitor<'input, Node>,
+    for<'a> &'a mut Self: CoerceUnsized<&'a mut Node::Visitor>,
+    Node::Type: Visitable<Node::Visitor>,
+{
+    default fn visit_children_inner(&mut self, node: &Node::Type) { node.accept_children(self) }
+}
 
 pub trait Visitable<Vis: ?Sized> {
     fn accept(&self, visitor: &mut Vis) {

@@ -26,6 +26,8 @@ pub trait TokenSource<'input>: TokenAware<'input> {
      * -1 if the current token source does not track character positions.
      */
     fn get_char_position_in_line(&self) -> isize;
+
+    // todo don't call trait object from lexer
     fn get_input_stream(&mut self) -> Option<&mut dyn IntStream>;
     fn get_source_name(&self) -> String;
     //    fn set_token_factory<'c: 'b>(&mut self, f: &'c TokenFactory);

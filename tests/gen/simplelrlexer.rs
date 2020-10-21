@@ -19,7 +19,7 @@ use antlr_rust::token_source::TokenSource;
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
 use antlr_rust::PredictionContextCache;
 
-use antlr_rust::lazy_static;
+use antlr_rust::{lazy_static, Tid, TidAble, TidExt};
 
 use std::cell::RefCell;
 use std::marker::PhantomData;
@@ -48,14 +48,14 @@ lazy_static! {
 }
 
 pub type LexerContext<'input> =
-    BaseParserRuleContext<'input, EmptyCustomRuleContext<'input, LocalTokenFactory<'input>>>;
+    BaseRuleContext<'input, EmptyCustomRuleContext<'input, LocalTokenFactory<'input>>>;
 pub type LocalTokenFactory<'input> = CommonTokenFactory;
 
 type From<'a> = <LocalTokenFactory<'a> as TokenFactory<'a>>::From;
 
+#[derive(Tid)]
 pub struct SimpleLRLexer<'input, Input: CharStream<From<'input>>> {
     base: BaseLexer<'input, SimpleLRLexerActions, Input, LocalTokenFactory<'input>>,
-    //	static { RuntimeMetaData.checkVersion("4.8", RuntimeMetaData.VERSION); }
 }
 
 impl<'input, Input: CharStream<From<'input>>> Deref for SimpleLRLexer<'input, Input> {

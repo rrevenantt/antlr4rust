@@ -18,7 +18,6 @@ use crate::int_stream::EOF;
 use crate::interval_set::IntervalSet;
 use crate::lexer_action::LexerAction::*;
 use crate::lexer_action::*;
-use crate::rule_context::CustomRuleContext;
 use crate::transition::Transition;
 use crate::transition::*;
 
@@ -43,20 +42,12 @@ const SERIALIZED_VERSION: isize = 3;
 
 pub struct ATNDeserializer {
     deserialization_options: ATNDeserializationOptions,
-    data: Vec<u8>,
-    pos: isize,
-    uuid: String,
-    //    pd:PhantomData<*const T>
 }
 
 impl ATNDeserializer {
     pub fn new(options: Option<ATNDeserializationOptions>) -> ATNDeserializer {
         ATNDeserializer {
             deserialization_options: options.unwrap_or(ATNDeserializationOptions::default()),
-            data: Vec::new(),
-            pos: 0,
-            uuid: String::new(),
-            //            pd: PhantomData,
         }
     }
 
@@ -66,7 +57,7 @@ impl ATNDeserializer {
         unimplemented!()
     }
 
-    pub fn deserialize(&self, data: Chars) -> ATN {
+    pub fn deserialize(&self, data: Chars<'_>) -> ATN {
         let mut data = data.clone().map(|ch| {
             let mut ch = ch as isize;
             // decode surrogates
@@ -160,7 +151,6 @@ impl ATNDeserializer {
             if state_type == ATNSTATE_INVALID_STATE_NUMBER {
                 atn.add_state(self.state_factory(ATNSTATE_INVALID_TYPE, -1, i));
                 panic!("why invalid state serialized?");
-                continue;
             }
 
             let mut rule_index = data.next().unwrap();
@@ -438,11 +428,7 @@ impl ATNDeserializer {
         let mut precedence_states = Vec::new();
         for state in _atn.states.iter() {
             if let ATNStateType::DecisionState {
-                state:
-                    ATNDecisionState::StarLoopEntry {
-                        loop_back_state,
-                        is_precedence,
-                    },
+                state: ATNDecisionState::StarLoopEntry { .. },
                 ..
             } = state.get_state_type()
             {

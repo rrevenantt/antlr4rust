@@ -1,4 +1,7 @@
 # antlr4rust
+[![docs](https://docs.rs/antlr-rust/badge.svg)](https://docs.rs/antlr-rust)
+[![Crate](https://img.shields.io/crates/v/antlr_rust.svg)](https://crates.io/crates/antlr_rust)
+
 ANTLR4 runtime for Rust programming language 
 
 Tool(generator) part is currently located in rust-target branch of my antlr4 fork [rrevenantt/antlr4/tree/rust-target](https://github.com/rrevenantt/antlr4/tree/rust-target)
@@ -81,19 +84,25 @@ I.e. for `MultContext` struct will contain `a` and `b` fields containing child s
 `op` field with `TerminalNode` type which corresponds to individual `Token`.
 It also is possible to disable generic parse tree creation to keep only selected children via
 `parser.build_parse_trees = false`.
+
+### Key properties
+ - Supports full zero-copy parsing including byte parsers
+    (you should be able to write zero-copy serde deserializers).
+ - Supports downcasting in places where type is not known statically(trait objects and embedded action)
+ - Listener and 
   
 ### Differences with Java
 Although Rust runtime API has been made as close as possible to Java, 
 there are quite some differences because Rust is not an OOP language and is much more explicit. 
 
- - Supports full zero-copy parsing including byte parsers.
  - If you are using labeled alternatives, 
- struct generated for rule is an enum with variant for each alternative
+ struct generated for the rule is an enum with variant for each alternative
  - Parser needs to have ownership for listeners, but it is possible to get listener back via `ListenerId`
  otherwise `ParseTreeWalker` should be used.
  - In embedded actions to access parser you should use `recog` variable instead of `self`/`this`. 
- This is because predicate have to be inserted into two syntactically different places in generated parser
- - String `InputStream` have different index behavior when there are unicode characters. 
+ This is because predicates have to be inserted into two syntactically different places in generated parser 
+ and in one of them it is impossible to have parser as `self`.
+ - str based `InputStream` have different index behavior when there are unicode characters. 
  If you need exactly the same behavior, use `[u32]` based `InputStream`, or implement custom `CharStream`.
  - In actions you have to escape `'` in rust lifetimes with `\ ` because ANTLR considers them as strings, e.g. `Struct<\'lifetime>`
  - To make custom tokens you should use `@tokenfactory` custom action, instead of usual `TokenLabelType` parser option.

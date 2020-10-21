@@ -12,7 +12,8 @@ use crate::atn::INVALID_ALT;
 use crate::parser::ParserNodeType;
 use crate::parser_rule_context::{BaseParserRuleContext, ParserRuleContext};
 use crate::token_factory::{CommonTokenFactory, TokenFactory};
-use crate::tree::{ParseTree, ParseTreeListener, Tree};
+use crate::tree::{ParseTree, ParseTreeListener, ParseTreeVisitor, Tree};
+use better_any::{Tid, TidAble};
 
 //pub trait RuleContext:RuleNode {
 pub trait RuleContext<'input>: CustomRuleContext<'input> {
@@ -45,14 +46,15 @@ where
     })
 }
 
-#[doc(hidden)]
-pub unsafe trait Tid {
-    fn self_id(&self) -> TypeId;
-    fn id() -> TypeId
-    where
-        Self: Sized;
-}
+// #[doc(hidden)]
+// pub unsafe trait Tid {
+//     fn self_id(&self) -> TypeId;
+//     fn id() -> TypeId
+//     where
+//         Self: Sized;
+// }
 
+#[derive(Tid)]
 pub struct EmptyCustomRuleContext<'a, TF: TokenFactory<'a> + 'a>(
     pub(crate) PhantomData<&'a TF::Tok>,
 );
@@ -64,30 +66,32 @@ impl<'a, TF: TokenFactory<'a> + 'a> CustomRuleContext<'a> for EmptyCustomRuleCon
     fn get_rule_index(&self) -> usize { usize::max_value() }
 }
 
-unsafe impl<'a, TF: TokenFactory<'a> + 'a> Tid for EmptyCustomRuleContext<'a, TF> {
-    fn self_id(&self) -> TypeId {
-        TypeId::of::<EmptyCustomRuleContext<'static, CommonTokenFactory>>()
-    }
-
-    fn id() -> TypeId
-    where
-        Self: Sized,
-    {
-        TypeId::of::<EmptyCustomRuleContext<'static, CommonTokenFactory>>()
-    }
-}
+// unsafe impl<'a, TF: TokenFactory<'a> + 'a> Tid for EmptyCustomRuleContext<'a, TF> {
+//     fn self_id(&self) -> TypeId {
+//         TypeId::of::<EmptyCustomRuleContext<'static, CommonTokenFactory>>()
+//     }
+//
+//     fn id() -> TypeId
+//     where
+//         Self: Sized,
+//     {
+//         TypeId::of::<EmptyCustomRuleContext<'static, CommonTokenFactory>>()
+//     }
+// }
 
 pub type EmptyContext<'a, TF> =
     dyn ParserRuleContext<'a, TF = TF, Ctx = EmptyContextType<'a, TF>> + 'a;
 
+#[derive(Tid)]
 pub struct EmptyContextType<'a, TF: TokenFactory<'a>>(pub PhantomData<&'a TF>);
 
 impl<'a, TF: TokenFactory<'a>> ParserNodeType<'a> for EmptyContextType<'a, TF> {
     type TF = TF;
     type Type = dyn ParserRuleContext<'a, TF = Self::TF, Ctx = Self> + 'a;
+    type Visitor = dyn ParseTreeVisitor<'a, Self> + 'a;
 }
 
-pub trait CustomRuleContext<'input>: Tid {
+pub trait CustomRuleContext<'input> {
     type TF: TokenFactory<'input> + 'input;
     type Ctx: ParserNodeType<'input, TF = Self::TF>;
     //const RULE_INDEX:usize;
@@ -99,6 +103,7 @@ pub trait CustomRuleContext<'input>: Tid {
     // fn exit(_ctx: &dyn Tree<'input, Node=Self>, _listener: &mut dyn Any) where Self: Sized {}
 }
 
+#[derive(Tid)]
 pub struct BaseRuleContext<'input, ExtCtx: CustomRuleContext<'input>> {
     pub(crate) parent_ctx: RefCell<Option<Weak<<ExtCtx::Ctx as ParserNodeType<'input>>::Type>>>,
     invoking_state: Cell<isize>,
@@ -128,16 +133,16 @@ impl<'input, ExtCtx: CustomRuleContext<'input>> CustomRuleContext<'input>
     fn get_rule_index(&self) -> usize { self.ext.get_rule_index() }
 }
 
-unsafe impl<'input, Ctx: CustomRuleContext<'input>> Tid for BaseRuleContext<'input, Ctx> {
-    fn self_id(&self) -> TypeId { self.ext.self_id() }
-
-    fn id() -> TypeId
-    where
-        Self: Sized,
-    {
-        Ctx::id()
-    }
-}
+// unsafe impl<'input, Ctx: CustomRuleContext<'input>> Tid for BaseRuleContext<'input, Ctx> {
+//     fn self_id(&self) -> TypeId { self.ext.self_id() }
+//
+//     fn id() -> TypeId
+//     where
+//         Self: Sized,
+//     {
+//         Ctx::id()
+//     }
+// }
 
 impl<'input, ExtCtx: CustomRuleContext<'input>> RuleContext<'input>
     for BaseRuleContext<'input, ExtCtx>
@@ -174,7 +179,7 @@ impl<'input, ExtCtx: CustomRuleContext<'input>> ParseTree<'input>
 {
 }
 
-impl<'input, ExtCtx: CustomRuleContext<'input>> ParserRuleContext<'input>
+impl<'input, ExtCtx: CustomRuleContext<'input> + TidAble<'input>> ParserRuleContext<'input>
     for BaseRuleContext<'input, ExtCtx>
 {
 }

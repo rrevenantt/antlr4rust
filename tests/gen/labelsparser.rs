@@ -23,11 +23,12 @@ use antlr_rust::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use antlr_rust::token_source::TokenSource;
 use antlr_rust::token_stream::TokenStream;
 use antlr_rust::tree::{
-    ErrorNode, LeafNode, Listenable, ParseTree, ParseTreeListener, ParseTreeWalker, TerminalNode,
-    Visitable,
+    ErrorNode, LeafNode, Listenable, ParseTree, ParseTreeListener, ParseTreeVisitor,
+    ParseTreeWalker, TerminalNode, Visitable,
 };
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
 use antlr_rust::PredictionContextCache;
+use antlr_rust::{TidAble, TidExt};
 
 use std::any::{Any, TypeId};
 use std::borrow::{Borrow, BorrowMut};
@@ -87,7 +88,7 @@ type BaseParserType<'input, I> = BaseParser<
     LabelsParserExt,
     I,
     LabelsParserContextType,
-    dyn LabelsListener<'input> + 'static,
+    dyn LabelsListener<'input> + 'input,
 >;
 
 type TokenType<'input> = <LocalTokenFactory<'input> as TokenFactory<'input>>::Tok;
@@ -99,7 +100,7 @@ pub type LabelsTreeWalker<'input, 'a> =
 /// Parser for Labels grammar
 pub struct LabelsParser<'input, I, H>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
     base: BaseParserType<'input, I>,
@@ -110,10 +111,10 @@ where
 
 impl<'input, I, H> LabelsParser<'input, I, H>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
-    pub fn get_serialized_atn() -> &'static str { unimplemented!() }
+    pub fn get_serialized_atn() -> &'static str { _serializedATN }
 
     pub fn set_error_strategy(&mut self, strategy: H) { self.err_handler = strategy }
 
@@ -133,20 +134,20 @@ where
     }
 }
 
-impl<'input, I>
-    LabelsParser<'input, I, Box<dyn ErrorStrategy<'input, BaseParserType<'input, I>> + 'input>>
+type DynStrategy<'input, I> = Box<dyn ErrorStrategy<'input, BaseParserType<'input, I>> + 'input>;
+
+impl<'input, I> LabelsParser<'input, I, DynStrategy<'input, I>>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
 {
     pub fn with_dyn_strategy(input: I) -> Self {
         Self::with_strategy(input, Box::new(DefaultErrorStrategy::new()))
     }
 }
 
-impl<'input, I>
-    LabelsParser<'input, I, DefaultErrorStrategy<dyn LabelsParserContext<'input> + 'input>>
+impl<'input, I> LabelsParser<'input, I, DefaultErrorStrategy<'input, LabelsParserContextType>>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
 {
     pub fn new(input: I) -> Self { Self::with_strategy(input, DefaultErrorStrategy::new()) }
 }
@@ -161,16 +162,24 @@ pub trait LabelsParserContext<'input>:
 impl<'input> LabelsParserContext<'input> for TerminalNode<'input, LabelsParserContextType> {}
 impl<'input> LabelsParserContext<'input> for ErrorNode<'input, LabelsParserContextType> {}
 
+#[antlr_rust::impl_tid]
+impl<'input> antlr_rust::TidAble<'input> for dyn LabelsParserContext<'input> + 'input {}
+
+#[antlr_rust::impl_tid]
+impl<'input> antlr_rust::TidAble<'input> for dyn LabelsListener<'input> + 'input {}
+
 pub struct LabelsParserContextType;
+antlr_rust::type_id! {LabelsParserContextType}
 
 impl<'input> ParserNodeType<'input> for LabelsParserContextType {
     type TF = LocalTokenFactory<'input>;
     type Type = dyn LabelsParserContext<'input> + 'input;
+    type Visitor = dyn ParseTreeVisitor<'input, Self> + 'input;
 }
 
 impl<'input, I, H> Deref for LabelsParser<'input, I, H>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
     type Target = BaseParserType<'input, I>;
@@ -180,7 +189,7 @@ where
 
 impl<'input, I, H> DerefMut for LabelsParser<'input, I, H>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.base }
@@ -194,12 +203,12 @@ impl<'input> TokenAware<'input> for LabelsParserExt {
     type TF = LocalTokenFactory<'input>;
 }
 
-impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>>>
+impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
     ParserRecog<'input, BaseParserType<'input, I>> for LabelsParserExt
 {
 }
 
-impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>>>
+impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
     Actions<'input, BaseParserType<'input, I>> for LabelsParserExt
 {
     fn get_grammar_file_name(&self) -> &str { "Labels.g4" }
@@ -208,14 +217,14 @@ impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>>>
 
     fn get_vocabulary(&self) -> &dyn Vocabulary { &**VOCABULARY }
     fn sempred(
-        _localctx: &(dyn LabelsParserContext<'input> + 'input),
+        _localctx: Option<&(dyn LabelsParserContext<'input> + 'input)>,
         rule_index: isize,
         pred_index: isize,
         recog: &mut BaseParserType<'input, I>,
     ) -> bool {
         match rule_index {
             1 => LabelsParser::<'input, I, _>::e_sempred(
-                cast::<_, EContext<'input>>(_localctx),
+                _localctx.and_then(|x| x.downcast_ref()),
                 pred_index,
                 recog,
             ),
@@ -224,13 +233,12 @@ impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>>>
     }
 }
 
-impl<'input, I>
-    LabelsParser<'input, I, DefaultErrorStrategy<dyn LabelsParserContext<'input> + 'input>>
+impl<'input, I> LabelsParser<'input, I, DefaultErrorStrategy<'input, LabelsParserContextType>>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
 {
     fn e_sempred(
-        _localctx: &EContext<'input>,
+        _localctx: Option<&EContext<'input>>,
         pred_index: isize,
         recog: &mut <Self as Deref>::Target,
     ) -> bool {
@@ -269,7 +277,7 @@ impl<'input> CustomRuleContext<'input> for SContextExt<'input> {
     fn get_rule_index(&self) -> usize { RULE_s }
     //fn type_rule_index() -> usize where Self: Sized { RULE_s }
 }
-antlr_rust::type_id! {SContextExt}
+antlr_rust::type_id! {SContextExt<'a>}
 
 impl<'input> SContextExt<'input> {
     fn new(
@@ -302,7 +310,7 @@ impl<'input> SContextAttrs<'input> for SContext<'input> {}
 
 impl<'input, I, H> LabelsParser<'input, I, H>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
     pub fn s(&mut self) -> Result<Rc<SContextAll<'input>>, ANTLRError> {
@@ -347,7 +355,7 @@ pub enum EContextAll<'input> {
     IncContext(IncContext<'input>),
     Error(EContext<'input>),
 }
-antlr_rust::type_id! {EContextAll}
+antlr_rust::type_id! {EContextAll<'a>}
 
 impl<'input> antlr_rust::parser_rule_context::DerefSeal for EContextAll<'input> {}
 
@@ -394,7 +402,7 @@ impl<'input> CustomRuleContext<'input> for EContextExt<'input> {
     fn get_rule_index(&self) -> usize { RULE_e }
     //fn type_rule_index() -> usize where Self: Sized { RULE_e }
 }
-antlr_rust::type_id! {EContextExt}
+antlr_rust::type_id! {EContextExt<'a>}
 
 impl<'input> EContextExt<'input> {
     fn new(
@@ -452,7 +460,7 @@ pub struct AddContextExt<'input> {
     ph: PhantomData<&'input str>,
 }
 
-antlr_rust::type_id! {AddContextExt}
+antlr_rust::type_id! {AddContextExt<'a>}
 
 impl<'input> LabelsParserContext<'input> for AddContext<'input> {}
 
@@ -481,7 +489,6 @@ impl<'input> EContextAttrs<'input> for AddContext<'input> {}
 
 impl<'input> AddContextExt<'input> {
     fn new(ctx: &dyn EContextAttrs<'input>) -> Rc<EContextAll<'input>> {
-        //let base = (cast::<_,EContext>(&ctx));
         Rc::new(EContextAll::AddContext(BaseParserRuleContext::copy_from(
             ctx,
             AddContextExt {
@@ -513,7 +520,7 @@ pub struct ParensContextExt<'input> {
     ph: PhantomData<&'input str>,
 }
 
-antlr_rust::type_id! {ParensContextExt}
+antlr_rust::type_id! {ParensContextExt<'a>}
 
 impl<'input> LabelsParserContext<'input> for ParensContext<'input> {}
 
@@ -542,7 +549,6 @@ impl<'input> EContextAttrs<'input> for ParensContext<'input> {}
 
 impl<'input> ParensContextExt<'input> {
     fn new(ctx: &dyn EContextAttrs<'input>) -> Rc<EContextAll<'input>> {
-        //let base = (cast::<_,EContext>(&ctx));
         Rc::new(EContextAll::ParensContext(
             BaseParserRuleContext::copy_from(
                 ctx,
@@ -583,7 +589,7 @@ pub struct MultContextExt<'input> {
     ph: PhantomData<&'input str>,
 }
 
-antlr_rust::type_id! {MultContextExt}
+antlr_rust::type_id! {MultContextExt<'a>}
 
 impl<'input> LabelsParserContext<'input> for MultContext<'input> {}
 
@@ -612,7 +618,6 @@ impl<'input> EContextAttrs<'input> for MultContext<'input> {}
 
 impl<'input> MultContextExt<'input> {
     fn new(ctx: &dyn EContextAttrs<'input>) -> Rc<EContextAll<'input>> {
-        //let base = (cast::<_,EContext>(&ctx));
         Rc::new(EContextAll::MultContext(BaseParserRuleContext::copy_from(
             ctx,
             MultContextExt {
@@ -645,7 +650,7 @@ pub struct DecContextExt<'input> {
     ph: PhantomData<&'input str>,
 }
 
-antlr_rust::type_id! {DecContextExt}
+antlr_rust::type_id! {DecContextExt<'a>}
 
 impl<'input> LabelsParserContext<'input> for DecContext<'input> {}
 
@@ -674,7 +679,6 @@ impl<'input> EContextAttrs<'input> for DecContext<'input> {}
 
 impl<'input> DecContextExt<'input> {
     fn new(ctx: &dyn EContextAttrs<'input>) -> Rc<EContextAll<'input>> {
-        //let base = (cast::<_,EContext>(&ctx));
         Rc::new(EContextAll::DecContext(BaseParserRuleContext::copy_from(
             ctx,
             DecContextExt {
@@ -707,7 +711,7 @@ pub struct AnIDContextExt<'input> {
     ph: PhantomData<&'input str>,
 }
 
-antlr_rust::type_id! {AnIDContextExt}
+antlr_rust::type_id! {AnIDContextExt<'a>}
 
 impl<'input> LabelsParserContext<'input> for AnIDContext<'input> {}
 
@@ -736,7 +740,6 @@ impl<'input> EContextAttrs<'input> for AnIDContext<'input> {}
 
 impl<'input> AnIDContextExt<'input> {
     fn new(ctx: &dyn EContextAttrs<'input>) -> Rc<EContextAll<'input>> {
-        //let base = (cast::<_,EContext>(&ctx));
         Rc::new(EContextAll::AnIDContext(BaseParserRuleContext::copy_from(
             ctx,
             AnIDContextExt {
@@ -769,7 +772,7 @@ pub struct AnIntContextExt<'input> {
     ph: PhantomData<&'input str>,
 }
 
-antlr_rust::type_id! {AnIntContextExt}
+antlr_rust::type_id! {AnIntContextExt<'a>}
 
 impl<'input> LabelsParserContext<'input> for AnIntContext<'input> {}
 
@@ -798,7 +801,6 @@ impl<'input> EContextAttrs<'input> for AnIntContext<'input> {}
 
 impl<'input> AnIntContextExt<'input> {
     fn new(ctx: &dyn EContextAttrs<'input>) -> Rc<EContextAll<'input>> {
-        //let base = (cast::<_,EContext>(&ctx));
         Rc::new(EContextAll::AnIntContext(BaseParserRuleContext::copy_from(
             ctx,
             AnIntContextExt {
@@ -829,7 +831,7 @@ pub struct IncContextExt<'input> {
     ph: PhantomData<&'input str>,
 }
 
-antlr_rust::type_id! {IncContextExt}
+antlr_rust::type_id! {IncContextExt<'a>}
 
 impl<'input> LabelsParserContext<'input> for IncContext<'input> {}
 
@@ -858,7 +860,6 @@ impl<'input> EContextAttrs<'input> for IncContext<'input> {}
 
 impl<'input> IncContextExt<'input> {
     fn new(ctx: &dyn EContextAttrs<'input>) -> Rc<EContextAll<'input>> {
-        //let base = (cast::<_,EContext>(&ctx));
         Rc::new(EContextAll::IncContext(BaseParserRuleContext::copy_from(
             ctx,
             IncContextExt {
@@ -872,7 +873,7 @@ impl<'input> IncContextExt<'input> {
 
 impl<'input, I, H> LabelsParser<'input, I, H>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
     pub fn e(&mut self) -> Result<Rc<EContextAll<'input>>, ANTLRError> { self.e_rec(0) }

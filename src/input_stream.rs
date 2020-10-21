@@ -5,7 +5,7 @@ use std::convert::TryFrom;
 use std::io::Read;
 use std::iter::FromIterator;
 use std::marker::PhantomData;
-use std::ops::{Index, Range, RangeFrom, RangeFull};
+use std::ops::{Deref, Index, Range, RangeFrom, RangeFull};
 use std::result;
 use std::slice::{from_raw_parts, SliceIndex};
 use std::str::{CharIndices, Chars};
@@ -15,47 +15,57 @@ use crate::errors::ANTLRError;
 use crate::int_stream::{IntStream, EOF};
 use crate::interval_set::Interval;
 use crate::token::Token;
+use better_any::{impl_tid, TidAble};
 
 /// Default rust target input stream.
 ///
-/// Since Rust uses UTF-8 format which does not support indexing,
-/// `InputStream<str>` has slightly different index behavior in compare to java runtime when there are
+/// Since Rust uses UTF-8 format which does not support indexing by char,
+/// `InputStream<&str>` has slightly different index behavior in compare to java runtime when there are
 /// non-ASCII unicode characters.
 /// If you need it to generate exactly the same indexes as Java runtime, you have to use `CodePoint8/16/32BitCharStream`,
-/// which does not use rusts native `str` type,
-pub struct InputStream<'a, Data: ?Sized> {
+/// which does not use rusts native `str` type, so it would do additional conversions and allocations along the way.
+pub struct InputStream<Data: Deref> {
     name: String,
-    data_raw: &'a Data,
+    data_raw: Data,
     index: isize,
 }
 
-impl<'a, T: From<&'a str>> CharStream<T> for InputStream<'a, str> {
-    /// Returns text from underlying string for start..=stop range
-    /// panics if provided indexes are invalid
+#[impl_tid]
+impl<'a, T: ?Sized + 'static> TidAble<'a> for InputStream<&'a T> {}
+
+#[impl_tid]
+impl<'a, T: ?Sized + 'static> TidAble<'a> for InputStream<Box<T>> {}
+
+impl<'a, T: From<&'a str>> CharStream<T> for InputStream<&'a str> {
     #[inline]
     fn get_text(&self, start: isize, stop: isize) -> T { self.get_text_inner(start, stop).into() }
 }
 
-pub type ByteCharStream<'a> = InputStream<'a, [u8]>;
-pub type CodePoint8BitCharStream<'a> = InputStream<'a, [u8]>;
-pub type CodePoint16BitCharStream<'a> = InputStream<'a, [u16]>;
-pub type CodePoint32BitCharStream<'a> = InputStream<'a, [u32]>;
+impl<T: From<D::Owned>, D: ?Sized + InputData> CharStream<T> for InputStream<Box<D>> {
+    #[inline]
+    fn get_text(&self, start: isize, stop: isize) -> T { self.get_text_owned(start, stop).into() }
+}
 
-impl<'a, T> CharStream<&'a [T]> for InputStream<'a, [T]>
+pub type ByteStream<'a> = InputStream<&'a [u8]>;
+pub type CodePoint8BitCharStream<'a> = InputStream<&'a [u8]>;
+pub type CodePoint16BitCharStream<'a> = InputStream<&'a [u16]>;
+pub type CodePoint32BitCharStream<'a> = InputStream<&'a [u32]>;
+
+impl<'a, T> CharStream<&'a [T]> for InputStream<&'a [T]>
 where
     [T]: InputData,
 {
     fn get_text(&self, a: isize, b: isize) -> &'a [T] { self.get_text_inner(a, b).into() }
 }
 
-impl<'a, T> CharStream<String> for InputStream<'a, [T]>
+impl<'a, T> CharStream<String> for InputStream<&'a [T]>
 where
     [T]: InputData,
 {
     fn get_text(&self, a: isize, b: isize) -> String { self.get_text_inner(a, b).to_display() }
 }
 
-impl<'a, 'b, T> CharStream<Cow<'b, str>> for InputStream<'a, [T]>
+impl<'a, 'b, T> CharStream<Cow<'b, str>> for InputStream<&'a [T]>
 where
     [T]: InputData,
 {
@@ -64,9 +74,31 @@ where
     }
 }
 
-impl<'a, Data> InputStream<'a, Data>
+impl<Data: ?Sized + InputData> InputStream<Box<Data>> {
+    fn get_text_owned(&self, start: isize, stop: isize) -> Data::Owned {
+        let start = start as usize;
+        let stop = self.data_raw.offset(stop, 1).unwrap_or(stop) as usize;
+
+        if stop < self.data_raw.len() {
+            &self.data_raw[start..stop]
+        } else {
+            &self.data_raw[start..]
+        }
+        .to_owned()
+    }
+
+    pub fn new_owned(data: Box<Data>) -> Self {
+        Self {
+            name: "<empty>".to_string(),
+            data_raw: data.into(),
+            index: 0,
+        }
+    }
+}
+
+impl<'a, Data> InputStream<&'a Data>
 where
-    Data: InputData + ?Sized,
+    Data: ?Sized + InputData,
 {
     fn get_text_inner(&self, start: isize, stop: isize) -> &'a Data {
         // println!("get text {}..{} of {:?}",start,stop,self.data_raw.to_display());
@@ -93,7 +125,11 @@ where
             // phantom: Default::default(),
         }
     }
-
+}
+impl<'a, Data: Deref> InputStream<Data>
+where
+    Data::Target: InputData,
+{
     #[inline]
     pub fn reset(&mut self) { self.index = 0 }
 
@@ -101,7 +137,10 @@ where
     pub fn lt(&mut self, offset: isize) -> isize { self.la(offset) }
 }
 
-impl<'a, Data: InputData + ?Sized> IntStream for InputStream<'a, Data> {
+impl<'a, Data: Deref> IntStream for InputStream<Data>
+where
+    Data::Target: InputData,
+{
     #[inline]
     fn consume(&mut self) -> result::Result<(), ANTLRError> {
         if let Some(index) = self.data_raw.offset(self.index, 1) {

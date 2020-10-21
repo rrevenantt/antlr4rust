@@ -9,7 +9,6 @@ use std::rc::Rc;
 use crate::atn_simulator::IATNSimulator;
 use crate::interval_set::IntervalSet;
 use crate::parser::{Parser, ParserNodeType};
-use crate::parser_rule_context::ParserRuleContext;
 use crate::rule_context::states_stack;
 use crate::token::{OwningToken, Token};
 use crate::transition::PredicateTransition;
@@ -74,7 +73,7 @@ impl Clone for ANTLRError {
 }
 
 impl Display for ANTLRError {
-    fn fmt(&self, _f: &mut Formatter) -> fmt::Result { <Self as Debug>::fmt(self, _f) }
+    fn fmt(&self, _f: &mut Formatter<'_>) -> fmt::Result { <Self as Debug>::fmt(self, _f) }
 }
 
 impl Error for ANTLRError {

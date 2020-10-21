@@ -55,7 +55,7 @@ impl SemanticContext {
                 } else {
                     None
                 };
-                parser.sempred(outer_context, *rule_index, *pred_index)
+                parser.sempred(_localctx, *rule_index, *pred_index)
             }
             SemanticContext::Precedence(prec) => parser.precpred(Some(outer_context), *prec),
             SemanticContext::AND(ops) => ops.iter().all(|sem| sem.evaluate(parser, outer_context)),

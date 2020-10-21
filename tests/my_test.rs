@@ -21,7 +21,7 @@ mod gen {
     use antlr_rust::token_stream::{TokenStream, UnbufferedTokenStream};
     use antlr_rust::tree::{
         ParseTree, ParseTreeListener, ParseTreeVisitor, ParseTreeWalker, TerminalNode, Tree,
-        Visitable,
+        VisitChildren, Visitable,
     };
     use antlr_rust::InputStream;
     use csvlexer::*;
@@ -32,7 +32,9 @@ mod gen {
     use referencetoatnparser::ReferenceToATNParser;
     use xmllexer::XMLLexer;
 
-    use crate::gen::csvparser::{CSVParserContext, CSVParserContextType, HdrContext, RowContext};
+    use crate::gen::csvparser::{
+        CSVParserContext, CSVParserContextType, CsvFileContext, HdrContext, RowContext,
+    };
     use crate::gen::csvvisitor::CSVVisitor;
     use crate::gen::labelslexer::LabelsLexer;
     use crate::gen::labelsparser::{AddContext, EContextAll, LabelsParser};
@@ -208,10 +210,12 @@ if (x < x && a > 0) then duh
     static FACTORY: OwningTokenFactory = OwningTokenFactory;
 
     #[test]
-    fn adaptive_predict_test() {
+    fn test_adaptive_predict_and_owned_tree() {
         let text = "a 34 b".to_owned();
-        let mut _lexer =
-            ReferenceToATNLexer::new_with_token_factory(InputStream::new(&*text), &FACTORY);
+        let mut _lexer = ReferenceToATNLexer::new_with_token_factory(
+            InputStream::new_owned(text.into_boxed_str()),
+            &FACTORY,
+        );
         let token_source = CommonTokenStream::new(_lexer);
         let mut parser = ReferenceToATNParser::new(token_source);
         parser.add_parse_listener(Box::new(Listener2 {}));
@@ -344,19 +348,23 @@ if (x < x && a > 0) then duh
         }
     }
 
-    struct MyCSVVisitor(String);
+    struct MyCSVVisitor<'i>(Vec<&'i str>);
 
-    impl<'i> ParseTreeVisitor<'i, CSVParserContextType> for MyCSVVisitor {
+    impl<'i> ParseTreeVisitor<'i, CSVParserContextType> for MyCSVVisitor<'i> {
         fn visit_terminal(&mut self, node: &TerminalNode<'i, CSVParserContextType>) {
             if node.symbol.get_token_type() == csvparser::TEXT {
-                write!(&mut self.0, "{} ", node.get_text());
+                if let Cow::Borrowed(s) = node.symbol.text {
+                    self.0.push(s);
+                }
             }
         }
     }
 
     use csvparser::RowContextAttrs;
+    use std::borrow::Cow;
+    use std::rc::Rc;
 
-    impl<'i> CSVVisitor<'i> for MyCSVVisitor {
+    impl<'i> CSVVisitor<'i> for MyCSVVisitor<'i> {
         fn visit_hdr(&mut self, ctx: &HdrContext<'i>) {}
 
         fn visit_row(&mut self, ctx: &RowContext<'i>) {
@@ -366,19 +374,24 @@ if (x < x && a > 0) then duh
         }
     }
 
+    // tests zero-copy parsing with non static visitor
     #[test]
     fn test_visitor() {
+        fn parse<'a>(tf: &'a ArenaCommonFactory<'a>) -> Rc<CsvFileContext<'a>> {
+            let mut _lexer =
+                CSVLexer::new_with_token_factory(InputStream::new("h1,h2\nd1,d2\nd3\n".into()), tf);
+            let token_source = CommonTokenStream::new(_lexer);
+            let mut parser = CSVParser::new(token_source);
+            let result = parser.csvFile().expect("parsed unsuccessfully");
+
+            let mut visitor = MyCSVVisitor(Vec::new());
+            result.accept(&mut visitor);
+            assert_eq!(visitor.0, vec!["d1", "d2"]);
+
+            result
+        }
         let tf = ArenaCommonFactory::default();
-        let mut _lexer =
-            CSVLexer::new_with_token_factory(InputStream::new("h1,h2\nd1,d2\nd3\n".into()), &tf);
-        let token_source = CommonTokenStream::new(_lexer);
-        let mut parser = CSVParser::new(token_source);
-        let result = parser.csvFile().expect("parsed unsuccessfully");
 
-        let mut visitor = MyCSVVisitor(String::new());
-
-        result.accept(&mut visitor);
-
-        assert_eq!(visitor.0, "d1 d2 ");
+        let result = parse(&tf);
     }
 }

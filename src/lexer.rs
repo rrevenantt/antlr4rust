@@ -104,7 +104,7 @@ where
 
     fn sempred(
         &mut self,
-        _localctx: &<Self::Node as ParserNodeType<'input>>::Type,
+        _localctx: Option<&<Self::Node as ParserNodeType<'input>>::Type>,
         rule_index: isize,
         action_index: isize,
     ) -> bool {
@@ -113,7 +113,7 @@ where
 
     fn action(
         &mut self,
-        _localctx: &<Self::Node as ParserNodeType<'input>>::Type,
+        _localctx: Option<&<Self::Node as ParserNodeType<'input>>::Type>,
         rule_index: isize,
         action_index: isize,
     ) {

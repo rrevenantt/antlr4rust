@@ -23,11 +23,12 @@ use antlr_rust::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use antlr_rust::token_source::TokenSource;
 use antlr_rust::token_stream::TokenStream;
 use antlr_rust::tree::{
-    ErrorNode, LeafNode, Listenable, ParseTree, ParseTreeListener, ParseTreeWalker, TerminalNode,
-    Visitable,
+    ErrorNode, LeafNode, Listenable, ParseTree, ParseTreeListener, ParseTreeVisitor,
+    ParseTreeWalker, TerminalNode, Visitable,
 };
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
 use antlr_rust::PredictionContextCache;
+use antlr_rust::{TidAble, TidExt};
 
 use std::any::{Any, TypeId};
 use std::borrow::{Borrow, BorrowMut};
@@ -61,7 +62,7 @@ type BaseParserType<'input, I> = BaseParser<
     SimpleLRParserExt,
     I,
     SimpleLRParserContextType,
-    dyn SimpleLRListener<'input> + 'static,
+    dyn SimpleLRListener<'input> + 'input,
 >;
 
 type TokenType<'input> = <LocalTokenFactory<'input> as TokenFactory<'input>>::Tok;
@@ -73,7 +74,7 @@ pub type SimpleLRTreeWalker<'input, 'a> =
 /// Parser for SimpleLR grammar
 pub struct SimpleLRParser<'input, I, H>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
     base: BaseParserType<'input, I>,
@@ -84,10 +85,10 @@ where
 
 impl<'input, I, H> SimpleLRParser<'input, I, H>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
-    pub fn get_serialized_atn() -> &'static str { unimplemented!() }
+    pub fn get_serialized_atn() -> &'static str { _serializedATN }
 
     pub fn set_error_strategy(&mut self, strategy: H) { self.err_handler = strategy }
 
@@ -111,20 +112,20 @@ where
     }
 }
 
-impl<'input, I>
-    SimpleLRParser<'input, I, Box<dyn ErrorStrategy<'input, BaseParserType<'input, I>> + 'input>>
+type DynStrategy<'input, I> = Box<dyn ErrorStrategy<'input, BaseParserType<'input, I>> + 'input>;
+
+impl<'input, I> SimpleLRParser<'input, I, DynStrategy<'input, I>>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
 {
     pub fn with_dyn_strategy(input: I) -> Self {
         Self::with_strategy(input, Box::new(DefaultErrorStrategy::new()))
     }
 }
 
-impl<'input, I>
-    SimpleLRParser<'input, I, DefaultErrorStrategy<dyn SimpleLRParserContext<'input> + 'input>>
+impl<'input, I> SimpleLRParser<'input, I, DefaultErrorStrategy<'input, SimpleLRParserContextType>>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
 {
     pub fn new(input: I) -> Self { Self::with_strategy(input, DefaultErrorStrategy::new()) }
 }
@@ -139,16 +140,24 @@ pub trait SimpleLRParserContext<'input>:
 impl<'input> SimpleLRParserContext<'input> for TerminalNode<'input, SimpleLRParserContextType> {}
 impl<'input> SimpleLRParserContext<'input> for ErrorNode<'input, SimpleLRParserContextType> {}
 
+#[antlr_rust::impl_tid]
+impl<'input> antlr_rust::TidAble<'input> for dyn SimpleLRParserContext<'input> + 'input {}
+
+#[antlr_rust::impl_tid]
+impl<'input> antlr_rust::TidAble<'input> for dyn SimpleLRListener<'input> + 'input {}
+
 pub struct SimpleLRParserContextType;
+antlr_rust::type_id! {SimpleLRParserContextType}
 
 impl<'input> ParserNodeType<'input> for SimpleLRParserContextType {
     type TF = LocalTokenFactory<'input>;
     type Type = dyn SimpleLRParserContext<'input> + 'input;
+    type Visitor = dyn ParseTreeVisitor<'input, Self> + 'input;
 }
 
 impl<'input, I, H> Deref for SimpleLRParser<'input, I, H>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
     type Target = BaseParserType<'input, I>;
@@ -158,7 +167,7 @@ where
 
 impl<'input, I, H> DerefMut for SimpleLRParser<'input, I, H>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.base }
@@ -172,12 +181,12 @@ impl<'input> TokenAware<'input> for SimpleLRParserExt {
     type TF = LocalTokenFactory<'input>;
 }
 
-impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>>>
+impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
     ParserRecog<'input, BaseParserType<'input, I>> for SimpleLRParserExt
 {
 }
 
-impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>>>
+impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
     Actions<'input, BaseParserType<'input, I>> for SimpleLRParserExt
 {
     fn get_grammar_file_name(&self) -> &str { "SimpleLR.g4" }
@@ -186,14 +195,14 @@ impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>>>
 
     fn get_vocabulary(&self) -> &dyn Vocabulary { &**VOCABULARY }
     fn sempred(
-        _localctx: &(dyn SimpleLRParserContext<'input> + 'input),
+        _localctx: Option<&(dyn SimpleLRParserContext<'input> + 'input)>,
         rule_index: isize,
         pred_index: isize,
         recog: &mut BaseParserType<'input, I>,
     ) -> bool {
         match rule_index {
             1 => SimpleLRParser::<'input, I, _>::a_sempred(
-                cast::<_, AContext<'input>>(_localctx),
+                _localctx.and_then(|x| x.downcast_ref()),
                 pred_index,
                 recog,
             ),
@@ -202,13 +211,12 @@ impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>>>
     }
 }
 
-impl<'input, I>
-    SimpleLRParser<'input, I, DefaultErrorStrategy<dyn SimpleLRParserContext<'input> + 'input>>
+impl<'input, I> SimpleLRParser<'input, I, DefaultErrorStrategy<'input, SimpleLRParserContextType>>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
 {
     fn a_sempred(
-        _localctx: &AContext<'input>,
+        _localctx: Option<&AContext<'input>>,
         pred_index: isize,
         recog: &mut <Self as Deref>::Target,
     ) -> bool {
@@ -243,7 +251,7 @@ impl<'input> CustomRuleContext<'input> for SContextExt<'input> {
     fn get_rule_index(&self) -> usize { RULE_s }
     //fn type_rule_index() -> usize where Self: Sized { RULE_s }
 }
-antlr_rust::type_id! {SContextExt}
+antlr_rust::type_id! {SContextExt<'a>}
 
 impl<'input> SContextExt<'input> {
     fn new(
@@ -273,7 +281,7 @@ impl<'input> SContextAttrs<'input> for SContext<'input> {}
 
 impl<'input, I, H> SimpleLRParser<'input, I, H>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
     pub fn s(&mut self) -> Result<Rc<SContextAll<'input>>, ANTLRError> {
@@ -333,7 +341,7 @@ impl<'input> CustomRuleContext<'input> for AContextExt<'input> {
     fn get_rule_index(&self) -> usize { RULE_a }
     //fn type_rule_index() -> usize where Self: Sized { RULE_a }
 }
-antlr_rust::type_id! {AContextExt}
+antlr_rust::type_id! {AContextExt<'a>}
 
 impl<'input> AContextExt<'input> {
     fn new(
@@ -371,7 +379,7 @@ impl<'input> AContextAttrs<'input> for AContext<'input> {}
 
 impl<'input, I, H> SimpleLRParser<'input, I, H>
 where
-    I: TokenStream<'input, TF = LocalTokenFactory<'input>>,
+    I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
     pub fn a(&mut self) -> Result<Rc<AContextAll<'input>>, ANTLRError> { self.a_rec(0) }

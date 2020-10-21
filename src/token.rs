@@ -11,6 +11,8 @@ use crate::int_stream::EOF;
 use crate::token_factory::{INVALID_COMMON, INVALID_OWNING};
 use crate::token_source::TokenSource;
 
+use better_any::type_id;
+
 pub const TOKEN_INVALID_TYPE: isize = 0;
 pub const TOKEN_EPSILON: isize = -2;
 pub const TOKEN_MIN_USER_TOKEN_TYPE: isize = 1;
@@ -46,8 +48,11 @@ pub trait Token: Debug + Display {
 pub type OwningToken = GenericToken<String>;
 pub type CommonToken<'a> = GenericToken<Cow<'a, str>>;
 
+type_id!(OwningToken);
+type_id!(CommonToken<'a>);
+
 #[derive(Debug)]
-pub struct GenericToken<T: Borrow<str> + Debug = String> {
+pub struct GenericToken<T> {
     //    source: Option<(Box<TokenSource>,Box<CharStream>)>,
     pub token_type: isize,
     pub channel: isize,
@@ -60,7 +65,10 @@ pub struct GenericToken<T: Borrow<str> + Debug = String> {
     pub read_only: bool,
 }
 
-impl<T: Borrow<str> + Debug + Clone> Clone for GenericToken<T> {
+impl<T: Clone> Clone for GenericToken<T>
+where
+    Self: Token,
+{
     fn clone(&self) -> Self {
         Self {
             token_type: self.token_type,

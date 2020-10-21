@@ -19,7 +19,7 @@ use antlr_rust::token_source::TokenSource;
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
 use antlr_rust::PredictionContextCache;
 
-use antlr_rust::lazy_static;
+use antlr_rust::{lazy_static, Tid, TidAble, TidExt};
 
 use std::cell::RefCell;
 use std::marker::PhantomData;
@@ -127,14 +127,14 @@ lazy_static! {
 }
 
 pub type LexerContext<'input> =
-    BaseParserRuleContext<'input, EmptyCustomRuleContext<'input, LocalTokenFactory<'input>>>;
+    BaseRuleContext<'input, EmptyCustomRuleContext<'input, LocalTokenFactory<'input>>>;
 pub type LocalTokenFactory<'input> = CommonTokenFactory;
 
 type From<'a> = <LocalTokenFactory<'a> as TokenFactory<'a>>::From;
 
+#[derive(Tid)]
 pub struct XMLLexer<'input, Input: CharStream<From<'input>>> {
     base: BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>,
-    //	static { RuntimeMetaData.checkVersion("4.8", RuntimeMetaData.VERSION); }
 }
 
 impl<'input, Input: CharStream<From<'input>>> Deref for XMLLexer<'input, Input> {
@@ -190,32 +190,24 @@ impl<'input, Input: CharStream<From<'input>>>
     for XMLLexerActions
 {
     fn action(
-        _localctx: &EmptyContext<'input, LocalTokenFactory<'input>>,
+        _localctx: Option<&EmptyContext<'input, LocalTokenFactory<'input>>>,
         rule_index: isize,
         action_index: isize,
         recog: &mut BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>,
     ) {
         match rule_index {
-            10 => XMLLexer::<'input>::CLOSE_action(
-                cast::<_, LexerContext<'input>>(_localctx),
-                action_index,
-                recog,
-            ),
+            10 => XMLLexer::<'input>::CLOSE_action(None, action_index, recog),
             _ => {}
         }
     }
     fn sempred(
-        _localctx: &EmptyContext<'input, LocalTokenFactory<'input>>,
+        _localctx: Option<&EmptyContext<'input, LocalTokenFactory<'input>>>,
         rule_index: isize,
         pred_index: isize,
         recog: &mut BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>,
     ) -> bool {
         match rule_index {
-            0 => XMLLexer::<'input>::COMMENT_sempred(
-                cast::<_, LexerContext<'input>>(_localctx),
-                pred_index,
-                recog,
-            ),
+            0 => XMLLexer::<'input>::COMMENT_sempred(None, pred_index, recog),
             _ => true,
         }
     }
@@ -223,7 +215,7 @@ impl<'input, Input: CharStream<From<'input>>>
 
 impl<'input, Input: CharStream<From<'input>>> XMLLexer<'input, Input> {
     fn CLOSE_action(
-        _localctx: &LexerContext<'input>,
+        _localctx: Option<&LexerContext<'input>>,
         action_index: isize,
         recog: &mut <Self as Deref>::Target,
     ) {
@@ -236,7 +228,7 @@ impl<'input, Input: CharStream<From<'input>>> XMLLexer<'input, Input> {
         }
     }
     fn COMMENT_sempred(
-        _localctx: &LexerContext<'input>,
+        _localctx: Option<&LexerContext<'input>>,
         pred_index: isize,
         recog: &mut <Self as Deref>::Target,
     ) -> bool {
