@@ -1031,6 +1031,7 @@ where
                         &mut recog.base,
                     )))?,
                 }
+
                 let tmp = recog.input.lt(-1).cloned();
                 recog.ctx.as_ref().unwrap().set_stop(tmp);
                 recog.base.set_state(36);

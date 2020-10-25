@@ -192,6 +192,15 @@ pub type ArenaCommonFactory<'a> = ArenaFactory<'a, CommonTokenFactory, CommonTok
 
 /// This is a wrapper for Token factory that allows to allocate tokens in separate arena.
 /// It can allow to significantly improve performance by passing Tokens by references everywhere.
+///
+/// Requires `&'a Tok: Default` bound to produce invalid tokens, which can be easily implemented
+/// like this:
+/// ```text
+/// lazy_static!{ static ref INVALID_TOKEN:CustomToken = ... }
+/// impl Default for &'_ CustomToken {
+///     fn default() -> Self { &**INVALID_TOKEN }
+/// }
+/// ```
 // Box is used here because it is almost always should be used for token factory
 #[derive(Tid)]
 pub struct ArenaFactory<'input, TF, T>

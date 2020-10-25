@@ -2,7 +2,7 @@
 [![docs](https://docs.rs/antlr-rust/badge.svg)](https://docs.rs/antlr-rust)
 [![Crate](https://img.shields.io/crates/v/antlr_rust.svg)](https://crates.io/crates/antlr_rust)
 
-ANTLR4 runtime for Rust programming language 
+[ANTLR4](https://github.com/antlr/antlr4) runtime for Rust programming language.
 
 Tool(generator) part is currently located in rust-target branch of my antlr4 fork [rrevenantt/antlr4/tree/rust-target](https://github.com/rrevenantt/antlr4/tree/rust-target)
 Latest version is automatically built to [releases](https://github.com/rrevenantt/antlr4rust/releases) on this repository.
@@ -12,9 +12,6 @@ For examples you can see [grammars](grammars), [tests/gen](tests/gen) for corres
 and [tests/my_tests.rs](tests/my_test.rs) for actual usage examples
 
 ### Implementation status
-
-Everything is implemented, "business" logic is quite stable and well tested, but user facing 
-API is not very robust yet and very likely will have some changes.
 
 For now development is going on in this repository 
 but eventually it will be merged to main ANTLR4 repo
@@ -40,7 +37,7 @@ Can be done after merge:
  - run rustfmt on generated parser
 ###### Long term improvements
  - generate enum for labeled alternatives without redundant `Error` option
- - option to generate fields instead of getters by default
+ - option to generate fields instead of getters by default and make visiting based on fields
  - make tree generic over pointer type and allow tree nodes to arena.
  (requires GAT, otherwise it would be a problem for users that want ownership for parse tree)
  - support stable rust
@@ -84,12 +81,6 @@ I.e. for `MultContext` struct will contain `a` and `b` fields containing child s
 `op` field with `TerminalNode` type which corresponds to individual `Token`.
 It also is possible to disable generic parse tree creation to keep only selected children via
 `parser.build_parse_trees = false`.
-
-### Key properties
- - Supports full zero-copy parsing including byte parsers
-    (you should be able to write zero-copy serde deserializers).
- - Supports downcasting in places where type is not known statically(trait objects and embedded action)
- - Listener and 
   
 ### Differences with Java
 Although Rust runtime API has been made as close as possible to Java, 
@@ -106,11 +97,12 @@ there are quite some differences because Rust is not an OOP language and is much
  If you need exactly the same behavior, use `[u32]` based `InputStream`, or implement custom `CharStream`.
  - In actions you have to escape `'` in rust lifetimes with `\ ` because ANTLR considers them as strings, e.g. `Struct<\'lifetime>`
  - To make custom tokens you should use `@tokenfactory` custom action, instead of usual `TokenLabelType` parser option.
- In Rust target TokenFactory is main customisation interface that allows to specify input type of token type. 
+ ANTLR parser options can accept only single identifiers while Rust target needs know about lifetime as well. 
+ Also in Rust target `TokenFactory` is the way to specify token type. As example you can see [CSV](grammars/CSV.g4) test grammar.
  - All rule context variables (rule argument or rule return) should implement `Default + Clone`.
  
 ### Unsafe
-Currently, unsafe is used only to cast from trait object back to original type 
+Currently, unsafe is used only for downcasting (through another crate) 
 and to update data inside Rc via `get_mut_unchecked`(returned mutable reference is used immediately and not stored anywhere)
 
 ### Versioning

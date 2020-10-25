@@ -1,3 +1,7 @@
+//!
+//!
+//!
+//!
 use std::any::{type_name, Any};
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::{Ref, RefCell, RefMut};
@@ -19,8 +23,6 @@ use crate::tree::{
     ErrorNode, ParseTree, ParseTreeListener, ParseTreeVisitor, TerminalNode, Tree, Visitable,
 };
 use better_any::{Tid, TidAble, TidExt};
-
-// use crate::utils::IndexIter;
 
 pub trait ParserRuleContext<'input>:
     ParseTree<'input> + RuleContext<'input> + Debug + Tid<'input>

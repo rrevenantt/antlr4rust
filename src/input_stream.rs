@@ -51,11 +51,13 @@ pub type CodePoint8BitCharStream<'a> = InputStream<&'a [u8]>;
 pub type CodePoint16BitCharStream<'a> = InputStream<&'a [u16]>;
 pub type CodePoint32BitCharStream<'a> = InputStream<&'a [u32]>;
 
-impl<'a, T> CharStream<&'a [T]> for InputStream<&'a [T]>
+impl<'a, T> CharStream<Cow<'a, [T]>> for InputStream<&'a [T]>
 where
     [T]: InputData,
 {
-    fn get_text(&self, a: isize, b: isize) -> &'a [T] { self.get_text_inner(a, b).into() }
+    fn get_text(&self, a: isize, b: isize) -> Cow<'a, [T]> {
+        Cow::Borrowed(self.get_text_inner(a, b))
+    }
 }
 
 impl<'a, T> CharStream<String> for InputStream<&'a [T]>
