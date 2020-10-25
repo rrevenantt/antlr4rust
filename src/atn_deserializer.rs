@@ -122,7 +122,7 @@ impl ATNDeserializer {
         }
 
         bytes.reverse();
-        let uuid = Uuid::from_bytes(bytes.as_slice()).unwrap();
+        let uuid = Uuid::from_slice(&bytes).unwrap();
         if !SUPPORTED_UUIDS.contains(&uuid) {
             panic!("Could not deserialize ATN with UUID {}", uuid)
         }

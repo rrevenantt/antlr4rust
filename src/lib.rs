@@ -63,8 +63,9 @@
 //! ### Visitors and Listeners
 //!
 //! Currently visitors and listeners must outlive `'input`.
-//! In general this means that visitor has either `'static` or `'input` lifetime.
-//! Thus you can retrieve references to parsed data from syntax tree to listener/visitor. (as example you can see visitor test)
+//! In practice this means that visitor has either `'static` or `'input` lifetime.
+//! Thus you can retrieve references to parsed data from syntax tree to save in listener/visitor
+//! (as example you can see visitor test). This should cover 99% of usecases.
 //!
 //! You can try to give visitor outside references but in this case
 //! if those references do not outlive `'input` you will get very confusing error messages,

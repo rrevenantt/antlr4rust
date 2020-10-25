@@ -54,15 +54,15 @@ For a full list of antlr4 tool options, please visit the
 [tool documentation page](https://github.com/antlr/antlr4/blob/master/doc/tool-options.md).
 
 You can also see [build.rs](build.rs) as an example of `build.rs` configuration 
-to rebuild parser automatically if grammar file was changed
+to rebuild parser automatically if grammar file was changed.
 
 Then add following to `Cargo.toml` of the crate from which generated parser 
 is going to be used:
 ```toml 
 [dependencies]
-antlr-rust = "=0.2"
+antlr-rust = "=0.2.0-dev.1"
 ```
-and `#![feature(try_blocks)]`(also `#![feature(specialization)]` if you are generating visitor) in your project root module.  
+and `#![feature(try_blocks)]` in your project root module.  
  
 ### Parse Tree structure
 
@@ -80,7 +80,7 @@ Also corresponding struct for each alternative will contain fields you labeled.
 I.e. for `MultContext` struct will contain `a` and `b` fields containing child subtrees and 
 `op` field with `TerminalNode` type which corresponds to individual `Token`.
 It also is possible to disable generic parse tree creation to keep only selected children via
-`parser.build_parse_trees = false`.
+`parser.build_parse_trees = false`, but unfortunately currently it will prevent visitors from working. 
   
 ### Differences with Java
 Although Rust runtime API has been made as close as possible to Java, 
@@ -102,7 +102,7 @@ there are quite some differences because Rust is not an OOP language and is much
  - All rule context variables (rule argument or rule return) should implement `Default + Clone`.
  
 ### Unsafe
-Currently, unsafe is used only for downcasting (through another crate) 
+Currently, unsafe is used only for downcasting (through separate crate) 
 and to update data inside Rc via `get_mut_unchecked`(returned mutable reference is used immediately and not stored anywhere)
 
 ### Versioning
