@@ -24,7 +24,7 @@ use crate::int_stream::EOF;
 use crate::interval_set::IntervalSet;
 use crate::lexer_atn_simulator::ERROR_DFA_STATE_REF;
 use crate::parser::{Parser, ParserNodeType};
-use crate::parser_rule_context::{empty_ctx, ParserRuleContext};
+use crate::parser_rule_context::ParserRuleContext;
 use crate::prediction_context::{
     MurmurHasherBuilder, PredictionContext, PredictionContextCache, EMPTY_PREDICTION_CONTEXT,
     PREDICTION_CONTEXT_EMPTY_RETURN_STATE,

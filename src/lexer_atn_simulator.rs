@@ -22,7 +22,6 @@ use crate::lexer::{
     BaseLexer, Lexer, LexerPosition, LexerRecog, LEXER_MAX_CHAR_VALUE, LEXER_MIN_CHAR_VALUE,
 };
 use crate::lexer_action_executor::LexerActionExecutor;
-use crate::parser_rule_context::empty_ctx;
 use crate::prediction_context::EMPTY_PREDICTION_CONTEXT;
 use crate::prediction_context::{
     PredictionContext, PredictionContextCache, PREDICTION_CONTEXT_EMPTY_RETURN_STATE,

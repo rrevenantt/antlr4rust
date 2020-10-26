@@ -12,7 +12,7 @@ use crate::atn::ATN;
 use crate::dfa::ScopeExt;
 use crate::parser::ParserNodeType;
 use crate::parser_atn_simulator::MergeCache;
-use crate::parser_rule_context::{empty_ctx, ParserRuleContext};
+use crate::parser_rule_context::ParserRuleContext;
 use crate::prediction_context::PredictionContext::{Array, Singleton};
 use crate::rule_context::RuleContext;
 use crate::token_factory::TokenFactory;
