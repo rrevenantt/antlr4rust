@@ -11,6 +11,7 @@ edition = "2018"
 license = "BSD-3-Clause"
 keywords = ["ANTLR","ANTLR4","parsing","runtime"]
 categories = ["parsing"]
+exclude = ["build.rs"]
 
 [dependencies]
 lazy_static = "^1.4"
