@@ -14,6 +14,7 @@
 #![warn(missing_docs)] // warn if there is missing docs
 #![warn(missing_debug_implementations)]
 #![warn(trivial_numeric_casts)]
+
 //! # Antlr4 runtime
 //!
 //! **This is pre-release version.**
@@ -58,18 +59,16 @@
 //! If you need to generate owned versions of parse tree or you want simpler usage,
 //! you can opt out zero-copy by requiring `'input` to be static. In this case it is easier to also use
 //! types that contains "owned" in their name or constructor function like `OwningTokenFactory`
-//! or `InputStream::new_owned()`
+//! or `InputStream::new_owned()`.
 //!
 //! ### Visitors and Listeners
 //!
-//! Currently visitors and listeners must outlive `'input`.
-//! In practice this means that visitor has either `'static` or `'input` lifetime.
-//! Thus you can retrieve references to parsed data from syntax tree to save in listener/visitor
-//! (as example you can see visitor test). This should cover 99% of usecases.
+//! Parse listeners must outlive 'input because they have to be stored inside of the parser.
+//! It still allows to retrieve borrowed data from parse tree which should be enough to cover 99% use cases.
 //!
-//! You can try to give visitor outside references but in this case
-//! if those references do not outlive `'input` you will get very confusing error messages,
-//! so this is not recommended.
+//! `ParseTreeWalker` can accept listeners with arbitrary lifetime.
+//!
+//! Visitors also can have arbitrary lifetime
 //!
 //! ### Downcasting
 //!

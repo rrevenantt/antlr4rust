@@ -348,9 +348,9 @@ if (x < x && a > 0) then duh
         }
     }
 
-    struct MyCSVVisitor<'i>(Vec<&'i str>);
+    struct MyCSVVisitor<'i, T>(Vec<&'i str>, T);
 
-    impl<'i> ParseTreeVisitor<'i, CSVParserContextType> for MyCSVVisitor<'i> {
+    impl<'i, T> ParseTreeVisitor<'i, CSVParserContextType> for MyCSVVisitor<'i, T> {
         fn visit_terminal(&mut self, node: &TerminalNode<'i, CSVParserContextType>) {
             if node.symbol.get_token_type() == csvparser::TEXT {
                 if let Cow::Borrowed(s) = node.symbol.text {
@@ -364,7 +364,7 @@ if (x < x && a > 0) then duh
     use std::borrow::Cow;
     use std::rc::Rc;
 
-    impl<'i> CSVVisitor<'i> for MyCSVVisitor<'i> {
+    impl<'i, T> CSVVisitor<'i> for MyCSVVisitor<'i, T> {
         fn visit_hdr(&mut self, ctx: &HdrContext<'i>) {}
 
         fn visit_row(&mut self, ctx: &RowContext<'i>) {
@@ -384,7 +384,8 @@ if (x < x && a > 0) then duh
             let mut parser = CSVParser::new(token_source);
             let result = parser.csvFile().expect("parsed unsuccessfully");
 
-            let mut visitor = MyCSVVisitor(Vec::new());
+            let mut test = 5;
+            let mut visitor = MyCSVVisitor(Vec::new(), &mut test);
             result.accept(&mut visitor);
             assert_eq!(visitor.0, vec!["d1", "d2"]);
 

@@ -1,6 +1,6 @@
 # antlr4rust
-[![docs](https://docs.rs/antlr-rust/badge.svg)](https://docs.rs/antlr-rust)
-[![Crate](https://img.shields.io/crates/v/antlr_rust.svg)](https://crates.io/crates/antlr_rust)
+[![Crate](https://flat.badgen.net/crates/v/antlr-rust)](https://crates.io/crates/antlr_rust)
+[![docs](https://flat.badgen.net/badge/docs.rs/v0.2.0-dev.2)](https://docs.rs/antlr-rust/0.2.0-dev.2)
 
 [ANTLR4](https://github.com/antlr/antlr4) runtime for Rust programming language.
 

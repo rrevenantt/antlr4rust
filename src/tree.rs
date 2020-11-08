@@ -221,12 +221,10 @@ pub trait ParseTreeVisitor<'input, Node: ParserNodeType<'input>>:
     fn visit_children(&mut self, node: &Node::Type) { self.visit_children_inner(node) }
 }
 
-/// How visitor is supposed to visit children
+/// Workaround for default recursive children visiting
 ///
-/// Default implementation visits children recursively
-/// To override it you would need to enable specialization feature
-///
-/// It is already implemented for visitors that are bound by `'input`.
+/// Already blanket implemented for all visitors.
+/// To override it you would need to implement `ParseTreeVisitor::visit_children`
 pub trait VisitChildren<'input, Node: ParserNodeType<'input>> {
     fn visit_children_inner(&mut self, node: &Node::Type);
 }
@@ -234,15 +232,22 @@ pub trait VisitChildren<'input, Node: ParserNodeType<'input>> {
 impl<'input, Node, T> VisitChildren<'input, Node> for T
 where
     Node: ParserNodeType<'input>,
-    T: ParseTreeVisitor<'input, Node>,
-    for<'a> &'a mut Self: CoerceUnsized<&'a mut Node::Visitor>,
-    Node::Type: Visitable<Node::Visitor>,
+    T: ParseTreeVisitor<'input, Node> + ?Sized,
+    // for<'a> &'a mut Self: CoerceUnsized<&'a mut Node::Visitor>,
+    Node::Type: VisitableDyn<T>,
 {
-    default fn visit_children_inner(&mut self, node: &Node::Type) { node.accept_children(self) }
+    #[inline(always)]
+    fn visit_children_inner(&mut self, node: &Node::Type) { node.accept_children(self) }
 }
 
 pub trait Visitable<Vis: ?Sized> {
     fn accept(&self, visitor: &mut Vis) {
+        unreachable!("should have been properly implemented by generated context when reachable")
+    }
+}
+
+pub trait VisitableDyn<Vis: ?Sized> {
+    fn accept_dyn(&self, visitor: &mut Vis) {
         unreachable!("should have been properly implemented by generated context when reachable")
     }
 }
@@ -279,9 +284,6 @@ where
     T: ParseTreeListener<'input, Node> + 'a + ?Sized,
     Node::Type: Listenable<T>,
 {
-    // #[doc(hidden)]
-    // pub fn new() -> Self{ Self(PhantomData) }
-
     pub fn walk<Listener, Ctx>(mut listener: Box<Listener>, t: &Ctx) -> Box<Listener>
     where
         for<'x> &'x mut Listener: CoerceUnsized<&'x mut T>,

@@ -22,10 +22,7 @@ use antlr_rust::token::{OwningToken, Token, TOKEN_EOF};
 use antlr_rust::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
 use antlr_rust::token_source::TokenSource;
 use antlr_rust::token_stream::TokenStream;
-use antlr_rust::tree::{
-    ErrorNode, LeafNode, Listenable, ParseTree, ParseTreeListener, ParseTreeVisitor,
-    ParseTreeWalker, TerminalNode, Visitable,
-};
+use antlr_rust::tree::*;
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
 use antlr_rust::PredictionContextCache;
 
@@ -145,6 +142,15 @@ pub trait CSVParserContext<'input>:
     + for<'x> Visitable<dyn CSVVisitor<'input> + 'x>
     + ParserRuleContext<'input, TF = LocalTokenFactory<'input>, Ctx = CSVParserContextType>
 {
+}
+
+impl<'input, 'x, T> VisitableDyn<T> for dyn CSVParserContext<'input> + 'input
+where
+    T: CSVVisitor<'input> + 'x,
+{
+    fn accept_dyn(&self, visitor: &mut T) {
+        self.accept(visitor as &mut (dyn CSVVisitor<'input> + 'x))
+    }
 }
 
 impl<'input> CSVParserContext<'input> for TerminalNode<'input, CSVParserContextType> {}

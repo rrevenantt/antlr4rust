@@ -21,6 +21,7 @@ use crate::token::Token;
 use crate::token_factory::{CommonTokenFactory, TokenFactory};
 use crate::tree::{
     ErrorNode, ParseTree, ParseTreeListener, ParseTreeVisitor, TerminalNode, Tree, Visitable,
+    VisitableDyn,
 };
 use better_any::{Tid, TidAble, TidExt};
 
@@ -131,7 +132,7 @@ pub trait RuleContextExt<'input>: ParserRuleContext<'input> {
     fn accept_children<V>(&self, visitor: &mut V)
     where
         V: ParseTreeVisitor<'input, Self::Ctx> + ?Sized,
-        <Self::Ctx as ParserNodeType<'input>>::Type: Visitable<V>;
+        <Self::Ctx as ParserNodeType<'input>>::Type: VisitableDyn<V>;
 }
 
 impl<'input, T: ParserRuleContext<'input> + ?Sized + 'input> RuleContextExt<'input> for T {
@@ -177,9 +178,10 @@ impl<'input, T: ParserRuleContext<'input> + ?Sized + 'input> RuleContextExt<'inp
     fn accept_children<V>(&self, visitor: &mut V)
     where
         V: ParseTreeVisitor<'input, Self::Ctx> + ?Sized,
-        <Self::Ctx as ParserNodeType<'input>>::Type: Visitable<V>,
+        <Self::Ctx as ParserNodeType<'input>>::Type: VisitableDyn<V>,
     {
-        self.get_children().for_each(|child| child.accept(visitor))
+        self.get_children()
+            .for_each(|child| child.accept_dyn(visitor))
     }
 }
 
