@@ -1,5 +1,5 @@
 # antlr4rust
-[![Crate](https://flat.badgen.net/crates/v/antlr-rust)](https://crates.io/crates/antlr_rust)
+[![Crate](https://flat.badgen.net/crates/v/antlr-rust)](https://crates.io/crates/antlr_rust/0.2.0-dev.2)
 [![docs](https://flat.badgen.net/badge/docs.rs/v0.2.0-dev.2)](https://docs.rs/antlr-rust/0.2.0-dev.2)
 
 [ANTLR4](https://github.com/antlr/antlr4) runtime for Rust programming language.
@@ -60,7 +60,7 @@ Then add following to `Cargo.toml` of the crate from which generated parser
 is going to be used:
 ```toml 
 [dependencies]
-antlr-rust = "=0.2.0-dev.1"
+antlr-rust = "=0.2.0-dev.2"
 ```
 and `#![feature(try_blocks)]` in your project root module.  
  
