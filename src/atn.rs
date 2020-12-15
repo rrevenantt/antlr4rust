@@ -77,7 +77,7 @@ impl ATN {
     }
 
     pub(crate) fn add_state(&mut self, state: Box<dyn ATNState>) {
-        assert_eq!(state.get_state_number(), self.states.len());
+        debug_assert_eq!(state.get_state_number(), self.states.len());
         self.states.push(state)
     }
 

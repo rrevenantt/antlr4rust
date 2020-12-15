@@ -101,6 +101,8 @@ there are quite some differences because Rust is not an OOP language and is much
  Also in Rust target `TokenFactory` is the way to specify token type. As example you can see [CSV](grammars/CSV.g4) test grammar.
  - All rule context variables (rule argument or rule return) should implement `Default + Clone`.
  
+### Benchmarks
+
 ### Unsafe
 Currently, unsafe is used only for downcasting (through separate crate) 
 and to update data inside Rc via `get_mut_unchecked`(returned mutable reference is used immediately and not stored anywhere)

@@ -15,7 +15,7 @@ use crate::transition::PredicateTransition;
 use crate::transition::TransitionType::TRANSITION_PREDICATE;
 
 /// Main ANTLR4 Rust runtime error
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ANTLRError {
     /// Returned from Lexer when it fails to find matching token type for current input
     ///
@@ -48,29 +48,29 @@ pub enum ANTLRError {
 
     /// Unrecoverable error. Indicates that error should not be processed by parser
     /// and it should abort parsing and immediately return to caller
-    FallThrough(Box<dyn Error>),
+    FallThrough(Rc<dyn Error>),
 
     /// Potentially recoverable error.
     /// Used to allow user to emit his own errors from parser actions or from custom error strategy.
     /// Parser will try to recover with provided `ErrorStrategy`
-    OtherError(Box<dyn Error>),
+    OtherError(Rc<dyn Error>),
 }
 
-impl Clone for ANTLRError {
-    fn clone(&self) -> Self {
-        match self {
-            ANTLRError::LexerNoAltError { start_index } => ANTLRError::LexerNoAltError {
-                start_index: *start_index,
-            },
-            ANTLRError::NoAltError(e) => ANTLRError::NoAltError(e.clone()),
-            ANTLRError::InputMismatchError(e) => ANTLRError::InputMismatchError(e.clone()),
-            ANTLRError::PredicateError(e) => ANTLRError::PredicateError(e.clone()),
-            ANTLRError::IllegalStateError(e) => ANTLRError::IllegalStateError(e.clone()),
-            ANTLRError::FallThrough(_) => panic!("clone not supported"),
-            ANTLRError::OtherError(_) => panic!("clone not supported"),
-        }
-    }
-}
+// impl Clone for ANTLRError {
+//     fn clone(&self) -> Self {
+//         match self {
+//             ANTLRError::LexerNoAltError { start_index } => ANTLRError::LexerNoAltError {
+//                 start_index: *start_index,
+//             },
+//             ANTLRError::NoAltError(e) => ANTLRError::NoAltError(e.clone()),
+//             ANTLRError::InputMismatchError(e) => ANTLRError::InputMismatchError(e.clone()),
+//             ANTLRError::PredicateError(e) => ANTLRError::PredicateError(e.clone()),
+//             ANTLRError::IllegalStateError(e) => ANTLRError::IllegalStateError(e.clone()),
+//             ANTLRError::FallThrough(_) => panic!("clone not supported"),
+//             ANTLRError::OtherError(_) => panic!("clone not supported"),
+//         }
+//     }
+// }
 
 impl Display for ANTLRError {
     fn fmt(&self, _f: &mut Formatter<'_>) -> fmt::Result { <Self as Debug>::fmt(self, _f) }

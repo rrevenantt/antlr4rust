@@ -166,7 +166,7 @@ impl<'input, T: ParserRuleContext<'input> + ?Sized + 'input> RuleContextExt<'inp
 
             next = p.get_parent().clone();
         }
-        // not optimal but we don't care here
+
         if result.chars().last() == Some(' ') {
             result.pop();
         }
@@ -233,7 +233,7 @@ pub struct BaseParserRuleContext<'input, Ctx: CustomRuleContext<'input>> {
 
     start: RefCell<<Ctx::TF as TokenFactory<'input>>::Tok>,
     stop: RefCell<<Ctx::TF as TokenFactory<'input>>::Tok>,
-    exception: Option<Box<ANTLRError>>,
+    pub exception: Option<Box<ANTLRError>>,
     /// List of children of current node
     pub(crate) children: RefCell<Vec<Rc<<Ctx::Ctx as ParserNodeType<'input>>::Type>>>,
 }
@@ -301,9 +301,7 @@ impl<'input, Ctx: CustomRuleContext<'input>> BorrowMut<Ctx> for BaseParserRuleCo
 impl<'input, Ctx: CustomRuleContext<'input> + TidAble<'input>> ParserRuleContext<'input>
     for BaseParserRuleContext<'input, Ctx>
 {
-    fn set_exception(&self, _e: ANTLRError) {
-        unimplemented!()
-        //        self.exception = Some(Box::new(e));
+    fn set_exception(&self, e: ANTLRError) { /*self.exception = Some(Box::new(e));*/
     }
 
     fn set_start(&self, t: Option<<Ctx::TF as TokenFactory<'input>>::Tok>) {
@@ -431,7 +429,7 @@ impl<'input, Ctx: CustomRuleContext<'input> + 'input> BaseParserRuleContext<'inp
         ext: Ctx,
     ) -> Self {
         Self {
-            base: BaseRuleContext::new_ctx(parent_ctx, invoking_state, ext),
+            base: BaseRuleContext::new_parser_ctx(parent_ctx, invoking_state, ext),
             start: RefCell::new(Ctx::TF::create_invalid()),
             stop: RefCell::new(Ctx::TF::create_invalid()),
             exception: None,
@@ -443,7 +441,11 @@ impl<'input, Ctx: CustomRuleContext<'input> + 'input> BaseParserRuleContext<'inp
         ext: Ctx,
     ) -> Self {
         Self {
-            base: BaseRuleContext::new_ctx(ctx.get_parent_ctx(), ctx.get_invoking_state(), ext),
+            base: BaseRuleContext::new_parser_ctx(
+                ctx.get_parent_ctx(),
+                ctx.get_invoking_state(),
+                ext,
+            ),
             start: RefCell::new(ctx.start_mut().clone()),
             stop: RefCell::new(ctx.stop_mut().clone()),
             exception: None,

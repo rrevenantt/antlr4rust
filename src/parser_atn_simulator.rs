@@ -164,7 +164,7 @@ impl ParserATNSimulator {
                     .dfa
                     .get_precedence_start_state(local.precedence /*parser.get_precedence()*/)
             } else {
-                local.dfa.s0.read().unwrap().as_ref().copied()
+                local.dfa.s0.read().as_ref().copied()
             };
 
             let s0 = s0.unwrap_or_else(|| {
@@ -176,9 +176,9 @@ impl ParserATNSimulator {
                     &mut local,
                 );
                 if local.dfa.is_precedence_dfa() {
-                    let mut s0 = local.dfa.s0.read().unwrap().unwrap();
+                    let mut s0 = local.dfa.s0.read().unwrap();
                     let s0_closure_updated = self.apply_precedence_filter(&s0_closure, &mut local);
-                    local.dfa.states.write().unwrap()[s0].configs = Box::new(s0_closure);
+                    local.dfa.states.write()[s0].configs = Box::new(s0_closure);
 
                     s0 = self.add_dfastate(
                         &local.dfa,
@@ -190,7 +190,7 @@ impl ParserATNSimulator {
                 } else {
                     let s0 = self
                         .add_dfastate(&local.dfa, DFAState::new_dfastate(0, Box::new(s0_closure)));
-                    local.dfa.s0.write().unwrap().replace(s0);
+                    local.dfa.s0.write().replace(s0);
                     s0
                 }
             });
@@ -218,9 +218,9 @@ impl ParserATNSimulator {
             let D = self
                 .get_existing_target_state(local.dfa, previousD, token)
                 .unwrap_or_else(|| self.compute_target_state(local.dfa, previousD, token, local));
-            assert!(D > 0);
+            debug_assert!(D > 0);
 
-            let states = local.dfa.states.read().unwrap();
+            let states = local.dfa.states.read();
             if D == ERROR_DFA_STATE_REF {
                 let previousDstate = &states[previousD];
                 let err = self.no_viable_alt(
@@ -330,7 +330,7 @@ impl ParserATNSimulator {
         previousD: DFAStateRef,
         t: isize,
     ) -> Option<DFAStateRef> {
-        dfa.states.read().unwrap()[previousD]
+        dfa.states.read()[previousD]
             .edges
             .get((t + 1) as usize)
             .and_then(|x| match *x {
@@ -347,9 +347,9 @@ impl ParserATNSimulator {
         t: isize,
         local: &mut Local<'_, 'a, T>,
     ) -> DFAStateRef {
-        //        println!("source config {:?}",dfa.states.read().unwrap()[previousD].configs.as_ref());
+        //        println!("source config {:?}",dfa.states.read()[previousD].configs.as_ref());
         let reach = self.compute_reach_set(
-            dfa.states.read().unwrap()[previousD].configs.as_ref(),
+            dfa.states.read()[previousD].configs.as_ref(),
             t,
             false,
             local,
@@ -357,7 +357,7 @@ impl ParserATNSimulator {
         let reach = match reach {
             None => {
                 self.add_dfaedge(
-                    dfa.states.write().unwrap()[previousD].borrow_mut(),
+                    dfa.states.write()[previousD].borrow_mut(),
                     t,
                     ERROR_DFA_STATE_REF,
                 );
@@ -397,7 +397,7 @@ impl ParserATNSimulator {
         }
 
         let D = self.add_dfastate(dfa, D);
-        self.add_dfaedge(dfa.states.write().unwrap()[previousD].borrow_mut(), t, D);
+        self.add_dfaedge(dfa.states.write()[previousD].borrow_mut(), t, D);
         D
     }
 
@@ -1392,14 +1392,14 @@ impl ParserATNSimulator {
         if dfastate.state_number == ERROR_DFA_STATE_REF {
             return ERROR_DFA_STATE_REF;
         }
-        let mut states = dfa.states.write().unwrap();
+        let mut states = dfa.states.write();
 
         let a = states.deref().len();
         dfastate.state_number = a;
 
         let key = dfastate.default_hash();
         //let mut new_hash = key;
-        if let Some(st) = dfa.states_map.write().unwrap().get_mut(&key) {
+        if let Some(st) = dfa.states_map.write().get_mut(&key) {
             if let Some(&st) = st.iter().find(|&&it| states[it] == dfastate) {
                 return st;
             }
@@ -1416,7 +1416,6 @@ impl ParserATNSimulator {
         //        if key != new_hash {
         dfa.states_map
             .write()
-            .unwrap()
             .entry(key)
             .or_insert(Vec::new())
             .push(a);

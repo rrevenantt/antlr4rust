@@ -1,5 +1,4 @@
 use std::fmt::Debug;
-use std::marker::Unsize;
 use std::ops::Deref;
 
 use crate::char_stream::CharStream;

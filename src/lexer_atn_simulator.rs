@@ -87,7 +87,7 @@ impl ILexerATNSimulator for LexerATNSimulator {
                 .get(mode)
                 .ok_or_else(|| ANTLRError::IllegalStateError("invalid mode".into()))?;
 
-            let s0 = dfa.s0.read().unwrap().as_ref().copied();
+            let s0 = dfa.s0.read().as_ref().copied();
             match s0 {
                 None => self.match_atn(lexer),
                 Some(s0) => self.exec_atn(s0, lexer),
@@ -175,9 +175,9 @@ impl LexerATNSimulator {
         let _supress_edge = s0_closure.has_semantic_context();
         s0_closure.set_has_semantic_context(false);
 
-        let next_state = self.add_dfastate(&mut self.get_dfa().states.write().unwrap(), s0_closure);
+        let next_state = self.add_dfastate(&mut self.get_dfa().states.write(), s0_closure);
         if !_supress_edge {
-            *self.get_dfa().s0.write().unwrap() = Some(next_state);
+            *self.get_dfa().s0.write() = Some(next_state);
         }
 
         self.exec_atn(next_state, lexer)
@@ -219,7 +219,7 @@ impl LexerATNSimulator {
 
             s = target;
         }
-        let _last = self.get_dfa().states.read().unwrap().get(s).unwrap();
+        // let _last = self.get_dfa().states.read().get(s).unwrap();
 
         self.fail_or_accept(symbol, lexer)
     }
@@ -232,7 +232,6 @@ impl LexerATNSimulator {
         self.get_dfa()
             .states
             .read()
-            .unwrap()
             .get(_s)
             .unwrap()
             .edges
@@ -250,7 +249,7 @@ impl LexerATNSimulator {
         _t: isize,
         lexer: &mut impl Lexer<'input>,
     ) -> DFAStateRef {
-        let states = self.get_dfa().states.read().unwrap();
+        let states = self.get_dfa().states.read();
 
         let mut reach = ATNConfigSet::new_ordered();
         self.get_reachable_config_set(
@@ -264,7 +263,7 @@ impl LexerATNSimulator {
         //        println!(" --- target computed {:?}", reach.configs.iter().map(|it|it.get_state()).collect::<Vec<_>>());
 
         drop(states);
-        let mut states = self.get_dfa().states.write().unwrap();
+        let mut states = self.get_dfa().states.write();
         if reach.is_empty() {
             if !reach.has_semantic_context() {
                 self.add_dfaedge(states.get_mut(_s).unwrap(), _t, ERROR_DFA_STATE_REF);
@@ -351,7 +350,7 @@ impl LexerATNSimulator {
         if let Some(state) = self.prev_accept.dfa_state {
             //            let lexer_action_executor;
             let prediction = {
-                let dfa_state_prediction = &mut self.get_dfa().states.write().unwrap()[state];
+                let dfa_state_prediction = &self.get_dfa().states.read()[state];
                 //                println!("accepted, prediction = {}, on dfastate {}", dfa_state_prediction.prediction, dfa_state_prediction.state_number);
                 //                lexer_action_executor = dfa_state_prediction.lexer_action_executor.clone();
                 //                let recog = self.recog.clone();
@@ -602,7 +601,6 @@ impl LexerATNSimulator {
             .get_dfa()
             .states
             .read()
-            .unwrap()
             .get(dfa_state)
             .unwrap()
             .is_accept_state
@@ -664,7 +662,6 @@ impl LexerATNSimulator {
         let dfastate_index = *dfa
             .states_map
             .write()
-            .unwrap()
             .entry(key)
             .or_insert_with(|| {
                 dfastate.state_number = states.deref().len();

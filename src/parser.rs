@@ -3,7 +3,7 @@ use std::borrow::Borrow;
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::iter::from_fn;
-use std::marker::{PhantomData, Unsize};
+use std::marker::PhantomData;
 use std::mem;
 use std::ops::{CoerceUnsized, Deref, DerefMut};
 use std::rc::Rc;
@@ -430,7 +430,10 @@ where
     ///
     /// ### Example for listener usage:
     /// todo
-    pub fn add_parse_listener<L: Unsize<T>>(&mut self, listener: Box<L>) -> ListenerId<L> {
+    pub fn add_parse_listener<L>(&mut self, listener: Box<L>) -> ListenerId<L>
+    where
+        Box<L>: CoerceUnsized<Box<T>>,
+    {
         let id = ListenerId::new(&listener);
         self.parse_listeners.push(listener);
         id
@@ -438,13 +441,16 @@ where
 
     /// Removes parse listener with corresponding `listener_id`, casts it back to user type and returns it to the caller.
     /// `listener_id` is returned when listener is added via `add_parse_listener`
-    pub fn remove_parse_listener<L: Unsize<T>>(&mut self, listener_id: ListenerId<L>) -> Box<L> {
+    pub fn remove_parse_listener<L>(&mut self, listener_id: ListenerId<L>) -> Box<L>
+    where
+        Box<L>: CoerceUnsized<Box<T>>,
+    {
         let index = self
             .parse_listeners
             .iter()
             .position(|it| ListenerId::new(it).actual_id == listener_id.actual_id)
             .expect("listener not found");
-        listener_id.into_listener(self.parse_listeners.remove(index))
+        unsafe { listener_id.into_listener(self.parse_listeners.remove(index)) }
     }
 
     /// Removes all added parse listeners without returning them
@@ -612,7 +618,7 @@ where
         let mut seen_one = false;
         for dfa in self.interp.decision_to_dfa() {
             // because s0 is saved in dfa for Rust version
-            if dfa.states.read().unwrap().len() > 1 + (dfa.is_precedence_dfa() as usize) {
+            if dfa.states.read().len() > 1 + (dfa.is_precedence_dfa() as usize) {
                 if seen_one {
                     println!()
                 }
@@ -655,11 +661,7 @@ impl<T: ?Sized> ListenerId<T> {
 }
 
 impl<T> ListenerId<T> {
-    fn into_listener<U>(self, boxed: Box<U>) -> Box<T>
-    where
-        U: ?Sized,
-        T: Unsize<U>,
-    {
-        unsafe { Box::from_raw(Box::into_raw(boxed) as *mut T) }
+    unsafe fn into_listener<U: ?Sized>(self, boxed: Box<U>) -> Box<T> {
+        Box::from_raw(Box::into_raw(boxed) as *mut T)
     }
 }

@@ -13,6 +13,10 @@ keywords = ["ANTLR","ANTLR4","parsing","runtime"]
 categories = ["parsing"]
 exclude = ["build.rs"]
 
+[features]
+test = []
+default = []
+
 [dependencies]
 lazy_static = "^1.4"
 uuid = "=0.8.*"
@@ -23,6 +27,7 @@ once_cell = "^1.2"
 #backtrace = "=0.3"
 typed-arena = "^2.0"
 better_any = "=0.1"
+parking_lot = "0.11"
 
 [lib]
 

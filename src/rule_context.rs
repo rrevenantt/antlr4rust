@@ -1,7 +1,7 @@
 //use tree::RuleNode;
 
 use std::any::{Any, TypeId};
-use std::borrow::BorrowMut;
+use std::borrow::{Borrow, BorrowMut};
 use std::cell::{Cell, RefCell};
 use std::fmt::{Debug, Formatter};
 use std::iter::from_fn;
@@ -111,17 +111,32 @@ pub struct BaseRuleContext<'input, ExtCtx: CustomRuleContext<'input>> {
 }
 
 impl<'input, ExtCtx: CustomRuleContext<'input>> BaseRuleContext<'input, ExtCtx> {
-    pub(crate) fn new_ctx(
+    pub fn new_parser_ctx(
         parent_ctx: Option<Rc<<ExtCtx::Ctx as ParserNodeType<'input>>::Type>>,
         invoking_state: isize,
         ext: ExtCtx,
     ) -> Self {
-        BaseRuleContext {
+        Self {
             parent_ctx: RefCell::new(parent_ctx.as_ref().map(Rc::downgrade)),
             invoking_state: Cell::new(invoking_state),
             ext,
         }
     }
+
+    pub fn copy_from<T: ParserRuleContext<'input, TF = ExtCtx::TF, Ctx = ExtCtx::Ctx> + ?Sized>(
+        ctx: &T,
+        ext: ExtCtx,
+    ) -> Self {
+        Self::new_parser_ctx(ctx.get_parent_ctx(), ctx.get_invoking_state(), ext)
+    }
+}
+
+impl<'input, Ctx: CustomRuleContext<'input>> Borrow<Ctx> for BaseRuleContext<'input, Ctx> {
+    fn borrow(&self) -> &Ctx { &self.ext }
+}
+
+impl<'input, Ctx: CustomRuleContext<'input>> BorrowMut<Ctx> for BaseRuleContext<'input, Ctx> {
+    fn borrow_mut(&mut self) -> &mut Ctx { &mut self.ext }
 }
 
 impl<'input, ExtCtx: CustomRuleContext<'input>> CustomRuleContext<'input>

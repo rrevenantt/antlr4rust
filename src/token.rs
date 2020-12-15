@@ -27,22 +27,34 @@ pub trait Token: Debug + Display {
     type Data: ?Sized + InputData;
     // fn get_source(&self) -> Option<(Box<dyn TokenSource>, Box<dyn CharStream>)>;
     fn get_token_type(&self) -> isize;
-    fn get_channel(&self) -> isize;
-    fn get_start(&self) -> isize;
-    fn get_stop(&self) -> isize;
-    fn get_line(&self) -> isize;
-    fn get_column(&self) -> isize;
+    fn get_channel(&self) -> isize { TOKEN_DEFAULT_CHANNEL }
+    fn get_start(&self) -> isize { 0 }
+    fn get_stop(&self) -> isize { 0 }
+    fn get_line(&self) -> isize { 0 }
+    fn get_column(&self) -> isize { 0 }
 
     fn get_text(&self) -> &Self::Data;
-    fn set_text(&mut self, text: <Self::Data as ToOwned>::Owned);
+    fn set_text(&mut self, text: <Self::Data as ToOwned>::Owned) {}
 
-    fn get_token_index(&self) -> isize;
-    fn set_token_index(&self, v: isize);
+    fn get_token_index(&self) -> isize { 0 }
+    fn set_token_index(&self, v: isize) {}
 
     // fn get_token_source(&self) -> &dyn TokenSource;
     // fn get_input_stream(&self) -> &dyn CharStream;
 
-    fn to_owned(&self) -> OwningToken;
+    fn to_owned(&self) -> OwningToken {
+        OwningToken {
+            token_type: self.get_token_type(),
+            channel: self.get_channel(),
+            start: self.get_start(),
+            stop: self.get_stop(),
+            token_index: AtomicIsize::from(self.get_token_index()),
+            line: self.get_line(),
+            column: self.get_column(),
+            text: self.get_text().to_display(),
+            read_only: true,
+        }
+    }
 }
 
 pub type OwningToken = GenericToken<String>;

@@ -1,6 +1,6 @@
 use std::borrow::{Borrow, BorrowMut};
 use std::cmp::min;
-use std::marker::{PhantomData, Unsize};
+use std::marker::PhantomData;
 use std::ops::Deref;
 use std::ptr::drop_in_place;
 

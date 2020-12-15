@@ -32,16 +32,14 @@ use std::any::Any;
 /// The interface for defining strategies to deal with syntax errors encountered
 /// during a parse by ANTLR-generated parsers. We distinguish between three
 /// different kinds of errors:
-/// <ul>
-/// <li>The parser could not figure out which path to take in the ATN (none of
-/// the available alternatives could possibly match)</li>
-/// <li>The current input does not match what we were looking for</li>
-/// <li>A predicate evaluated to false</li>
-/// </ul>
+///  - The parser could not figure out which path to take in the ATN (none of
+/// the available alternatives could possibly match)
+///  - The current input does not match what we were looking for
+///  - A predicate evaluated to false
 ///
-/// Implementations of this interface report syntax errors by calling [`Parser.notifyErrorListeners`]
+/// Implementations of this interface should report syntax errors by calling [`Parser.notifyErrorListeners`]
 ///
-/// [`Parser.notifyErrorListeners`]: todo
+/// [`Parser.notifyErrorListeners`]: crate::parser::Parser::notifyErrorListeners
 pub trait ErrorStrategy<'a, T: Parser<'a>>: Tid<'a> {
     fn reset(&mut self, recognizer: &mut T);
     fn recover_inline(
@@ -534,7 +532,7 @@ impl<'input, Ctx: ParserNodeType<'input>> BailErrorStrategy<'input, Ctx> {
                 ctx = ctx.get_parent()?
             }
         };
-        return ANTLRError::FallThrough(Box::new(ParseCancelledError(e.clone())));
+        return ANTLRError::FallThrough(Rc::new(ParseCancelledError(e.clone())));
     }
 }
 
@@ -557,7 +555,7 @@ impl<'a, T: Parser<'a>> ErrorStrategy<'a, T> for BailErrorStrategy<'a, T::Node> 
     #[inline(always)]
     fn reset(&mut self, recognizer: &mut T) { self.0.reset(recognizer) }
 
-    #[inline(always)]
+    #[cold]
     fn recover_inline(
         &mut self,
         recognizer: &mut T,
@@ -567,7 +565,7 @@ impl<'a, T: Parser<'a>> ErrorStrategy<'a, T> for BailErrorStrategy<'a, T::Node> 
         Err(self.process_error(recognizer, &err))
     }
 
-    #[inline(always)]
+    #[cold]
     fn recover(&mut self, recognizer: &mut T, e: &ANTLRError) -> Result<(), ANTLRError> {
         Err(self.process_error(recognizer, &e))
     }

@@ -2,7 +2,7 @@ use std::borrow::Cow::{Borrowed, Owned};
 use std::borrow::{Borrow, BorrowMut, Cow};
 use std::cell::Cell;
 use std::fmt::Debug;
-use std::marker::{PhantomData, Unsize};
+use std::marker::PhantomData;
 use std::ops::{CoerceUnsized, Deref};
 use std::sync::atomic::AtomicIsize;
 
@@ -40,21 +40,20 @@ lazy_static! {
     });
 }
 
-// todo remove redundant allocation for arenas
-
-/// Trait for creating tokens
+/// Trait for creating tokens.
+///
 pub trait TokenFactory<'a>: TidAble<'a> + Sized {
-    /// type of tokens emitted by this factory
+    /// Type of tokens emitted by this factory.
     type Inner: Token<Data = Self::Data> + ?Sized + 'a;
-    /// ownership of the emitted tokens
+    /// Ownership of the emitted tokens
     type Tok: Borrow<Self::Inner> + Clone + 'a + Debug;
     // can relax InputData to just ToOwned here?
-    /// type of the underlying storage
+    /// Type of the underlying storage
     type Data: InputData + ?Sized;
-    /// type of the reference to `Self::Data` that factory needs for producing tokens
+    /// Type of the reference to `Self::Data` that factory needs for producing tokens
     type From: Borrow<Self::Data> + Into<Cow<'a, Self::Data>>;
 
-    /// Creates token
+    /// Creates token either from `sourse` or from pure data in `text`
     fn create<T>(
         &'a self,
         source: Option<&mut T>,
@@ -74,7 +73,8 @@ pub trait TokenFactory<'a>: TidAble<'a> + Sized {
     fn create_invalid() -> Self::Tok;
 }
 
-#[derive(Default, Tid)]
+/// Default token factory
+#[derive(Default, Tid, Debug)]
 pub struct CommonTokenFactory;
 
 impl Default for &'_ CommonTokenFactory {
@@ -129,7 +129,7 @@ impl<'a> TokenFactory<'a> for CommonTokenFactory {
     fn create_invalid() -> Self::Tok { INVALID_COMMON.clone() }
 }
 
-#[derive(Default, Tid)]
+#[derive(Default, Tid, Debug)]
 pub struct OwningTokenFactory;
 
 impl<'a> TokenFactory<'a> for OwningTokenFactory {
@@ -253,6 +253,7 @@ where
     where
         T: CharStream<Self::From> + ?Sized,
     {
+        // todo remove redundant allocation
         let token = self
             .factory
             .create(source, ttype, text, channel, start, stop, line, column);

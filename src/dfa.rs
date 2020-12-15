@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::ops::Deref;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use crate::atn::ATN;
 use crate::atn_config_set::ATNConfigSet;
@@ -9,6 +9,7 @@ use crate::atn_state::{ATNDecisionState, ATNState, ATNStateRef, ATNStateType};
 use crate::dfa_serializer::DFASerializer;
 use crate::dfa_state::{DFAState, DFAStateRef};
 use crate::vocabulary::Vocabulary;
+use parking_lot::RwLock;
 
 ///Helper trait for scope management and temporary values not living long enough
 pub(crate) trait ScopeExt: Sized {
@@ -63,7 +64,7 @@ impl DFA {
         };
 
         // to indicate null
-        dfa.states.write().unwrap().push(DFAState::new_dfastate(
+        dfa.states.write().push(DFAState::new_dfastate(
             usize::max_value(),
             Box::new(ATNConfigSet::new_base_atnconfig_set(true)),
         ));
@@ -78,7 +79,7 @@ impl DFA {
         {
             dfa.is_precedence_dfa = true;
             let mut precedence_state = DFAState::new_dfastate(
-                dfa.states.read().unwrap().len(),
+                dfa.states.read().len(),
                 Box::new(ATNConfigSet::new_base_atnconfig_set(true)),
             );
             precedence_state.edges = vec![];
@@ -86,7 +87,7 @@ impl DFA {
             precedence_state.requires_full_context = false;
 
             dfa.s0 = RwLock::new(Some(precedence_state.state_number));
-            dfa.states.write().unwrap().push(precedence_state)
+            dfa.states.write().push(precedence_state)
         }
         dfa
     }
@@ -96,8 +97,8 @@ impl DFA {
             panic!("dfa is supposed to be precedence here");
         }
 
-        self.s0.read().unwrap().and_then(|s0| {
-            self.states.read().unwrap()[s0]
+        self.s0.read().and_then(|s0| {
+            self.states.read()[s0]
                 .edges
                 .get(_precedence as usize)
                 .copied()
@@ -118,8 +119,8 @@ impl DFA {
         }
         let precedence = precedence as usize;
 
-        if let Some(x) = self.s0.write().unwrap().deref() {
-            self.states.write().unwrap()[*x].edges.apply(|edges| {
+        if let Some(x) = self.s0.write().deref() {
+            self.states.write()[*x].edges.apply(|edges| {
                 if edges.len() <= precedence {
                     edges.resize(precedence + 1, 0);
                 }
@@ -137,7 +138,7 @@ impl DFA {
     fn num_states(&self) -> isize { unimplemented!() }
 
     pub fn to_string(&self, vocabulary: &dyn Vocabulary) -> String {
-        if self.s0.read().unwrap().is_none() {
+        if self.s0.read().is_none() {
             return String::new();
         }
 
@@ -150,7 +151,7 @@ impl DFA {
     }
 
     pub fn to_lexer_string(&self) -> String {
-        if self.s0.read().unwrap().is_none() {
+        if self.s0.read().is_none() {
             return String::new();
         }
         format!(
