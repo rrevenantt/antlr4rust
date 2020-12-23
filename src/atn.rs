@@ -15,6 +15,7 @@ use crate::transition::RuleTransition;
 
 pub const INVALID_ALT: isize = 0;
 
+#[doc(hidden)]
 pub struct ATN {
     pub decision_to_state: Vec<ATNStateRef>,
 

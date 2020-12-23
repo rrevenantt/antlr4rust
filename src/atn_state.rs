@@ -21,6 +21,7 @@ pub(crate) const ATNSTATE_LOOP_END: isize = 12;
 pub(crate) const ATNSTATE_INVALID_STATE_NUMBER: isize = -1;
 
 //might be changed later
+#[doc(hidden)]
 #[derive(Debug, Eq, PartialEq)]
 pub enum ATNStateType {
     RuleStartState {
@@ -40,6 +41,7 @@ pub enum ATNStateType {
     InvalidState,
 }
 
+#[doc(hidden)]
 #[derive(Debug, Eq, PartialEq)]
 pub enum ATNDecisionState {
     StarLoopEntry {
@@ -54,6 +56,7 @@ pub enum ATNDecisionState {
     },
 }
 
+#[doc(hidden)]
 #[derive(Debug, Eq, PartialEq)]
 pub enum ATNBlockStart {
     BasicBlockStart,

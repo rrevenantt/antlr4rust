@@ -21,6 +21,8 @@ pub trait Lexer<'input>:
     TokenSource<'input>
     + Recognizer<'input, Node = EmptyContextType<'input, <Self as TokenAware<'input>>::TF>>
 {
+    type Input: IntStream;
+    fn input(&mut self) -> &mut Self::Input;
     /// Sets channel where current token will be pushed
     ///
     /// By default two channels are available:
@@ -67,7 +69,7 @@ pub struct BaseLexer<
     Input: CharStream<TF::From>,
     TF: TokenFactory<'input> = CommonTokenFactory,
 > {
-    pub interpreter: Option<LexerATNSimulator>,
+    pub interpreter: Option<Box<LexerATNSimulator>>,
     pub input: Option<Input>,
     recog: T,
 
@@ -182,11 +184,12 @@ where
             .map(|it| Borrowed(it.borrow()))
             // .unwrap_or("")
             .unwrap_or_else(|| {
-                self.input
+                let text = self
+                    .input
                     .as_ref()
                     .unwrap()
-                    .get_text(self.token_start_char_index, self.get_char_index() - 1)
-                    .into()
+                    .get_text(self.token_start_char_index, self.get_char_index() - 1);
+                TF::get_data(text)
             })
     }
 
@@ -211,7 +214,7 @@ where
         factory: &'input TF,
     ) -> Self {
         let mut lexer = Self {
-            interpreter: Some(interpreter),
+            interpreter: Some(Box::new(interpreter)),
             input: Some(input),
             recog,
             factory,
@@ -258,7 +261,7 @@ where
     fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok {
         assert!(self.input.is_some());
 
-        let _marker = self.input.as_mut().unwrap().mark();
+        let _marker = self.input().mark();
         'outer: loop {
             if self.hit_eof {
                 self.emit_eof();
@@ -273,37 +276,29 @@ where
                 .get_char_position_in_line();
             self.token_start_line = self.interpreter.as_ref().unwrap().get_line();
             self.text = None;
-            let index = self.get_input_stream().unwrap().index();
+            let index = self.input().index();
             self.token_start_char_index = index;
 
             'inner: loop {
-                let ttype;
                 self.token_type = TOKEN_INVALID_TYPE;
-                {
-                    // detach from self, to allow self to be passed deeper
-                    let mut interpreter = self.interpreter.take().unwrap();
-                    //                    let mut input = self.input.take().unwrap();
-                    let result = interpreter.match_token(self.mode, self);
-                    self.interpreter = Some(interpreter);
+                // detach from self, to allow self to be passed deeper
+                let mut interpreter = self.interpreter.take().unwrap();
+                //                    let mut input = self.input.take().unwrap();
+                let result = interpreter.match_token(self.mode, self);
+                self.interpreter = Some(interpreter);
 
-                    ttype = match result {
-                        Ok(ttype) => {
-                            //                            println!("new mode {}",self.mode);
-                            ttype
-                        }
-                        Err(err) => {
-                            //                            println!("error, recovering");
-                            notify_listeners(&mut self.error_listeners.borrow_mut(), &err, self);
-                            self.interpreter
-                                .as_mut()
-                                .unwrap()
-                                .recover(err, self.input.as_mut().unwrap().deref_mut());
-                            LEXER_SKIP
-                        }
-                    };
-                    //                    self.input = Some(input)
-                }
-                if self.get_input_stream().unwrap().la(1) == super::int_stream::EOF {
+                let ttype = result.unwrap_or_else(|err| {
+                    //                            println!("error, recovering");
+                    notify_listeners(&mut self.error_listeners.borrow_mut(), &err, self);
+                    self.interpreter
+                        .as_mut()
+                        .unwrap()
+                        .recover(err, self.input.as_mut().unwrap());
+                    LEXER_SKIP
+                });
+                //                    self.input = Some(input)
+
+                if self.input().la(1) == super::int_stream::EOF {
                     self.hit_eof = true;
                 }
 
@@ -325,7 +320,7 @@ where
                 break;
             }
         }
-        self.input.as_mut().unwrap().release(_marker);
+        self.input().release(_marker);
         self.token.take().unwrap()
     }
 
@@ -365,15 +360,14 @@ fn notify_listeners<'input, T, Input, TF>(
     Input: CharStream<TF::From>,
     TF: TokenFactory<'input>,
 {
+    let inner = lexer
+        .input
+        .as_ref()
+        .unwrap()
+        .get_text(lexer.token_start_char_index, lexer.get_char_index());
     let text = format!(
         "token recognition error at: '{}'",
-        lexer
-            .input
-            .as_ref()
-            .unwrap()
-            .get_text(lexer.token_start_char_index, lexer.get_char_index())
-            .borrow()
-            .to_display()
+        TF::get_data(inner).to_display()
     );
     for listener in liseners.iter_mut() {
         listener.syntax_error(
@@ -393,6 +387,10 @@ where
     Input: CharStream<TF::From>,
     TF: TokenFactory<'input>,
 {
+    type Input = Input;
+
+    fn input(&mut self) -> &mut Self::Input { self.input.as_mut().unwrap() }
+
     fn set_channel(&mut self, v: isize) { self.channel = v; }
 
     fn push_mode(&mut self, m: usize) {
@@ -417,5 +415,5 @@ where
 
     fn reset(&mut self) { unimplemented!() }
 
-    fn get_interpreter(&self) -> Option<&LexerATNSimulator> { self.interpreter.as_ref() }
+    fn get_interpreter(&self) -> Option<&LexerATNSimulator> { self.interpreter.as_deref() }
 }

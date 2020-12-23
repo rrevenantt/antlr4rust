@@ -51,9 +51,10 @@ pub trait TokenFactory<'a>: TidAble<'a> + Sized {
     /// Type of the underlying storage
     type Data: InputData + ?Sized;
     /// Type of the reference to `Self::Data` that factory needs for producing tokens
-    type From: Borrow<Self::Data> + Into<Cow<'a, Self::Data>>;
+    type From;
 
     /// Creates token either from `sourse` or from pure data in `text`
+    /// Either `source` or `text` are not None
     fn create<T>(
         &'a self,
         source: Option<&mut T>,
@@ -71,6 +72,8 @@ pub trait TokenFactory<'a>: TidAble<'a> + Sized {
     /// Creates invalid token
     /// Invalid tokens must have `TOKEN_INVALID_TYPE` token type.
     fn create_invalid() -> Self::Tok;
+
+    fn get_data(from: Self::From) -> Cow<'a, Self::Data>;
 }
 
 /// Default token factory
@@ -127,6 +130,8 @@ impl<'a> TokenFactory<'a> for CommonTokenFactory {
     }
 
     fn create_invalid() -> Self::Tok { INVALID_COMMON.clone() }
+
+    fn get_data(from: Self::From) -> Cow<'a, Self::Data> { from }
 }
 
 #[derive(Default, Tid, Debug)]
@@ -178,6 +183,8 @@ impl<'a> TokenFactory<'a> for OwningTokenFactory {
     }
 
     fn create_invalid() -> Self::Tok { INVALID_OWNING.clone() }
+
+    fn get_data(from: Self::From) -> Cow<'a, Self::Data> { from.into() }
 }
 
 // pub struct DynFactory<'input,TF:TokenFactory<'.into()input>>(TF) where TF::Tok:CoerceUnsized<Box<dyn Token+'input>>;
@@ -196,10 +203,14 @@ pub type ArenaCommonFactory<'a> = ArenaFactory<'a, CommonTokenFactory, CommonTok
 /// Requires `&'a Tok: Default` bound to produce invalid tokens, which can be easily implemented
 /// like this:
 /// ```text
-/// lazy_static!{ static ref INVALID_TOKEN:CustomToken = ... }
+/// lazy_static!{ static ref INVALID_TOKEN:Box<CustomToken> = ... }
 /// impl Default for &'_ CustomToken {
 ///     fn default() -> Self { &**INVALID_TOKEN }
 /// }
+/// ```
+/// or if possible just
+/// ```text
+/// const INVALID_TOKEN:CustomToken = ...
 /// ```
 // Box is used here because it is almost always should be used for token factory
 #[derive(Tid)]
@@ -261,6 +272,8 @@ where
     }
 
     fn create_invalid() -> &'input Tok { <&Tok as Default>::default() }
+
+    fn get_data(from: Self::From) -> Cow<'input, Self::Data> { TF::get_data(from) }
 }
 
 pub trait TokenAware<'input> {

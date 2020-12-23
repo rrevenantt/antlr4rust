@@ -18,7 +18,8 @@ pub trait CharStream<Data>: IntStream {
     /// Called by parser only on token intervals.
     /// This fact can be used by custom implementations  
     fn get_text(&self, a: isize, b: isize) -> Data;
-    fn get_text_from_interval(&self, i: &Interval) -> Data { self.get_text(i.a, i.b) }
+    /// Same but indexed are provided with `Interval`, exists mostly to correspond to Java version
+    fn get_text_from_interval(&self, i: Interval) -> Data { self.get_text(i.a, i.b) }
 }
 
 /// Trait for input that can be accepted by `InputStream` to be able to provide lexer with data.

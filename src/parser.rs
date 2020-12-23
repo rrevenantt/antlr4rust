@@ -36,7 +36,7 @@ pub trait Parser<'input>: Recognizer<'input> {
     fn get_token_factory(&self) -> &'input Self::TF;
     fn get_parser_rule_context(&self) -> &Rc<<Self::Node as ParserNodeType<'input>>::Type>;
     //    fn set_parser_rule_context(&self, v: ParserRuleContext);
-    fn consume(&mut self, err_handler: &mut dyn ErrorStrategy<'input, Self>)
+    fn consume(&mut self, err_handler: &mut impl ErrorStrategy<'input, Self>)
     where
         Self: Sized;
     //    fn get_parse_listeners(&self) -> Vec<ParseTreeListener>;
@@ -233,7 +233,7 @@ where
     #[inline(always)]
     fn get_parser_rule_context(&self) -> &Rc<Ctx::Type> { self.ctx.as_ref().unwrap() }
 
-    fn consume(&mut self, err_handler: &mut dyn ErrorStrategy<'input, Self>) {
+    fn consume(&mut self, err_handler: &mut impl ErrorStrategy<'input, Self>) {
         let o = self.get_current_token().clone();
         if o.borrow().get_token_type() != TOKEN_EOF {
             self.input.consume();
@@ -380,7 +380,7 @@ where
     pub fn match_token(
         &mut self,
         ttype: isize,
-        err_handler: &mut dyn ErrorStrategy<'input, Self>,
+        err_handler: &mut impl ErrorStrategy<'input, Self>,
     ) -> Result<<I::TF as TokenFactory<'input>>::Tok, ANTLRError> {
         let mut token = self.get_current_token().clone();
         if token.borrow().get_token_type() == ttype {
@@ -405,7 +405,7 @@ where
     #[inline]
     pub fn match_wildcard(
         &mut self,
-        err_handler: &mut dyn ErrorStrategy<'input, Self>,
+        err_handler: &mut impl ErrorStrategy<'input, Self>,
     ) -> Result<<I::TF as TokenFactory<'input>>::Tok, ANTLRError> {
         let mut t = self.get_current_token().clone();
         if t.borrow().get_token_type() > 0 {
@@ -617,8 +617,9 @@ where
     pub fn dump_dfa(&self) {
         let mut seen_one = false;
         for dfa in self.interp.decision_to_dfa() {
+            let dfa = dfa.read();
             // because s0 is saved in dfa for Rust version
-            if dfa.states.read().len() > 1 + (dfa.is_precedence_dfa() as usize) {
+            if dfa.states.len() > 1 + (dfa.is_precedence_dfa() as usize) {
                 if seen_one {
                     println!()
                 }

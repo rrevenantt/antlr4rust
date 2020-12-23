@@ -3,6 +3,7 @@ use std::mem;
 
 use murmur3::murmur3_32::MurmurHasher;
 
+use crate::int_stream::IntStream;
 use crate::lexer::Lexer;
 use crate::lexer_action::LexerAction;
 use crate::lexer_action::LexerAction::LexerIndexedCustomAction;
@@ -66,20 +67,20 @@ impl LexerActionExecutor {
 
     pub fn execute<'input>(&self, lexer: &mut impl Lexer<'input>, start_index: isize) {
         let mut requires_seek = false;
-        let stop_index = lexer.get_input_stream().unwrap().index();
+        let stop_index = lexer.input().index();
         for action in self.lexer_actions.iter() {
             //println!("executing action {:?}",action);
             if let LexerAction::LexerIndexedCustomAction { offset, .. } = action {
-                lexer.get_input_stream().unwrap().seek(start_index + offset);
+                lexer.input().seek(start_index + offset);
                 requires_seek = start_index + offset != stop_index;
             } else if action.is_position_dependent() {
-                lexer.get_input_stream().unwrap().seek(stop_index);
+                lexer.input().seek(stop_index);
                 requires_seek = false
             }
             action.execute(lexer);
         }
         if requires_seek {
-            lexer.get_input_stream().unwrap().seek(stop_index);
+            lexer.input().seek(stop_index);
         }
     }
 

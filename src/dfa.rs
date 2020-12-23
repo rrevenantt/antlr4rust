@@ -39,14 +39,14 @@ pub struct DFA {
     pub decision: isize,
 
     /// Set of all dfa states.
-    pub states: RwLock<Vec<DFAState>>,
+    pub states: Vec<DFAState>,
 
     // for faster duplicate search
     // TODO i think DFAState.edges can contain references to its elements
-    pub(crate) states_map: RwLock<HashMap</*DFAState hash*/ u64, Vec<DFAStateRef>>>,
+    pub(crate) states_map: HashMap</*DFAState hash*/ u64, Vec<DFAStateRef>>,
     //    states_mu sync.RWMutex
     /// Initial DFA state
-    pub s0: RwLock<Option<DFAStateRef>>,
+    pub s0: Option<DFAStateRef>,
     //    s0_mu sync.RWMutex
     is_precedence_dfa: bool,
 }
@@ -56,15 +56,15 @@ impl DFA {
         let mut dfa = DFA {
             atn_start_state,
             decision,
-            states: RwLock::new(Vec::new()),
+            states: Default::default(),
             //            states_map: RwLock::new(HashMap::new()),
-            states_map: RwLock::new(HashMap::new()),
-            s0: RwLock::new(None),
+            states_map: Default::default(),
+            s0: Default::default(),
             is_precedence_dfa: false,
         };
 
         // to indicate null
-        dfa.states.write().push(DFAState::new_dfastate(
+        dfa.states.push(DFAState::new_dfastate(
             usize::max_value(),
             Box::new(ATNConfigSet::new_base_atnconfig_set(true)),
         ));
@@ -79,15 +79,15 @@ impl DFA {
         {
             dfa.is_precedence_dfa = true;
             let mut precedence_state = DFAState::new_dfastate(
-                dfa.states.read().len(),
+                dfa.states.len(),
                 Box::new(ATNConfigSet::new_base_atnconfig_set(true)),
             );
             precedence_state.edges = vec![];
             precedence_state.is_accept_state = false;
             precedence_state.requires_full_context = false;
 
-            dfa.s0 = RwLock::new(Some(precedence_state.state_number));
-            dfa.states.write().push(precedence_state)
+            dfa.s0 = Some(precedence_state.state_number);
+            dfa.states.push(precedence_state)
         }
         dfa
     }
@@ -97,19 +97,18 @@ impl DFA {
             panic!("dfa is supposed to be precedence here");
         }
 
-        self.s0.read().and_then(|s0| {
-            self.states.read()[s0]
+        self.s0.and_then(|s0| {
+            self.states[s0]
                 .edges
                 .get(_precedence as usize)
-                .copied()
-                .and_then(|it| match it {
+                .and_then(|it| match *it {
                     0 => None,
                     x => Some(x),
                 })
         })
     }
 
-    pub fn set_precedence_start_state(&self, precedence: isize, _start_state: DFAStateRef) {
+    pub fn set_precedence_start_state(&mut self, precedence: isize, _start_state: DFAStateRef) {
         if !self.is_precedence_dfa {
             panic!("set_precedence_start_state called for not precedence dfa")
         }
@@ -119,8 +118,8 @@ impl DFA {
         }
         let precedence = precedence as usize;
 
-        if let Some(x) = self.s0.write().deref() {
-            self.states.write()[*x].edges.apply(|edges| {
+        if let Some(x) = &self.s0 {
+            self.states[*x].edges.apply(|edges| {
                 if edges.len() <= precedence {
                     edges.resize(precedence + 1, 0);
                 }
@@ -138,7 +137,7 @@ impl DFA {
     fn num_states(&self) -> isize { unimplemented!() }
 
     pub fn to_string(&self, vocabulary: &dyn Vocabulary) -> String {
-        if self.s0.read().is_none() {
+        if self.s0.is_none() {
             return String::new();
         }
 
@@ -151,7 +150,7 @@ impl DFA {
     }
 
     pub fn to_lexer_string(&self) -> String {
-        if self.s0.read().is_none() {
+        if self.s0.is_none() {
             return String::new();
         }
         format!(

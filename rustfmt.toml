@@ -1,2 +1,3 @@
 edition = "2018"
 fn_single_line = true
+fn_params_layout = "Compressed"

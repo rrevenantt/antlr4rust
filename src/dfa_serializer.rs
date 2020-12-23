@@ -11,7 +11,7 @@ pub struct DFASerializer<'a, 'b> {
 
 impl Display for DFASerializer<'_, '_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let dfa = self.dfa.states.read();
+        let dfa = &self.dfa.states;
         for source in dfa.iter() {
             for (i, edge) in source.edges.iter().copied().enumerate() {
                 if edge != 0 && edge != ERROR_DFA_STATE_REF {

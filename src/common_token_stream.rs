@@ -16,6 +16,7 @@ pub struct CommonTokenStream<'input, T: TokenSource<'input>> {
 }
 
 impl<'input, T: TokenSource<'input>> IntStream for CommonTokenStream<'input, T> {
+    #[inline]
     fn consume(&mut self) -> Result<(), ANTLRError> {
         self.base.consume()?;
         //        self.base.p = self.next_token_on_channel(self.base.p,self.channel);
@@ -25,18 +26,23 @@ impl<'input, T: TokenSource<'input>> IntStream for CommonTokenStream<'input, T> 
         Ok(())
     }
 
+    #[inline]
     fn la(&mut self, i: isize) -> isize {
         self.lt(i)
             .map(|t| t.borrow().get_token_type())
             .unwrap_or(TOKEN_INVALID_TYPE)
     }
 
+    #[inline(always)]
     fn mark(&mut self) -> isize { 0 }
 
+    #[inline(always)]
     fn release(&mut self, _marker: isize) {}
 
+    #[inline(always)]
     fn index(&self) -> isize { self.base.index() }
 
+    #[inline(always)]
     fn seek(&mut self, index: isize) { self.base.seek(index); }
 
     #[inline(always)]
@@ -48,29 +54,24 @@ impl<'input, T: TokenSource<'input>> IntStream for CommonTokenStream<'input, T> 
 impl<'input, T: TokenSource<'input>> TokenStream<'input> for CommonTokenStream<'input, T> {
     type TF = T::TF;
 
+    #[inline(always)]
     fn lt(&mut self, k: isize) -> Option<&<Self::TF as TokenFactory<'input>>::Tok> {
+        if k == 1 {
+            return self.base.tokens.get(self.base.p as usize);
+        }
         if k == 0 {
             panic!();
         }
         if k < 0 {
             return self.lb(-k);
         }
-        let mut i = self.base.p;
-        let mut n = 1; // we know tokens[p] is a good one
-                       // find k good tokens
-        while n < k {
-            // skip off-channel tokens, but make sure to not look past EOF
-            if self.sync(i + 1) {
-                i = self.next_token_on_channel(i + 1, self.channel, 1);
-            }
-            n += 1;
-        }
-        //		if ( i>range ) range = i;
-        return self.base.tokens.get(i as usize);
+        self.lt_inner(k)
     }
 
+    #[inline]
     fn get(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Tok { self.base.get(index) }
 
+    #[inline]
     fn get_inner(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Inner {
         self.base.get_inner(index)
     }
@@ -99,10 +100,28 @@ impl<'input, T: TokenSource<'input>> CommonTokenStream<'input, T> {
         r.sync(0);
         r
     }
+
+    fn lt_inner(&mut self, k: isize) -> Option<&<T::TF as TokenFactory<'input>>::Tok> {
+        let mut i = self.base.p;
+        let mut n = 1; // we know tokens[p] is a good one
+                       // find k good tokens
+        while n < k {
+            // skip off-channel tokens, but make sure to not look past EOF
+            if self.sync(i + 1) {
+                i = self.next_token_on_channel(i + 1, self.channel, 1);
+            }
+            n += 1;
+        }
+        //		if ( i>range ) range = i;
+        return self.base.tokens.get(i as usize);
+    }
     //
     //    fn get_all_tokens(&self) -> Vec<Token> { unimplemented!() }
     //
-    //    fn reset(&self) { unimplemented!() }
+    pub fn reset(&mut self) {
+        self.base.p = 0;
+        self.base.current_token_index = 0;
+    }
 
     pub fn iter(&mut self) -> IterWrapper<Self> { IterWrapper(self) }
 

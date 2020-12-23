@@ -90,6 +90,9 @@ extern crate lazy_static;
 pub use lazy_static::lazy_static;
 
 #[doc(hidden)]
+pub use parking_lot::RwLock;
+
+#[doc(hidden)]
 pub use better_any::{impl_tid, type_id, Tid, TidAble, TidExt};
 
 #[doc(inline)]

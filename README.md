@@ -17,7 +17,7 @@ For now development is going on in this repository
 but eventually it will be merged to main ANTLR4 repo
 
 Currently, requires nightly version of rust. 
-This likely will be the case until `coerce_unsize` or some kind of coercion trait is stabilized. 
+This likely will be the case until `coerce_unsized` or some kind of coercion trait is stabilized. 
 There are other unstable features in use but only `CoerceUnsized` is essential. 
 
 Remaining things before merge:
@@ -26,7 +26,6 @@ Remaining things before merge:
    - [ ] more tests for API because it is quite different from Java
 
 Can be done after merge: 
- - more profiling and performance optimizations
  - Documentation
    - [ ] Some things are already documented but still far from perfect, also more links needed.
  - Code quality
@@ -102,6 +101,22 @@ there are quite some differences because Rust is not an OOP language and is much
  - All rule context variables (rule argument or rule return) should implement `Default + Clone`.
  
 ### Benchmarks
+Here is comparison of antlr generated XML lexer and parser
+(from default XML grammar but with custom minimal Token/TokenFactory/InputStream) to hand-written implementations in rust ecosystem.
+Keep in mind that `xmlparser` and `quick_xml` are much closer to being lexer than parser, so they should be compared with antlr lexer.
+Also while structs used by generated lexer and parser were customized to track as minimum data as required 
+(which is possible for any user), 
+internals of the lexer cannot be customized yet and still track quite a lot of data that might not be used in particular case. 
+So there is still room for improvement.
+```text
+large/large_xmlparser        time:   [1.8598 ms 1.8607 ms 1.8619 ms]                                   
+large/large_quick_xml        time:   [1.4623 ms 1.4645 ms 1.4675 ms]                                   
+large/large_antlr_xml_lexer  time:   [5.7866 ms 5.7877 ms 5.7891 ms]
+large/large_xmlrs            time:   [16.734 ms 16.748 ms 16.766 ms]
+large/large_minidom          time:   [7.0639 ms 7.0792 ms 7.0975 ms]                                
+large/large_roxmltree        time:   [4.9341 ms 4.9360 ms 4.9380 ms]                                   
+large/large_antlr_xml_full   time:   [10.243 ms 10.248 ms 10.252 ms]                                  
+```
 
 ### Unsafe
 Currently, unsafe is used only for downcasting (through separate crate) 

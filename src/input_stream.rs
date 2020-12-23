@@ -14,7 +14,7 @@ use crate::char_stream::{CharStream, InputData};
 use crate::errors::ANTLRError;
 use crate::int_stream::{IntStream, EOF};
 use crate::interval_set::Interval;
-use crate::token::Token;
+use crate::token::{Token, TOKEN_EOF};
 use better_any::{impl_tid, TidAble};
 
 /// Default rust target input stream.
@@ -55,6 +55,7 @@ impl<'a, T> CharStream<Cow<'a, [T]>> for InputStream<&'a [T]>
 where
     [T]: InputData,
 {
+    #[inline]
     fn get_text(&self, a: isize, b: isize) -> Cow<'a, [T]> {
         Cow::Borrowed(self.get_text_inner(a, b))
     }
@@ -71,9 +72,18 @@ impl<'a, 'b, T> CharStream<Cow<'b, str>> for InputStream<&'a [T]>
 where
     [T]: InputData,
 {
+    #[inline]
     fn get_text(&self, a: isize, b: isize) -> Cow<'b, str> {
         self.get_text_inner(a, b).to_display().into()
     }
+}
+
+impl<'a, T> CharStream<&'a [T]> for InputStream<&'a [T]>
+where
+    [T]: InputData,
+{
+    #[inline]
+    fn get_text(&self, a: isize, b: isize) -> &'a [T] { self.get_text_inner(a, b) }
 }
 
 impl<Data: ?Sized + InputData> InputStream<Box<Data>> {
@@ -89,6 +99,7 @@ impl<Data: ?Sized + InputData> InputStream<Box<Data>> {
         .to_owned()
     }
 
+    /// Creates new `InputStream` over owned data   
     pub fn new_owned(data: Box<Data>) -> Self {
         Self {
             name: "<empty>".to_string(),
@@ -117,6 +128,7 @@ where
         }
     }
 
+    /// Creates new `InputStream` over borrowed data
     pub fn new(data_raw: &'a Data) -> Self {
         // let data_raw = data_raw.as_ref();
         // let data = data_raw.to_indexed_vec();
@@ -147,6 +159,7 @@ where
     fn consume(&mut self) -> result::Result<(), ANTLRError> {
         if let Some(index) = self.data_raw.offset(self.index, 1) {
             self.index = index;
+            // self.current = self.data_raw.deref().item(index).unwrap_or(TOKEN_EOF);
             Ok(())
         } else {
             Err(ANTLRError::IllegalStateError("cannot consume EOF".into()))
@@ -155,6 +168,12 @@ where
 
     #[inline]
     fn la(&mut self, mut offset: isize) -> isize {
+        if offset == 1 {
+            return self
+                .data_raw
+                .item(self.index)
+                .unwrap_or(crate::int_stream::EOF);
+        }
         if offset == 0 {
             panic!("should not be called with offset 0");
         }

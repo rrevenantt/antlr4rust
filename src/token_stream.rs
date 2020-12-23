@@ -59,6 +59,7 @@ impl<'a, 'input: 'a, T: TokenStream<'input>> Iterator for TokenIter<'a, 'input, 
     }
 }
 
+/// Token stream that keeps all data in internal Vec
 #[derive(Tid)]
 pub struct UnbufferedTokenStream<'input, T: TokenSource<'input>> {
     token_source: T,
@@ -122,6 +123,7 @@ impl<'input, T: TokenSource<'input>> UnbufferedTokenStream<'input, T> {
 impl<'input, T: TokenSource<'input>> TokenStream<'input> for UnbufferedTokenStream<'input, T> {
     type TF = T::TF;
 
+    #[inline]
     fn lt(&mut self, i: isize) -> Option<&<Self::TF as TokenFactory<'input>>::Tok> {
         if i == -1 {
             return self.tokens.get(self.p as usize - 1);
@@ -132,10 +134,12 @@ impl<'input, T: TokenSource<'input>> TokenStream<'input> for UnbufferedTokenStre
         self.tokens.get((self.p + i - 1) as usize)
     }
 
+    #[inline]
     fn get(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Tok {
         &self.tokens[(index - self.get_buffer_start_index()) as usize]
     }
 
+    #[inline]
     fn get_inner(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Inner {
         self.tokens[(index - self.get_buffer_start_index()) as usize].borrow()
     }
@@ -174,6 +178,7 @@ impl<'input, T: TokenSource<'input>> TokenStream<'input> for UnbufferedTokenStre
 }
 
 impl<'input, T: TokenSource<'input>> IntStream for UnbufferedTokenStream<'input, T> {
+    #[inline]
     fn consume(&mut self) -> Result<(), ANTLRError> {
         if self.la(1) == TOKEN_EOF {
             return Err(ANTLRError::IllegalStateError(
@@ -193,17 +198,20 @@ impl<'input, T: TokenSource<'input>> IntStream for UnbufferedTokenStream<'input,
         Ok(())
     }
 
+    #[inline]
     fn la(&mut self, i: isize) -> isize {
         self.lt(i)
             .map(|t| t.borrow().get_token_type())
             .unwrap_or(TOKEN_INVALID_TYPE)
     }
 
+    #[inline]
     fn mark(&mut self) -> isize {
         self.markers_count += 1;
         -self.markers_count
     }
 
+    #[inline]
     fn release(&mut self, marker: isize) {
         assert_eq!(marker, -self.markers_count);
 
@@ -236,6 +244,7 @@ impl<'input, T: TokenSource<'input>> IntStream for UnbufferedTokenStream<'input,
     #[inline(always)]
     fn index(&self) -> isize { self.current_token_index }
 
+    #[inline]
     fn seek(&mut self, mut index: isize) {
         if self.current_token_index == index {
             return;

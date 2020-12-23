@@ -587,5 +587,5 @@ impl<'a, T: Parser<'a>> ErrorStrategy<'a, T> for BailErrorStrategy<'a, T::Node> 
     }
 
     #[inline(always)]
-    fn report_match(&mut self, recognizer: &mut T) { self.0.report_match(recognizer) }
+    fn report_match(&mut self, recognizer: &mut T) {}
 }

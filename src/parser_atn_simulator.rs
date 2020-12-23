@@ -3,7 +3,7 @@ use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hasher;
 use std::marker::PhantomData;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 use std::sync::Arc;
 use std::{ptr, usize};
@@ -43,6 +43,7 @@ use crate::transition::{
     ActionTransition, EpsilonTransition, PrecedencePredicateTransition, PredicateTransition,
     RuleTransition, Transition, TransitionType,
 };
+use parking_lot::{RwLock, RwLockUpgradableReadGuard, RwLockWriteGuard};
 
 /// ### The embodiment of the adaptive LL(*), ALL(*), parsing strategy.
 ///
@@ -93,7 +94,8 @@ pub struct ParserATNSimulator {
 /// Just a local helper structure to spoil function parameters as little as possible
 struct Local<'a, 'input, T: Parser<'input> + 'a> {
     outer_context: Rc<<T::Node as ParserNodeType<'input>>::Type>,
-    dfa: &'a DFA,
+    dfa: Option<RwLockUpgradableReadGuard<'a, DFA>>,
+    dfa_mut: Option<RwLockWriteGuard<'a, DFA>>,
     merge_cache: &'a mut MergeCache,
     precedence: isize,
     parser: &'a mut T,
@@ -101,6 +103,16 @@ struct Local<'a, 'input, T: Parser<'input> + 'a> {
 }
 
 impl<'a, 'input, T: Parser<'input> + 'a> Local<'a, 'input, T> {
+    fn dfa(&self) -> &DFA { self.dfa.as_deref().unwrap() }
+    fn dfa_mut(&mut self) -> &mut DFA { self.dfa_mut.as_mut().unwrap().deref_mut() }
+    fn upgrade_lock(&mut self) {
+        let lock = self.dfa.take().unwrap();
+        self.dfa_mut = Some(RwLockUpgradableReadGuard::upgrade(lock));
+    }
+    fn downgrade_lock(&mut self) {
+        let lock = self.dfa_mut.take().unwrap();
+        self.dfa = Some(RwLockWriteGuard::downgrade_to_upgradable(lock));
+    }
     fn input(&mut self) -> &mut dyn TokenStream<'input, TF = T::TF> {
         self.parser.get_input_stream_mut()
     }
@@ -119,7 +131,7 @@ pub type MergeCache = HashMap<
 impl ParserATNSimulator {
     pub fn new(
         atn: Arc<ATN>,
-        decision_to_dfa: Arc<Vec<DFA>>,
+        decision_to_dfa: Arc<Vec<RwLock<DFA>>>,
         shared_context_cache: Arc<PredictionContextCache>,
     ) -> ParserATNSimulator {
         ParserATNSimulator {
@@ -148,7 +160,10 @@ impl ParserATNSimulator {
         let mut merge_cache: MergeCache = HashMap::with_hasher(MurmurHasherBuilder {});
         let mut local = Local {
             outer_context: parser.get_parser_rule_context().clone(),
-            dfa: &self.decision_to_dfa()[decision as usize],
+            dfa: self.decision_to_dfa()[decision as usize]
+                .upgradable_read()
+                .into(),
+            dfa_mut: None,
             merge_cache: &mut merge_cache,
             precedence: parser.get_precedence(),
             parser,
@@ -159,40 +174,48 @@ impl ParserATNSimulator {
         let m = local.input().mark();
 
         let result = {
-            let s0 = if local.dfa.is_precedence_dfa() {
+            let s0 = if local.dfa().is_precedence_dfa() {
                 local
-                    .dfa
+                    .dfa()
                     .get_precedence_start_state(local.precedence /*parser.get_precedence()*/)
             } else {
-                local.dfa.s0.read().as_ref().copied()
+                local.dfa().s0
             };
 
             let s0 = s0.unwrap_or_else(|| {
                 let s0_closure = self.compute_start_state(
-                    local.dfa.atn_start_state,
+                    local.dfa().atn_start_state,
                     // PredictionContext::from_rule_context::<'a,T::Node>(self.atn(), empty_ctx::<T::Node>().as_ref()),
                     EMPTY_PREDICTION_CONTEXT.clone(),
                     false,
                     &mut local,
                 );
-                if local.dfa.is_precedence_dfa() {
-                    let mut s0 = local.dfa.s0.read().unwrap();
+                local.upgrade_lock();
+                let mut s0;
+                if local.dfa_mut().is_precedence_dfa() {
+                    s0 = local.dfa_mut().s0.unwrap();
                     let s0_closure_updated = self.apply_precedence_filter(&s0_closure, &mut local);
-                    local.dfa.states.write()[s0].configs = Box::new(s0_closure);
+                    local.dfa_mut().states[s0].configs = Box::new(s0_closure);
 
                     s0 = self.add_dfastate(
-                        &local.dfa,
+                        local.dfa_mut(),
                         DFAState::new_dfastate(0, Box::new(s0_closure_updated)),
                     );
 
-                    local.dfa.set_precedence_start_state(local.precedence, s0);
-                    s0
+                    local
+                        .dfa_mut
+                        .as_mut()
+                        .unwrap()
+                        .set_precedence_start_state(local.precedence, s0);
                 } else {
-                    let s0 = self
-                        .add_dfastate(&local.dfa, DFAState::new_dfastate(0, Box::new(s0_closure)));
-                    local.dfa.s0.write().replace(s0);
-                    s0
+                    s0 = self.add_dfastate(
+                        local.dfa_mut(),
+                        DFAState::new_dfastate(0, Box::new(s0_closure)),
+                    );
+                    local.dfa_mut().s0.replace(s0);
                 }
+                local.downgrade_lock();
+                s0
             });
 
             self.exec_atn(&mut local, s0)?
@@ -213,14 +236,15 @@ impl ParserATNSimulator {
         let mut previousD = s0;
 
         let mut token = local.input().la(1);
+
         loop {
             //            println!("exec atn loop previous D {}",previousD as isize -1);
-            let D = self
-                .get_existing_target_state(local.dfa, previousD, token)
-                .unwrap_or_else(|| self.compute_target_state(local.dfa, previousD, token, local));
+            let D = Self::get_existing_target_state(local.dfa(), previousD, token)
+                .unwrap_or_else(|| self.compute_target_state(previousD, token, local));
             debug_assert!(D > 0);
 
-            let states = local.dfa.states.read();
+            let dfa = local.dfa.take().unwrap();
+            let states = &dfa.states;
             if D == ERROR_DFA_STATE_REF {
                 let previousDstate = &states[previousD];
                 let err = self.no_viable_alt(
@@ -259,8 +283,18 @@ impl ParserATNSimulator {
                     }
                 }
 
+                self.report_attempting_full_context(
+                    &dfa,
+                    &conflicting_alts,
+                    Dstate.configs.as_ref(),
+                    self.start_index.get(),
+                    local.input().index(),
+                    local.parser,
+                );
+                local.dfa = Some(dfa);
+
                 let s0_closure = self.compute_start_state(
-                    local.dfa.atn_start_state,
+                    local.dfa().atn_start_state,
                     PredictionContext::from_rule_context::<'a, T::Node>(
                         self.atn(),
                         local.outer_context(),
@@ -269,16 +303,7 @@ impl ParserATNSimulator {
                     local,
                 );
 
-                self.report_attempting_full_context(
-                    local.dfa,
-                    &conflicting_alts,
-                    Dstate.configs.as_ref(),
-                    self.start_index.get(),
-                    local.input().index(),
-                    local.parser,
-                );
-
-                return self.exec_atn_with_full_context(local, &Dstate, s0_closure);
+                return self.exec_atn_with_full_context(local, s0_closure);
             }
 
             if Dstate.is_accept_state {
@@ -302,7 +327,7 @@ impl ParserATNSimulator {
                     1 => return Ok(alts.iter().next().unwrap() as isize),
                     _ => {
                         self.report_ambiguity(
-                            local.dfa,
+                            &dfa,
                             self.start_index.get(),
                             stop_index,
                             false,
@@ -320,17 +345,17 @@ impl ParserATNSimulator {
                 local.input().consume();
                 token = local.input().la(1);
             }
+            local.dfa = Some(dfa);
         }
     }
 
     #[allow(non_snake_case)]
     fn get_existing_target_state(
-        &self,
         dfa: &DFA,
         previousD: DFAStateRef,
         t: isize,
     ) -> Option<DFAStateRef> {
-        dfa.states.read()[previousD]
+        dfa.states[previousD]
             .edges
             .get((t + 1) as usize)
             .and_then(|x| match *x {
@@ -342,25 +367,23 @@ impl ParserATNSimulator {
     #[allow(non_snake_case)]
     fn compute_target_state<'a, T: Parser<'a>>(
         &self,
-        dfa: &DFA,
+        // dfa: &mut DFA,
         previousD: DFAStateRef,
         t: isize,
         local: &mut Local<'_, 'a, T>,
     ) -> DFAStateRef {
         //        println!("source config {:?}",dfa.states.read()[previousD].configs.as_ref());
-        let reach = self.compute_reach_set(
-            dfa.states.read()[previousD].configs.as_ref(),
-            t,
-            false,
-            local,
-        );
+        let reach = {
+            let closure = RwLockUpgradableReadGuard::rwlock(local.dfa.as_ref().unwrap()).read();
+            let closure = closure.states[previousD].configs.as_ref();
+            self.compute_reach_set(closure, t, false, local)
+        };
+        local.upgrade_lock();
+        let dfa = local.dfa_mut();
         let reach = match reach {
             None => {
-                self.add_dfaedge(
-                    dfa.states.write()[previousD].borrow_mut(),
-                    t,
-                    ERROR_DFA_STATE_REF,
-                );
+                self.add_dfaedge(&mut dfa.states[previousD], t, ERROR_DFA_STATE_REF);
+                local.downgrade_lock();
                 return ERROR_DFA_STATE_REF;
             }
             Some(x) => x,
@@ -397,7 +420,8 @@ impl ParserATNSimulator {
         }
 
         let D = self.add_dfastate(dfa, D);
-        self.add_dfaedge(dfa.states.write()[previousD].borrow_mut(), t, D);
+        self.add_dfaedge(&mut dfa.states[previousD], t, D);
+        local.downgrade_lock();
         D
     }
 
@@ -426,7 +450,7 @@ impl ParserATNSimulator {
     fn exec_atn_with_full_context<'a, T: Parser<'a>>(
         &self,
         local: &mut Local<'_, 'a, T>,
-        _D: &DFAState,
+        // _D: &DFAState,
         s0: ATNConfigSet,
     ) -> Result<isize, ANTLRError> {
         //println!("exec_atn_with_full_context");
@@ -436,8 +460,10 @@ impl ParserATNSimulator {
         local.input().seek(self.start_index.get());
         let mut t = local.input().la(1);
         let mut predicted_alt = 0;
+        // local.upgrade_lock();
         loop {
             //            println!("full_ctx loop");
+
             let reach = self.compute_reach_set(&prev, t, full_ctx, local);
             prev = match reach {
                 None => {
@@ -477,9 +503,11 @@ impl ParserATNSimulator {
             }
         }
 
+        // local.downgrade_lock();
+        let dfa = local.dfa.take().unwrap();
         if prev.get_unique_alt() != INVALID_ALT {
             self.report_context_sensitivity(
-                local.dfa,
+                &dfa,
                 predicted_alt,
                 &prev,
                 self.start_index.get(),
@@ -489,7 +517,7 @@ impl ParserATNSimulator {
             return Ok(predicted_alt);
         }
         self.report_ambiguity(
-            local.dfa,
+            &dfa,
             self.start_index.get(),
             local.input().index(),
             found_exact_ambig,
@@ -1062,12 +1090,13 @@ impl ParserATNSimulator {
                 if let RuleStopState = self.atn().states[config.get_state()].get_state_type() {
                     assert!(!full_ctx);
 
-                    if local.dfa.is_precedence_dfa() {
+                    if local.dfa().is_precedence_dfa() {
                         let outermost_precedence_return = tr
                             .as_ref()
                             .cast::<EpsilonTransition>()
                             .outermost_precedence_return;
-                        let atn_start_state = self.atn().states[local.dfa.atn_start_state].as_ref();
+                        let atn_start_state =
+                            self.atn().states[local.dfa().atn_start_state].as_ref();
                         if outermost_precedence_return == atn_start_state.get_rule_index() as isize
                         {
                             c.set_precedence_filter_suppressed(true);
@@ -1388,18 +1417,18 @@ impl ParserATNSimulator {
         to
     }
 
-    fn add_dfastate(&self, dfa: &DFA, mut dfastate: DFAState) -> DFAStateRef {
+    fn add_dfastate(&self, dfa: &mut DFA, mut dfastate: DFAState) -> DFAStateRef {
         if dfastate.state_number == ERROR_DFA_STATE_REF {
             return ERROR_DFA_STATE_REF;
         }
-        let mut states = dfa.states.write();
+        let mut states = &mut dfa.states;
 
-        let a = states.deref().len();
-        dfastate.state_number = a;
+        let state_number = states.len();
+        dfastate.state_number = state_number;
 
         let key = dfastate.default_hash();
         //let mut new_hash = key;
-        if let Some(st) = dfa.states_map.write().get_mut(&key) {
+        if let Some(st) = dfa.states_map.get_mut(&key) {
             if let Some(&st) = st.iter().find(|&&it| states[it] == dfastate) {
                 return st;
             }
@@ -1415,12 +1444,11 @@ impl ParserATNSimulator {
 
         //        if key != new_hash {
         dfa.states_map
-            .write()
             .entry(key)
             .or_insert(Vec::new())
-            .push(a);
+            .push(state_number);
         //        }
-        a
+        state_number
     }
 
     fn report_attempting_full_context<'a, T: Parser<'a>>(
@@ -1486,5 +1514,5 @@ impl IATNSimulator for ParserATNSimulator {
 
     fn atn(&self) -> &ATN { self.base.atn() }
 
-    fn decision_to_dfa(&self) -> &Vec<DFA> { self.base.decision_to_dfa() }
+    fn decision_to_dfa(&self) -> &Vec<RwLock<DFA>> { self.base.decision_to_dfa() }
 }
