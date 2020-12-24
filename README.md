@@ -1,6 +1,6 @@
 # antlr4rust
-[![Crate](https://flat.badgen.net/crates/v/antlr-rust)](https://crates.io/crates/antlr_rust/0.2.0-dev.2)
-[![docs](https://flat.badgen.net/badge/docs.rs/v0.2.0-dev.2)](https://docs.rs/antlr-rust/0.2.0-dev.2)
+[![Crate](https://flat.badgen.net/crates/v/antlr-rust)](https://crates.io/crates/antlr_rust/0.2.0)
+[![docs](https://flat.badgen.net/badge/docs.rs/v0.2.0)](https://docs.rs/antlr-rust/0.2.0)
 
 [ANTLR4](https://github.com/antlr/antlr4) runtime for Rust programming language.
 
@@ -59,7 +59,7 @@ Then add following to `Cargo.toml` of the crate from which generated parser
 is going to be used:
 ```toml 
 [dependencies]
-antlr-rust = "=0.2.0-dev.2"
+antlr-rust = "=0.2"
 ```
 and `#![feature(try_blocks)]` in your project root module.  
  
@@ -102,11 +102,11 @@ there are quite some differences because Rust is not an OOP language and is much
  
 ### Benchmarks
 Here is comparison of antlr generated XML lexer and parser
-(from default XML grammar but with custom minimal Token/TokenFactory/InputStream) to hand-written implementations in rust ecosystem.
+(from default XML grammar but with custom minimal Token/TokenFactory/InputStream/RuleContext) to hand-written implementations in rust ecosystem.
 Keep in mind that `xmlparser` and `quick_xml` are much closer to being lexer than parser, so they should be compared with antlr lexer.
 Also while structs used by generated lexer and parser were customized to track as minimum data as required 
-(which is possible for any user), 
-internals of the lexer cannot be customized yet and still track quite a lot of data that might not be used in particular case. 
+(which is possible by any user of antlr-rust), 
+internals of the lexer cannot be customized enough yet and still track quite a lot of data that might not be used in particular case. 
 So there is still room for improvement.
 ```text
 large/large_xmlparser        time:   [1.8598 ms 1.8607 ms 1.8619 ms]                                   
