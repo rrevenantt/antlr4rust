@@ -1,0 +1,304 @@
+writeln(s) ::= <<println!("{}", <s> );>>
+write(s) ::= <<print!("{}", <s> );>>
+writeList(s) ::= << std::cout \<\< <s; separator=" \<\< "> \<\< std::endl;>>
+
+False() ::= "false"
+True() ::= "true"
+Not(v) ::= "!<v>"
+Assert(s) ::= ""
+//Cast(t,v) ::= "cast::\<_,<t>>(&*<v>)"
+Cast(t,v) ::= <<(if let EContextAll::<t>(ctx) = &*<v> { ctx } else { panic!("can't cast")} )>>
+Append(a,b) ::= "format!(\"{}{}\",<a>, <b>.unwrap())"
+AppendStr(a,b) ::= <%<a>.to_string() + &(<b>)%>
+Concat(a,b) ::= "<a><b>"
+
+DeclareLocal(s,v) ::= "let mut <s> = <v>"
+
+AssertIsList(v) ::= "" //not sure if possible in Rust
+AssignLocal(s,v) ::= "<s> = <v>;"
+
+InitIntVar(n,v) ::= "let <n> = <v>;"
+InitIntMember(n,v) ::= <<}
+@parser::fields {<n>: isize,}
+@parser::init   {<n>: <v>,
+>>
+InitBooleanMember(n,v) ::= <<}
+@parser::fields {<n>: bool,}
+@parser::init   {<n>: <v>,
+>>
+
+IntArg(v) ::= "<v>: isize"
+VarRef(v) ::= "<v>"
+
+GetMember(n) ::= "recog.<n>"
+SetMember(n,v) ::= "recog.<n> = <v>;"
+AddMember(n,v) ::= "recog.<n> += <v>;"
+PlusMember(n,v) ::= "recog.<n> + <v>"
+MemberEquals(n,v) ::= "recog.<n> == <v>"
+ModMemberEquals(n,m,v) ::= "recog.<n> % <m> == <v>"
+ModMemberNotEquals(n,m,v) ::= "recog.<n> % <m> != <v>"
+
+DumpDFA() ::= "recog.dump_dfa();"
+Pass() ::= "/* do nothing */"
+
+StringList() ::= "Vec\<String>"
+BuildParseTrees() ::= "recog.build_parse_trees = true;"
+BailErrorStrategy() ::=
+<<use antlr_rust::TidExt;
+*recog.err_handler.downcast_mut::\<DynStrategy\<I> >().unwrap() = Box::new(antlr_rust::error_strategy::BailErrorStrategy::new());
+>>
+
+ToStringTree(s) ::= "<s>.to_string_tree(&recog.base)"
+Column() ::= "recog.get_char_position_in_line()"
+Text() ::= "recog.get_text()"
+ValEquals(a,b) ::= "<a> == <b>"
+TextEquals(a) ::= "recog.get_text() == \"<a>\""
+PlusText(a) ::="\"<a>\".to_owned() + &recog.get_text()"
+InputText() ::= "recog.base.input.get_all_text()"
+LTEquals(i, v) ::= "recog.input.lt(<i>).unwrap().get_text() == <v>"
+LANotEquals(i, v) ::= "recog.input.la(<i>) != <v>"
+TokenStartColumnEquals(i) ::= "recog.token_start_column == <i>"
+
+ImportListener(X) ::= ""
+
+GetExpectedTokenNames() ::= "recog.base.get_expected_tokens().to_token_string(recog.get_vocabulary())"
+
+RuleInvocationStack() ::= "format!(\"[{}]\",recog.get_rule_invocation_stack().join(\", \"))"
+
+LL_EXACT_AMBIG_DETECTION() ::= <<recog.get_interpreter().set_prediction_mode(antlr_rust::PredictionMode::LL_EXACT_AMBIG_DETECTION);>>
+
+//ParserToken(parser, token) ::= <%<parser>.<token>%>
+ParserToken(parser, token) ::= <%self::<token>%>
+
+Production(p) ::= <%<p>%>
+
+Result(r) ::= <%<r>%>
+
+ParserPropertyMember() ::= <<
+@members {
+fn Property(&self) -> bool {
+	return true;
+}
+}
+>>
+
+ParserPropertyCall(p, call) ::= "recog.<call>"
+
+// unsupported
+TreeNodeWithAltNumField(X) ::= <<
+@parser::definitions {
+struct MyRuleNode\<T:CustomRuleContext>(BaseParserRuleContext\<MyRuleNodeCtx\<T> >);
+struct MyRuleNodeCtx\<T:CustomRuleContext>(T,std::cell::Cell\<isize>);
+use core::fmt::{Formatter,Debug};
+impl\<T:CustomRuleContext> Debug for MyRuleNode\<T>{
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        f.write_str(std::any::type_name::\<Self>())
+    }
+}
+
+impl\<T:CustomRuleContext> CustomRuleContext for MyRuleNodeCtx\<T>{
+    fn get_alt_number(&self) -> isize {self.1.get()}
+    fn set_alt_number(&self, _alt_number: isize) {self.1.set(_alt_number)}
+}
+
+
+impl\<T:CustomRuleContext> Deref for MyRuleNode\<T>{
+	type Target = dyn ParserRuleContext;
+	fn deref(&self) -> &Self::Target {&self.0}
+}
+impl\<T:CustomRuleContext> DerefMut for MyRuleNode\<T>{
+	fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
+}
+impl\<T:CustomRuleContext> antlr_rust::parser_rule_context::DerefSeal for MyRuleNode\<T>{}
+}
+>>
+
+PositionAdjustingLexer() ::= <<
+>>
+
+PositionAdjustingLexerDef() ::= <<
+//@definitions
+   fn handleAcceptPositionForIdentifier\<'input, Input:CharStream\<From\<'input>\>>(this: &mut BaseLexer\<'input,PositionAdjustingLexerActions,Input,LocalTokenFactory\<'input> >) {
+     let tokenText = this.get_text();
+     let identifierLength = tokenText.chars().position(|it| !isIdentifierChar(it)).unwrap() as isize;
+//     while (identifierLength \< tokenText.len() as isize && isIdentifierChar(tokenText[identifierLength as usize])) {
+//       identifierLength+=1;
+//     }
+
+     if (this.get_input_stream().unwrap().index() > this.token_start_char_index + identifierLength) {
+       let offset = identifierLength - 1;
+       let mut input = this.input.take().unwrap();
+       this.interpreter.as_mut().unwrap().resetAcceptPosition(&mut input,
+         this.token_start_char_index + offset, this.token_start_line, this.token_start_column + offset);
+       this.input = Some(input);
+       //return;
+     };
+
+   }
+
+   fn handleAcceptPositionForKeyword\<'input, Input:CharStream\<From\<'input>\>>(this: &mut BaseLexer\<'input,PositionAdjustingLexerActions,Input,LocalTokenFactory\<'input> >, keyword: &str) {
+   	let mut input = this.input.take().unwrap();
+     if (input.index() > this.token_start_char_index + keyword.len() as isize) {
+       let offset = keyword.len() as isize - 1;
+       this.interpreter.as_mut().unwrap().resetAcceptPosition(&mut input,
+         this.token_start_char_index + offset, this.token_start_line, this.token_start_column + offset);
+       //return true;
+     }
+     this.input = Some(input);
+
+     //return false;
+   }
+
+   fn isIdentifierChar(c: char) -> bool{
+     return c.is_ascii_alphanumeric() || c == '_';
+   }
+
+trait PositionAdjustingLexerATNSim {
+    fn resetAcceptPosition(&mut self, input: &mut dyn IntStream, index: isize, line: isize, charPositionInLine: isize);
+  }
+impl PositionAdjustingLexerATNSim for antlr_rust::lexer_atn_simulator::LexerATNSimulator{
+    fn resetAcceptPosition(&mut self, input: &mut dyn IntStream, index: isize, line: isize, charPositionInLine: isize) {
+      input.seek(index);
+      self.set_line(line);
+      self.set_char_position_in_line(charPositionInLine);
+      self.consume(input);
+    }
+}
+
+}
+@extend{
+
+  fn before_emit(lexer:&mut BaseLexer\<'input,PositionAdjustingLexerActions,Input,LocalTokenFactory\<'input> >) {
+    match (lexer.token_type) {
+      TOKENS => handleAcceptPositionForKeyword(lexer,"tokens"),
+      LABEL => handleAcceptPositionForIdentifier(lexer),
+      _ => {}
+    }
+  }
+
+>>
+
+
+BasicListener(X) ::= <<
+@parser::definitions {
+struct TestListener;
+
+impl\<'a> ParseTreeListener\<'a,TParserContextType> for TestListener{
+	fn visit_terminal(&'_ mut self, node: &TerminalNode\<'a,TParserContextType> ) {
+		println!("{}",node.symbol.get_text());
+	}
+}
+impl\<'a> TListener\<'a> for TestListener{}
+}
+>>
+
+WalkListener(s) ::= <<
+TTreeWalker::walk(Box::new(TestListener), <s>.deref());
+>>
+
+TokenGetterListener(X) ::= <<
+@parser::definitions {
+use antlr_rust::tree::Tree;
+struct TestListener;
+
+impl TListener\<'_> for TestListener{
+	fn exit_a(&mut self, node: &AContext) {
+		if node.get_child_count() == 2 {
+			println!("{} {} {:?}",node.INT(0).unwrap().symbol.get_text(),node.INT(1).unwrap().symbol.get_text(),node.INT_all())
+		} else{
+			println!("{}",node.ID().unwrap().symbol);
+		}
+	}
+}
+impl ParseTreeListener\<'_,TParserContextType> for TestListener{}
+}
+>>
+
+RuleGetterListener(X) ::= <<
+@parser::definitions {
+
+use antlr_rust::tree::Tree;
+struct TestListener;
+
+impl TListener\<'_> for TestListener{
+	fn exit_a(&mut self, node: &AContext) {
+		if node.get_child_count() == 2 {
+			println!("{} {} {}",
+				node.b(0).unwrap().start().get_text(),
+				node.b(1).unwrap().start().get_text(),
+				node.b_all()[0].start().get_text(),
+			)
+		} else{
+			println!("{}",node.b(0).unwrap().start().get_text());
+		}
+	}
+}
+impl ParseTreeListener\<'_,TParserContextType> for TestListener{}
+}
+>>
+
+
+LRListener(X) ::= <<
+@parser::definitions {
+use antlr_rust::tree::Tree;
+struct TestListener;
+
+impl ParseTreeListener\<'_,TParserContextType> for TestListener{}
+impl TListener\<'_> for TestListener{
+	fn exit_e(&mut self, ctx: &EContext) {
+		if ctx.get_child_count() == 3 {
+			println!("{} {} {}",ctx.e(0).unwrap().start().get_text(),ctx.e(1).unwrap().start().get_text(),ctx.e_all()[0].start().get_text());
+		} else {
+			println!("{}",ctx.INT().unwrap().symbol.get_text());
+		}
+	}
+}
+}
+>>
+
+LRWithLabelsListener(X) ::= <<
+@parser::definitions {
+
+use antlr_rust::tree::Tree;
+use antlr_rust::parser_rule_context::RuleContextExt;
+struct TestListener;
+
+impl ParseTreeListener\<'_,TParserContextType> for TestListener{}
+impl TListener\<'_> for TestListener{
+	fn exit_Call(&mut self, ctx: &CallContext) {
+		println!("{} {}",ctx.e().unwrap().start().get_text(),ctx.eList().unwrap().to_string(None,None));
+	}
+	fn exit_Int(&mut self, ctx: &IntContext){
+		println!("{}",ctx.INT().unwrap().symbol.get_text());
+	}
+}
+}
+>>
+
+DeclareContextListGettersFunction() ::= <<
+fn foo() {
+  let s:SContext = unimplemented!();
+  let a:Vec\<Rc\<AContextAll> >  = s.a_all();
+  let b:Vec\<Rc\<BContextAll> >  = s.b_all();
+}
+>>
+
+Declare_foo() ::= <<pub fn foo(&self) {
+	println!("foo");
+}
+>>
+
+Invoke_foo() ::= "recog.foo();"
+
+Declare_pred() ::= <<
+pub fn pred(&self,v:bool)-> bool {
+	println!("eval={}",v);
+	return v;
+}
+>>
+
+Invoke_pred(v) ::= <<recog.pred(<v>)>>
+
+ContextRuleFunction(ctx, rule) ::= "<ctx>.<rule>.as_ref().unwrap()"
+StringType() ::= "String"
+ContextMember(ctx, subctx, member) ::= "<ctx>.<subctx>.unwrap().get_<member>()"
