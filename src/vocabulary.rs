@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+//! Mapping from symbol type to its string representation
 use std::borrow::Borrow;
 //use std::borrow::Cow;
 use std::borrow::Cow::{self, Borrowed, Owned};
@@ -102,7 +104,7 @@ impl Vocabulary for VocabularyImpl {
             .and_then(|x| x.as_deref())
     }
 
-    fn get_display_name(&self, token_type: isize) -> Cow<str> {
+    fn get_display_name(&self, token_type: isize) -> Cow<'_, str> {
         self.display_names
             .get(token_type as usize)
             .and_then(|x| x.as_deref())
@@ -121,9 +123,9 @@ pub(crate) struct DummyVocab;
 impl Vocabulary for DummyVocab {
     fn get_max_token_type(&self) -> isize { unimplemented!() }
 
-    fn get_literal_name(&self, token_type: isize) -> Option<&str> { unimplemented!() }
+    fn get_literal_name(&self, _token_type: isize) -> Option<&str> { unimplemented!() }
 
-    fn get_symbolic_name(&self, token_type: isize) -> Option<&str> { unimplemented!() }
+    fn get_symbolic_name(&self, _token_type: isize) -> Option<&str> { unimplemented!() }
 
     fn get_display_name(&self, token_type: isize) -> Cow<'_, str> { token_type.to_string().into() }
 }

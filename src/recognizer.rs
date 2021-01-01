@@ -1,9 +1,8 @@
 use crate::atn::ATN;
 use crate::parser::ParserNodeType;
-use crate::parser_rule_context::ParserRuleContext;
-use crate::token_factory::{TokenAware, TokenFactory};
+
+use crate::token_factory::TokenAware;
 use crate::vocabulary::Vocabulary;
-use crate::Parser;
 
 /// Major version of this runtime.
 /// Used by generated parser to verify that it is compatible with current version of runtime
@@ -26,9 +25,9 @@ pub trait Recognizer<'input>: TokenAware<'input> {
     type Node: ParserNodeType<'input, TF = Self::TF>;
     fn sempred(
         &mut self,
-        localctx: Option<&<Self::Node as ParserNodeType<'input>>::Type>,
-        rule_index: isize,
-        action_index: isize,
+        _localctx: Option<&<Self::Node as ParserNodeType<'input>>::Type>,
+        _rule_index: isize,
+        _action_index: isize,
     ) -> bool
     where
         Self: Sized,
@@ -37,9 +36,9 @@ pub trait Recognizer<'input>: TokenAware<'input> {
     }
     fn action(
         &mut self,
-        localctx: Option<&<Self::Node as ParserNodeType<'input>>::Type>,
-        rule_index: isize,
-        action_index: isize,
+        _localctx: Option<&<Self::Node as ParserNodeType<'input>>::Type>,
+        _rule_index: isize,
+        _action_index: isize,
     ) where
         Self: Sized,
     {

@@ -4,7 +4,6 @@ use std::sync::Arc;
 
 use crate::atn::ATN;
 use crate::dfa::DFA;
-use crate::prediction_context::PredictionContext;
 use crate::prediction_context::PredictionContextCache;
 use parking_lot::RwLock;
 
@@ -37,10 +36,6 @@ impl BaseATNSimulator {
             shared_context_cache,
             decision_to_dfa,
         }
-    }
-
-    fn get_cached_context(&self, _context: Box<PredictionContext>) -> &PredictionContext {
-        unimplemented!()
     }
 }
 

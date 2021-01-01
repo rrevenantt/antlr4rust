@@ -1,15 +1,10 @@
-use std::borrow::{Borrow, Cow};
+//! `IntStream` extension for Lexer that allows subslicing of underlying data
 use std::char::REPLACEMENT_CHARACTER;
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 use std::fmt::Debug;
-use std::iter::from_fn;
-use std::num::TryFromIntError;
 use std::ops::{Index, Range, RangeFrom};
 
 use crate::int_stream::IntStream;
-use crate::interval_set::Interval;
-use crate::token::Token;
-use crate::utils::Sealed;
 
 /// Provides underlying data for Tokens.
 pub trait CharStream<Data>: IntStream {
@@ -18,25 +13,32 @@ pub trait CharStream<Data>: IntStream {
     /// Called by parser only on token intervals.
     /// This fact can be used by custom implementations  
     fn get_text(&self, a: isize, b: isize) -> Data;
-    /// Same but indexed are provided with `Interval`, exists mostly to correspond to Java version
-    fn get_text_from_interval(&self, i: Interval) -> Data { self.get_text(i.a, i.b) }
 }
 
 /// Trait for input that can be accepted by `InputStream` to be able to provide lexer with data.
-/// Is sealed for now just in case.
+/// Public for implementation reasons.
 pub trait InputData:
-    Index<Range<usize>, Output = Self> + Index<RangeFrom<usize>, Output = Self> + ToOwned + 'static
+    Index<Range<usize>, Output = Self>
+    + Index<RangeFrom<usize>, Output = Self>
+    + ToOwned
+    + Debug
+    + 'static
 {
     // fn to_indexed_vec(&self) -> Vec<(u32, u32)>;
 
+    #[doc(hidden)]
     fn offset(&self, index: isize, item_offset: isize) -> Option<isize>;
 
+    #[doc(hidden)]
     fn item(&self, index: isize) -> Option<isize>;
 
+    #[doc(hidden)]
     fn len(&self) -> usize;
 
+    #[doc(hidden)]
     fn from_text(text: &str) -> Self::Owned;
 
+    #[doc(hidden)]
     fn to_display(&self) -> String;
 }
 
@@ -53,7 +55,7 @@ where
 
     #[inline]
     fn offset(&self, index: isize, item_offset: isize) -> Option<isize> {
-        let mut new_index = index + item_offset;
+        let new_index = index + item_offset;
         if new_index < 0 {
             return None; // invalid; no char before first char
         }

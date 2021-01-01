@@ -1,10 +1,7 @@
 #![allow(nonstandard_style)]
 // Generated from SimpleLR.g4 by ANTLR 4.8
 use super::simplelrparser::*;
-use antlr_rust::token_factory::CommonTokenFactory;
 use antlr_rust::tree::ParseTreeListener;
-
-use std::any::Any;
 
 pub trait SimpleLRListener<'input>: ParseTreeListener<'input, SimpleLRParserContextType> {
     /**

@@ -119,8 +119,6 @@ impl BaseATNState {
             transitions: Vec::new(),
         }
     }
-
-    fn is_non_greedy_exit_state(&self) -> bool { unimplemented!() }
 }
 
 impl ATNState for BaseATNState {

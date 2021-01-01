@@ -1,7 +1,7 @@
+//! Implementation of lexer automata(DFA)
 use std::cell::Cell;
-use std::convert::TryFrom;
-use std::io::Write;
-use std::ops::{Add, Deref, DerefMut, Index};
+
+use std::ops::Deref;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::usize;
@@ -12,36 +12,35 @@ use crate::atn_config_set::ATNConfigSet;
 use crate::atn_simulator::{BaseATNSimulator, IATNSimulator};
 use crate::atn_state::ATNStateType::RuleStopState;
 use crate::atn_state::{ATNState, ATNStateType};
-use crate::char_stream::CharStream;
+
 use crate::dfa::DFA;
 use crate::dfa_state::{DFAState, DFAStateRef};
 use crate::errors::ANTLRError;
 use crate::errors::ANTLRError::LexerNoAltError;
 use crate::int_stream::{IntStream, EOF};
-use crate::lexer::{
-    BaseLexer, Lexer, LexerPosition, LexerRecog, LEXER_MAX_CHAR_VALUE, LEXER_MIN_CHAR_VALUE,
-};
+use crate::lexer::{Lexer, LexerPosition, LEXER_MAX_CHAR_VALUE, LEXER_MIN_CHAR_VALUE};
 use crate::lexer_action_executor::LexerActionExecutor;
 use crate::prediction_context::EMPTY_PREDICTION_CONTEXT;
 use crate::prediction_context::{
     PredictionContext, PredictionContextCache, PREDICTION_CONTEXT_EMPTY_RETURN_STATE,
 };
-use crate::recognizer::Recognizer;
 use crate::token::TOKEN_EOF;
-use crate::token_source::TokenSource;
+
 use crate::transition::{
     ActionTransition, PredicateTransition, RuleTransition, Transition, TransitionType,
 };
 use parking_lot::{RwLock, RwLockUpgradableReadGuard, RwLockWriteGuard};
 
+#[allow(missing_docs)]
 pub const ERROR_DFA_STATE_REF: DFAStateRef = usize::MAX;
 
+// todo rewrite this to be actually usable
+#[doc(hidden)]
 pub trait ILexerATNSimulator: IATNSimulator {
     fn reset(&mut self);
     fn match_token<'input>(
         &mut self,
         mode: usize,
-        //        input:&mut dyn CharStream,
         lexer: &mut impl Lexer<'input>,
     ) -> Result<isize, ANTLRError>;
     fn get_char_position_in_line(&self) -> isize;
@@ -57,6 +56,8 @@ pub trait ILexerATNSimulator: IATNSimulator {
     }
 }
 
+/// Simple DFA implementation enough for lexer.
+#[derive(Debug)]
 pub struct LexerATNSimulator {
     base: BaseATNSimulator,
 
@@ -134,10 +135,15 @@ impl IATNSimulator for LexerATNSimulator {
     fn decision_to_dfa(&self) -> &Vec<RwLock<DFA>> { self.base.decision_to_dfa() }
 }
 
+#[allow(missing_docs)]
 pub const MIN_DFA_EDGE: isize = 0;
+#[allow(missing_docs)]
 pub const MAX_DFA_EDGE: isize = 127;
 
 impl LexerATNSimulator {
+    /// Creates `LexerATNSimulator` instance which creates DFA over `atn`
+    ///
+    /// Called from generated parser.
     pub fn new_lexer_atnsimulator(
         atn: Arc<ATN>,
         decision_to_dfa: Arc<Vec<RwLock<DFA>>>,
@@ -690,16 +696,19 @@ impl LexerATNSimulator {
         dfastate_index
     }
 
+    /// Returns current DFA that is currently used.
     pub fn get_dfa(&self) -> &RwLock<DFA> { &self.decision_to_dfa()[self.mode] }
 
+    /// Returns current DFA for particular lexer mode
     pub fn get_dfa_for_mode(&self, mode: usize) -> &RwLock<DFA> { &self.decision_to_dfa()[mode] }
 
-    fn get_token_name(&self, _tt: isize) -> String { unimplemented!() }
+    // fn get_token_name(&self, _tt: isize) -> String { unimplemented!() }
 
-    fn reset_sim_state(_sim: &mut SimState) { unimplemented!() }
+    // fn reset_sim_state(_sim: &mut SimState) { unimplemented!() }
 }
 
-pub struct SimState {
+#[derive(Debug)]
+pub(crate) struct SimState {
     index: isize,
     line: isize,
     column: isize,
@@ -707,7 +716,7 @@ pub struct SimState {
 }
 
 impl SimState {
-    pub fn new() -> SimState {
+    pub(crate) fn new() -> SimState {
         SimState {
             index: -1,
             line: 0,

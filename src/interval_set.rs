@@ -5,19 +5,22 @@ use std::cmp::{max, min, Ordering};
 use crate::token::{TOKEN_EOF, TOKEN_EPSILON};
 use crate::vocabulary::{Vocabulary, DUMMY_VOCAB};
 
+/// Represents interval equivalent to `a..=b`
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Interval {
+    /// start
     pub a: isize,
+    /// end >= start
     pub b: isize,
 }
 
-pub const INVALID: Interval = Interval { a: -1, b: -2 };
+pub(crate) const INVALID: Interval = Interval { a: -1, b: -2 };
 
 impl Interval {
     /* stop is not included! */
     fn new(a: isize, b: isize) -> Interval { Interval { a, b } }
 
-    fn contains(&self, _item: isize) -> bool { unimplemented!() }
+    // fn contains(&self, _item: isize) -> bool { unimplemented!() }
 
     fn length(&self) -> isize { self.b - self.a }
 
@@ -29,29 +32,29 @@ impl Interval {
     }
 
     /** Does self start completely before other? Disjoint */
-    pub fn startsBeforeDisjoint(&self, other: &Interval) -> bool {
+    pub fn starts_before_disjoint(&self, other: &Interval) -> bool {
         return self.a < other.a && self.b < other.a;
     }
 
     /** Does self start at or before other? Nondisjoint */
-    pub fn startsBeforeNonDisjoint(&self, other: &Interval) -> bool {
+    pub fn starts_before_non_disjoint(&self, other: &Interval) -> bool {
         return self.a <= other.a && self.b >= other.a;
     }
 
     /** Does self.a start after other.b? May or may not be disjoint */
-    pub fn startsAfter(&self, other: &Interval) -> bool { return self.a > other.a; }
+    pub fn starts_after(&self, other: &Interval) -> bool { return self.a > other.a; }
 
     /** Does self start completely after other? Disjoint */
-    pub fn startsAfterDisjoint(&self, other: &Interval) -> bool { return self.a > other.b; }
+    pub fn starts_after_disjoint(&self, other: &Interval) -> bool { return self.a > other.b; }
 
     /** Does self start after other? NonDisjoint */
-    pub fn startsAfterNonDisjoint(&self, other: &Interval) -> bool {
+    pub fn starts_after_non_disjoint(&self, other: &Interval) -> bool {
         return self.a > other.a && self.a <= other.b; // self.b>=other.b implied
     }
 
     /** Are both ranges disjoint? I.e., no overlap? */
     pub fn disjoint(&self, other: &Interval) -> bool {
-        return self.startsBeforeDisjoint(other) || self.startsAfterDisjoint(other);
+        return self.starts_before_disjoint(other) || self.starts_after_disjoint(other);
     }
 
     /** Are two intervals adjacent such as 0..41 and 42..42? */
@@ -74,12 +77,18 @@ impl Interval {
     //    }
 }
 
+/// Set of disjoint intervals
+///
+/// Basically a set of integers but optimized for cases when it is sparse and created by adding
+/// intervals of integers.
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct IntervalSet {
     intervals: Vec<Interval>,
+    #[allow(missing_docs)]
     pub read_only: bool,
 }
 
+#[allow(missing_docs)]
 impl IntervalSet {
     pub fn new() -> IntervalSet {
         IntervalSet {
@@ -127,7 +136,7 @@ impl IntervalSet {
                 }
                 return;
             }
-            if added.startsBeforeDisjoint(r) {
+            if added.starts_before_disjoint(r) {
                 // insert before r
                 self.intervals.insert(i, added);
                 return;
@@ -138,13 +147,13 @@ impl IntervalSet {
         self.intervals.push(added);
     }
 
-    pub(crate) fn add_set(&mut self, _other: &IntervalSet) {
+    pub fn add_set(&mut self, _other: &IntervalSet) {
         for i in &_other.intervals {
             self.add_interval(*i)
         }
     }
 
-    fn substract(&mut self, right: &IntervalSet) {
+    pub fn substract(&mut self, right: &IntervalSet) {
         let result = self;
         let mut result_i = 0usize;
         let mut right_i = 0usize;
@@ -219,13 +228,13 @@ impl IntervalSet {
             .is_ok()
     }
 
-    fn length(&self) -> isize {
+    pub fn length(&self) -> isize {
         self.intervals
             .iter()
             .fold(0, |acc, it| acc + it.b - it.a + 1)
     }
 
-    fn remove_range(&self, _v: &Interval) { unimplemented!() }
+    // fn remove_range(&self, _v: &Interval) { unimplemented!() }
 
     pub fn remove_one(&mut self, el: isize) {
         if self.read_only {

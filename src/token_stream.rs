@@ -1,16 +1,15 @@
-use std::borrow::{Borrow, BorrowMut};
+//! `IntStream` that produces tokens for Parser
+use std::borrow::Borrow;
 use std::cmp::min;
 use std::marker::PhantomData;
-use std::ops::Deref;
-use std::ptr::drop_in_place;
 
 use crate::char_stream::InputData;
-use crate::errors::ANTLRError;
 use crate::int_stream::{IntStream, IterWrapper};
 use crate::token::{OwningToken, Token, TOKEN_EOF, TOKEN_INVALID_TYPE};
-use crate::token_factory::{CommonTokenFactory, TokenFactory};
+use crate::token_factory::TokenFactory;
 use crate::token_source::TokenSource;
 use better_any::{Tid, TidAble};
+use std::fmt::{Debug, Formatter};
 
 /// An `IntSteam` of `Token`s
 ///
@@ -18,16 +17,23 @@ use better_any::{Tid, TidAble};
 /// If there is an existing source of tokens, you should implement
 /// `TokenSource`, not `TokenStream`
 pub trait TokenStream<'input>: IntStream {
-    /// Output token type
+    /// Token factory that created tokens in this stream
     type TF: TokenFactory<'input> + 'input;
+
+    /// Lookahead for tokens, same as `IntSteam::la` but return reference to full token
     fn lt(&mut self, k: isize) -> Option<&<Self::TF as TokenFactory<'input>>::Tok>;
+    /// Returns reference to token at `index`
     fn get(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Tok;
-    fn get_inner(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Inner;
+
+    /// Token source that produced data for tokens for this stream
     fn get_token_source(&self) -> &dyn TokenSource<'input, TF = Self::TF>;
     //    fn set_token_source(&self,source: Box<TokenSource>);
-    fn get_all_text(&self) -> String;
+    /// Get combined text of all tokens in this stream
+    fn get_all_text(&self) -> String { self.get_text_from_interval(0, self.size() - 1) }
+    /// Get combined text of tokens in start..=stop interval
     fn get_text_from_interval(&self, start: isize, stop: isize) -> String;
     //    fn get_text_from_rule_context(&self,context: RuleContext) -> String;
+    /// Get combined text of tokens in between `a` and `b`
     fn get_text_from_tokens<T: Token + ?Sized>(&self, a: &T, b: &T) -> String
     where
         Self: Sized,
@@ -36,7 +42,8 @@ pub trait TokenStream<'input>: IntStream {
     }
 }
 
-//
+/// Iterator over tokens in `T`
+#[derive(Debug)]
 pub struct TokenIter<'a, 'input: 'a, T: TokenStream<'input>>(
     &'a mut T,
     bool,
@@ -51,9 +58,10 @@ impl<'a, 'input: 'a, T: TokenStream<'input>> Iterator for TokenIter<'a, 'input, 
             return None;
         }
         let result = self.0.lt(1).unwrap().borrow().to_owned();
-        self.0.consume();
         if result.get_token_type() == TOKEN_EOF {
             self.1 = true;
+        } else {
+            self.0.consume();
         }
         Some(result)
     }
@@ -69,20 +77,34 @@ pub struct UnbufferedTokenStream<'input, T: TokenSource<'input>> {
     markers_count: isize,
     pub(crate) p: isize,
 }
+impl<'input, T: TokenSource<'input>> Debug for UnbufferedTokenStream<'input, T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UnbufferedTokenStream")
+            .field("tokens", &self.tokens)
+            .field("current_token_index", &self.current_token_index)
+            .field("markers_count", &self.markers_count)
+            .field("p(buffer index)", &self.p)
+            .finish()
+    }
+}
 
 impl<'input, T: TokenSource<'input>> UnbufferedTokenStream<'input, T> {
+    /// Creates iterator over this token stream
     pub fn iter(&mut self) -> IterWrapper<'_, Self> { IterWrapper(self) }
 
+    /// Creates iterator over tokens in this token stream
     pub fn token_iter(&mut self) -> TokenIter<'_, 'input, Self> {
         TokenIter(self, false, PhantomData)
     }
 
+    /// Creates token stream that keeps all tokens inside
     pub fn new_buffered(source: T) -> Self {
         let mut a = UnbufferedTokenStream::new_unbuffered(source);
         a.mark();
         a
     }
 
+    /// Creates token stream that keeps only tokens required by `mark`
     pub fn new_unbuffered(source: T) -> Self {
         UnbufferedTokenStream {
             token_source: source,
@@ -109,7 +131,7 @@ impl<'input, T: TokenSource<'input>> UnbufferedTokenStream<'input, T> {
             {
                 return i;
             }
-            let mut token = self.token_source.next_token();
+            let token = self.token_source.next_token();
             token
                 .borrow()
                 .set_token_index(self.get_buffer_start_index() + self.tokens.len() as isize);
@@ -139,14 +161,7 @@ impl<'input, T: TokenSource<'input>> TokenStream<'input> for UnbufferedTokenStre
         &self.tokens[(index - self.get_buffer_start_index()) as usize]
     }
 
-    #[inline]
-    fn get_inner(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Inner {
-        self.tokens[(index - self.get_buffer_start_index()) as usize].borrow()
-    }
-
     fn get_token_source(&self) -> &dyn TokenSource<'input, TF = Self::TF> { &self.token_source }
-
-    fn get_all_text(&self) -> String { self.get_text_from_interval(0, self.size()) }
 
     fn get_text_from_interval(&self, start: isize, stop: isize) -> String {
         //        println!("get_text_from_interval {}..{}",start,stop);
@@ -179,11 +194,9 @@ impl<'input, T: TokenSource<'input>> TokenStream<'input> for UnbufferedTokenStre
 
 impl<'input, T: TokenSource<'input>> IntStream for UnbufferedTokenStream<'input, T> {
     #[inline]
-    fn consume(&mut self) -> Result<(), ANTLRError> {
+    fn consume(&mut self) {
         if self.la(1) == TOKEN_EOF {
-            return Err(ANTLRError::IllegalStateError(
-                "cannot consume EOF".to_owned(),
-            ));
+            panic!("cannot consume EOF");
         }
 
         if self.p == self.tokens.len() as isize && self.markers_count == 0 {
@@ -195,7 +208,7 @@ impl<'input, T: TokenSource<'input>> IntStream for UnbufferedTokenStream<'input,
         self.current_token_index += 1;
 
         self.sync(1);
-        Ok(())
+        // Ok(())
     }
 
     #[inline]

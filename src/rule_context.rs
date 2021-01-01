@@ -1,6 +1,4 @@
-//use tree::RuleNode;
-
-use std::any::{Any, TypeId};
+//! Minimal parser node
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::{Cell, RefCell};
 use std::fmt::{Debug, Formatter};
@@ -10,15 +8,16 @@ use std::rc::{Rc, Weak};
 
 use crate::atn::INVALID_ALT;
 use crate::parser::ParserNodeType;
-use crate::parser_rule_context::{BaseParserRuleContext, ParserRuleContext};
-use crate::token_factory::{CommonTokenFactory, TokenFactory};
-use crate::tree::{ParseTree, ParseTreeListener, ParseTreeVisitor, Tree};
+use crate::parser_rule_context::ParserRuleContext;
+use crate::token_factory::TokenFactory;
+use crate::tree::{ParseTree, ParseTreeVisitor, Tree};
 use better_any::{Tid, TidAble};
 
 //pub trait RuleContext:RuleNode {
+/// Minimal rule context functionality required for parser to work properly
 pub trait RuleContext<'input>: CustomRuleContext<'input> {
     fn get_invoking_state(&self) -> isize { -1 }
-    fn set_invoking_state(&self, t: isize) {}
+    fn set_invoking_state(&self, _t: isize) {}
 
     /// A context is empty if there is no invoking state; meaning nobody called
     /// current context. Which is usually true for the root of the syntax tree
@@ -26,7 +25,7 @@ pub trait RuleContext<'input>: CustomRuleContext<'input> {
 
     fn get_parent_ctx(&self) -> Option<Rc<<Self::Ctx as ParserNodeType<'input>>::Type>> { None }
 
-    fn set_parent(&self, parent: &Option<Rc<<Self::Ctx as ParserNodeType<'input>>::Type>>) {}
+    fn set_parent(&self, _parent: &Option<Rc<<Self::Ctx as ParserNodeType<'input>>::Type>>) {}
 }
 
 pub(crate) fn states_stack<'input, T: ParserRuleContext<'input> + ?Sized + 'input>(
@@ -54,7 +53,8 @@ where
 //         Self: Sized;
 // }
 
-#[derive(Tid)]
+#[derive(Tid, Debug)]
+#[doc(hidden)]
 pub struct EmptyCustomRuleContext<'a, TF: TokenFactory<'a> + 'a>(
     pub(crate) PhantomData<&'a TF::Tok>,
 );
@@ -78,17 +78,18 @@ impl<'a, TF: TokenFactory<'a> + 'a> CustomRuleContext<'a> for EmptyCustomRuleCon
 //         TypeId::of::<EmptyCustomRuleContext<'static, CommonTokenFactory>>()
 //     }
 // }
-
+#[doc(hidden)] // public for implementation reasons
 pub type EmptyContext<'a, TF> =
     dyn ParserRuleContext<'a, TF = TF, Ctx = EmptyContextType<'a, TF>> + 'a;
 
-#[derive(Tid)]
+#[derive(Tid, Debug)]
+#[doc(hidden)] // public for implementation reasons
 pub struct EmptyContextType<'a, TF: TokenFactory<'a>>(pub PhantomData<&'a TF>);
 
 impl<'a, TF: TokenFactory<'a>> ParserNodeType<'a> for EmptyContextType<'a, TF> {
     type TF = TF;
     type Type = dyn ParserRuleContext<'a, TF = Self::TF, Ctx = Self> + 'a;
-    type Visitor = dyn ParseTreeVisitor<'a, Self> + 'a;
+    // type Visitor = dyn ParseTreeVisitor<'a, Self> + 'a;
 }
 
 pub trait CustomRuleContext<'input> {
@@ -184,7 +185,7 @@ impl<'input, ExtCtx: CustomRuleContext<'input>> RuleContext<'input>
 }
 
 impl<'input, ExtCtx: CustomRuleContext<'input>> Debug for BaseRuleContext<'input, ExtCtx> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { unimplemented!() }
+    fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result { unimplemented!() }
 }
 
 impl<'input, ExtCtx: CustomRuleContext<'input>> Tree<'input> for BaseRuleContext<'input, ExtCtx> {}

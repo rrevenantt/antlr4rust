@@ -1,9 +1,10 @@
+//! How Lexer should produce tokens
 use std::borrow::Cow::{Borrowed, Owned};
-use std::borrow::{Borrow, BorrowMut, Cow};
-use std::cell::Cell;
-use std::fmt::Debug;
+use std::borrow::{Borrow, Cow};
+
+use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
-use std::ops::{CoerceUnsized, Deref};
+
 use std::sync::atomic::AtomicIsize;
 
 use typed_arena::Arena;
@@ -13,10 +14,11 @@ use crate::token::Token;
 use crate::token::{CommonToken, OwningToken, TOKEN_INVALID_TYPE};
 use better_any::{Tid, TidAble};
 
+#[allow(non_upper_case_globals)]
 lazy_static! {
-    pub static ref CommonTokenFactoryDEFAULT: Box<CommonTokenFactory> =
+    pub(crate) static ref COMMON_TOKEN_FACTORY_DEFAULT: Box<CommonTokenFactory> =
         Box::new(CommonTokenFactory {});
-    pub static ref INVALID_OWNING: Box<OwningToken> = Box::new(OwningToken {
+    pub(crate) static ref INVALID_OWNING: Box<OwningToken> = Box::new(OwningToken {
         token_type: TOKEN_INVALID_TYPE,
         channel: 0,
         start: -1,
@@ -27,7 +29,7 @@ lazy_static! {
         text: "<invalid>".to_owned(),
         read_only: true,
     });
-    pub static ref INVALID_COMMON: Box<CommonToken<'static>> = Box::new(CommonToken {
+    pub(crate) static ref INVALID_COMMON: Box<CommonToken<'static>> = Box::new(CommonToken {
         token_type: TOKEN_INVALID_TYPE,
         channel: 0,
         start: -1,
@@ -41,7 +43,6 @@ lazy_static! {
 }
 
 /// Trait for creating tokens.
-///
 pub trait TokenFactory<'a>: TidAble<'a> + Sized {
     /// Type of tokens emitted by this factory.
     type Inner: Token<Data = Self::Data> + ?Sized + 'a;
@@ -50,7 +51,7 @@ pub trait TokenFactory<'a>: TidAble<'a> + Sized {
     // can relax InputData to just ToOwned here?
     /// Type of the underlying storage
     type Data: InputData + ?Sized;
-    /// Type of the reference to `Self::Data` that factory needs for producing tokens
+    /// Type of the `CharStream` that factory can produce tokens from
     type From;
 
     /// Creates token either from `sourse` or from pure data in `text`
@@ -73,6 +74,8 @@ pub trait TokenFactory<'a>: TidAble<'a> + Sized {
     /// Invalid tokens must have `TOKEN_INVALID_TYPE` token type.
     fn create_invalid() -> Self::Tok;
 
+    /// Creates `Self::Data` representation for `from` for lexer to work with
+    /// when it does not need to create full token   
     fn get_data(from: Self::From) -> Cow<'a, Self::Data>;
 }
 
@@ -81,7 +84,7 @@ pub trait TokenFactory<'a>: TidAble<'a> + Sized {
 pub struct CommonTokenFactory;
 
 impl Default for &'_ CommonTokenFactory {
-    fn default() -> Self { &**CommonTokenFactoryDEFAULT }
+    fn default() -> Self { &**COMMON_TOKEN_FACTORY_DEFAULT }
 }
 
 impl<'a> TokenFactory<'a> for CommonTokenFactory {
@@ -134,6 +137,8 @@ impl<'a> TokenFactory<'a> for CommonTokenFactory {
     fn get_data(from: Self::From) -> Cow<'a, Self::Data> { from }
 }
 
+/// Token factory that produces heap allocated
+/// `OwningToken`s
 #[derive(Default, Tid, Debug)]
 pub struct OwningTokenFactory;
 
@@ -194,7 +199,9 @@ impl<'a> TokenFactory<'a> for OwningTokenFactory {
 //
 // }
 
+///Arena token factory that contains `OwningToken`s
 pub type ArenaOwningFactory<'a> = ArenaFactory<'a, OwningTokenFactory, OwningToken>;
+///Arena token factory that contains `CommonToken`s
 pub type ArenaCommonFactory<'a> = ArenaFactory<'a, CommonTokenFactory, CommonToken<'a>>;
 
 /// This is a wrapper for Token factory that allows to allocate tokens in separate arena.
@@ -214,20 +221,24 @@ pub type ArenaCommonFactory<'a> = ArenaFactory<'a, CommonTokenFactory, CommonTok
 /// ```
 // Box is used here because it is almost always should be used for token factory
 #[derive(Tid)]
-pub struct ArenaFactory<'input, TF, T>
-where
-    TF: TokenFactory<'input, Tok = Box<T>, Inner = T>,
-    T: Token<Data = TF::Data> + Clone + 'input,
-{
+pub struct ArenaFactory<'input, TF, T> {
     arena: Arena<T>,
     factory: TF,
     pd: PhantomData<&'input str>,
 }
 
+impl<'input, TF: Debug, T> Debug for ArenaFactory<'input, TF, T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ArenaFactory")
+            .field("arena", &"Arena")
+            .field("factory", &self.factory)
+            .finish()
+    }
+}
+
 impl<'input, TF, T> Default for ArenaFactory<'input, TF, T>
 where
-    TF: TokenFactory<'input, Tok = Box<T>, Inner = T> + Default,
-    T: Token<Data = TF::Data> + Clone + 'input,
+    TF: Default,
 {
     fn default() -> Self {
         Self {
@@ -276,6 +287,7 @@ where
     fn get_data(from: Self::From) -> Cow<'input, Self::Data> { TF::get_data(from) }
 }
 
+#[doc(hidden)]
 pub trait TokenAware<'input> {
     type TF: TokenFactory<'input> + 'input;
 }

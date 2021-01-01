@@ -40,6 +40,7 @@ lazy_static! {
 
 const SERIALIZED_VERSION: isize = 3;
 
+#[derive(Debug)]
 pub struct ATNDeserializer {
     deserialization_options: ATNDeserializationOptions,
 }
@@ -49,12 +50,6 @@ impl ATNDeserializer {
         ATNDeserializer {
             deserialization_options: options.unwrap_or(ATNDeserializationOptions::default()),
         }
-    }
-
-    fn String_in_slice(_a: String, _list: Vec<String>) -> isize { unimplemented!() }
-
-    fn is_feature_supported(&self, _feature: String, _actualUUID: String) -> bool {
-        unimplemented!()
     }
 
     pub fn deserialize(&self, data: Chars<'_>) -> ATN {
@@ -102,7 +97,7 @@ impl ATNDeserializer {
         atn
     }
 
-    fn reset(&self, _data: Vec<u8>) { unimplemented!() }
+    // fn reset(&self, _data: Vec<u8>) { unimplemented!() }
 
     fn check_version(&self, version: isize) {
         if version != self::SERIALIZED_VERSION {
@@ -118,7 +113,7 @@ impl ATNDeserializer {
         //codepoint numbers to bytes
         let mut bytes = Vec::new();
         for i in data.take(8) {
-            bytes.write_u16::<LittleEndian>(i as u16);
+            bytes.write_u16::<LittleEndian>(i as u16).unwrap();
         }
 
         bytes.reverse();
@@ -403,27 +398,6 @@ impl ATNDeserializer {
         }
     }
 
-    fn generate_rule_bypass_transitions(
-        &self,
-        _atn: &mut ATN,
-        _data: &mut dyn Iterator<Item = isize>,
-    ) {
-        unimplemented!()
-    }
-
-    fn generate_rule_bypass_transition(
-        &self,
-        _atn: &mut ATN,
-        _data: &mut dyn Iterator<Item = isize>,
-        _idx: isize,
-    ) {
-        unimplemented!()
-    }
-
-    fn state_is_end_state_for(&self, _state: &dyn ATNState, _idx: isize) -> Box<dyn ATNState> {
-        unimplemented!()
-    }
-
     fn mark_precedence_decisions(&self, _atn: &mut ATN, _data: &mut dyn Iterator<Item = isize>) {
         let mut precedence_states = Vec::new();
         for state in _atn.states.iter() {
@@ -458,7 +432,7 @@ impl ATNDeserializer {
             if let ATNStateType::DecisionState {
                 state:
                     ATNDecisionState::StarLoopEntry {
-                        loop_back_state,
+                        loop_back_state: _,
                         is_precedence,
                     },
                 ..
@@ -473,15 +447,7 @@ impl ATNDeserializer {
         //TODO
     }
 
-    fn check_condition(&self, _condition: bool, _message: String) { unimplemented!() }
-
-    fn read_int(&self) -> isize { unimplemented!() }
-
-    fn read_int32(&self) -> isize { unimplemented!() }
-
-    fn create_byte_to_hex() -> Vec<String> { unimplemented!() }
-
-    fn read_uuid(&self) -> String { unimplemented!() }
+    // fn check_condition(&self, _condition: bool, _message: String) { unimplemented!() }
 
     fn edge_factory(
         &self,

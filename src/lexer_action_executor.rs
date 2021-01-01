@@ -1,5 +1,4 @@
 use std::hash::{Hash, Hasher};
-use std::mem;
 
 use murmur3::murmur3_32::MurmurHasher;
 
@@ -51,13 +50,10 @@ impl LexerActionExecutor {
                 LexerAction::LexerIndexedCustomAction { .. } => {}
                 _ => {
                     if action.is_position_dependent() {
-                        mem::replace(
-                            action,
-                            LexerIndexedCustomAction {
-                                offset,
-                                action: Box::new(action.clone()),
-                            },
-                        );
+                        *action = LexerIndexedCustomAction {
+                            offset,
+                            action: Box::new(action.clone()),
+                        };
                     }
                 }
             }

@@ -13,6 +13,7 @@ use crate::semantic_context::SemanticContext;
 /// utility methods for analyzing configuration sets for conflicts and/or
 /// ambiguities.
 ///
+/// It is set through `ParserATNSimulator::
 #[allow(non_camel_case_types)]
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum PredictionMode {

@@ -1,20 +1,10 @@
-use std::borrow::{Borrow, Cow};
-use std::char::{decode_utf16, DecodeUtf16Error, REPLACEMENT_CHARACTER};
-use std::cmp::min;
-use std::convert::TryFrom;
-use std::io::Read;
-use std::iter::FromIterator;
-use std::marker::PhantomData;
-use std::ops::{Deref, Index, Range, RangeFrom, RangeFull};
-use std::result;
-use std::slice::{from_raw_parts, SliceIndex};
-use std::str::{CharIndices, Chars};
+//! Input to lexer
+use std::borrow::Cow;
 
 use crate::char_stream::{CharStream, InputData};
-use crate::errors::ANTLRError;
-use crate::int_stream::{IntStream, EOF};
-use crate::interval_set::Interval;
-use crate::token::{Token, TOKEN_EOF};
+use crate::int_stream::IntStream;
+use std::ops::Deref;
+
 use better_any::{impl_tid, TidAble};
 
 /// Default rust target input stream.
@@ -24,6 +14,7 @@ use better_any::{impl_tid, TidAble};
 /// non-ASCII unicode characters.
 /// If you need it to generate exactly the same indexes as Java runtime, you have to use `CodePoint8/16/32BitCharStream`,
 /// which does not use rusts native `str` type, so it would do additional conversions and allocations along the way.
+#[derive(Debug)]
 pub struct InputStream<Data: Deref> {
     name: String,
     data_raw: Data,
@@ -45,10 +36,13 @@ impl<T: From<D::Owned>, D: ?Sized + InputData> CharStream<T> for InputStream<Box
     #[inline]
     fn get_text(&self, start: isize, stop: isize) -> T { self.get_text_owned(start, stop).into() }
 }
-
+/// `InputStream` over byte slice
 pub type ByteStream<'a> = InputStream<&'a [u8]>;
+/// InputStream which treats the input as a series of Unicode code points that fit into `u8`
 pub type CodePoint8BitCharStream<'a> = InputStream<&'a [u8]>;
+/// InputStream which treats the input as a series of Unicode code points that fit into `u16`
 pub type CodePoint16BitCharStream<'a> = InputStream<&'a [u16]>;
+/// InputStream which treats the input as a series of Unicode code points
 pub type CodePoint32BitCharStream<'a> = InputStream<&'a [u32]>;
 
 impl<'a, T> CharStream<Cow<'a, [T]>> for InputStream<&'a [T]>
@@ -144,11 +138,9 @@ impl<'a, Data: Deref> InputStream<Data>
 where
     Data::Target: InputData,
 {
+    /// Resets input stream to start from the beginning of this slice
     #[inline]
     pub fn reset(&mut self) { self.index = 0 }
-
-    #[inline]
-    pub fn lt(&mut self, offset: isize) -> isize { self.la(offset) }
 }
 
 impl<'a, Data: Deref> IntStream for InputStream<Data>
@@ -156,13 +148,13 @@ where
     Data::Target: InputData,
 {
     #[inline]
-    fn consume(&mut self) -> result::Result<(), ANTLRError> {
+    fn consume(&mut self) {
         if let Some(index) = self.data_raw.offset(self.index, 1) {
             self.index = index;
             // self.current = self.data_raw.deref().item(index).unwrap_or(TOKEN_EOF);
-            Ok(())
+            // Ok(())
         } else {
-            Err(ANTLRError::IllegalStateError("cannot consume EOF".into()))
+            panic!("cannot consume EOF");
         }
     }
 
@@ -197,7 +189,7 @@ where
     fn index(&self) -> isize { self.index }
 
     #[inline]
-    fn seek(&mut self, mut index: isize) { self.index = index }
+    fn seek(&mut self, index: isize) { self.index = index }
 
     #[inline]
     fn size(&self) -> isize { self.data_raw.len() as isize }

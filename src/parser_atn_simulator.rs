@@ -1,7 +1,8 @@
-use std::borrow::{Borrow, BorrowMut};
+//! Base parser implementation
+use std::borrow::Borrow;
 use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
-use std::hash::Hasher;
+
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
@@ -9,7 +10,6 @@ use std::sync::Arc;
 use std::{ptr, usize};
 
 use bit_set::BitSet;
-use typed_arena::Arena;
 
 use crate::atn::{ATN, INVALID_ALT};
 use crate::atn_config::ATNConfig;
@@ -24,20 +24,15 @@ use crate::int_stream::EOF;
 use crate::interval_set::IntervalSet;
 use crate::lexer_atn_simulator::ERROR_DFA_STATE_REF;
 use crate::parser::{Parser, ParserNodeType};
-use crate::parser_rule_context::ParserRuleContext;
+
 use crate::prediction_context::{
     MurmurHasherBuilder, PredictionContext, PredictionContextCache, EMPTY_PREDICTION_CONTEXT,
     PREDICTION_CONTEXT_EMPTY_RETURN_STATE,
 };
-use crate::prediction_mode::{
-    all_subsets_conflict, all_subsets_equal, get_alts, get_conflicting_alt_subsets,
-    get_single_viable_alt, has_sll_conflict_terminating_prediction,
-    resolves_to_just_one_viable_alt, PredictionMode,
-};
-use crate::rule_context::RuleContext;
+use crate::prediction_mode::*;
 use crate::semantic_context::SemanticContext;
 use crate::token::{Token, TOKEN_EOF, TOKEN_EPSILON};
-use crate::token_factory::CommonTokenFactory;
+
 use crate::token_stream::TokenStream;
 use crate::transition::{
     ActionTransition, EpsilonTransition, PrecedencePredicateTransition, PredicateTransition,
@@ -84,6 +79,7 @@ use parking_lot::{RwLock, RwLockUpgradableReadGuard, RwLockWriteGuard};
 /// ATN each time we get that input.</p>
 ///
 /// **For more info see Java version**
+#[derive(Debug)]
 pub struct ParserATNSimulator {
     base: BaseATNSimulator,
     prediction_mode: Cell<PredictionMode>,
@@ -92,7 +88,7 @@ pub struct ParserATNSimulator {
 }
 
 /// Just a local helper structure to spoil function parameters as little as possible
-struct Local<'a, 'input, T: Parser<'input> + 'a> {
+struct Local<'a, 'input, T: Parser<'input>> {
     outer_context: Rc<<T::Node as ParserNodeType<'input>>::Type>,
     dfa: Option<RwLockUpgradableReadGuard<'a, DFA>>,
     dfa_mut: Option<RwLockWriteGuard<'a, DFA>>,
@@ -116,19 +112,20 @@ impl<'a, 'input, T: Parser<'input> + 'a> Local<'a, 'input, T> {
     fn input(&mut self) -> &mut dyn TokenStream<'input, TF = T::TF> {
         self.parser.get_input_stream_mut()
     }
-    fn seek(&mut self, i: isize) { self.input().seek(i) }
+    // fn seek(&mut self, i: isize) { self.input().seek(i) }
     fn outer_context(&self) -> &<T::Node as ParserNodeType<'input>>::Type {
         self.outer_context.deref()
     }
 }
 
-pub type MergeCache = HashMap<
+pub(crate) type MergeCache = HashMap<
     (Arc<PredictionContext>, Arc<PredictionContext>),
     Arc<PredictionContext>,
     MurmurHasherBuilder,
 >;
 
 impl ParserATNSimulator {
+    /// creates new `ParserATNSimulator`
     pub fn new(
         atn: Arc<ATN>,
         decision_to_dfa: Arc<Vec<RwLock<DFA>>>,
@@ -145,12 +142,15 @@ impl ParserATNSimulator {
         }
     }
 
+    /// Returns current prediction mode
     pub fn get_prediction_mode(&self) -> PredictionMode { self.prediction_mode.get() }
 
+    /// Sets current prediction mode
     pub fn set_prediction_mode(&self, v: PredictionMode) { self.prediction_mode.set(v) }
 
-    fn reset(&self) { unimplemented!() }
+    // fn reset(&self) { unimplemented!() }
 
+    /// Called by generated parser to choose an alternative when LL(1) parsing is not enough
     pub fn adaptive_predict<'a, T: Parser<'a>>(
         &self,
         decision: isize,
@@ -295,7 +295,7 @@ impl ParserATNSimulator {
 
                 let s0_closure = self.compute_start_state(
                     local.dfa().atn_start_state,
-                    PredictionContext::from_rule_context::<'a, T::Node>(
+                    PredictionContext::from_rule_context::<T::Node>(
                         self.atn(),
                         local.outer_context(),
                     ),
@@ -459,7 +459,7 @@ impl ParserATNSimulator {
         let mut prev = s0;
         local.input().seek(self.start_index.get());
         let mut t = local.input().la(1);
-        let mut predicted_alt = 0;
+        let mut predicted_alt;
         // local.upgrade_lock();
         loop {
             //            println!("full_ctx loop");
@@ -1001,7 +1001,7 @@ impl ParserATNSimulator {
                         }
                     }
                 });
-                let mut context = config.take_context();
+                let context = config.take_context();
                 for i in 0..context.length() {
                     if context.get_return_state(i) == PREDICTION_CONTEXT_EMPTY_RETURN_STATE {
                         if i != context.length() - 1 {
@@ -1421,7 +1421,7 @@ impl ParserATNSimulator {
         if dfastate.state_number == ERROR_DFA_STATE_REF {
             return ERROR_DFA_STATE_REF;
         }
-        let mut states = &mut dfa.states;
+        let states = &mut dfa.states;
 
         let state_number = states.len();
         dfastate.state_number = state_number;

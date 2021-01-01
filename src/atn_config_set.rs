@@ -1,7 +1,7 @@
 use std::cmp::max;
 use std::collections::HashMap;
 use std::fmt::{Debug, Error, Formatter};
-use std::hash::{BuildHasher, Hash, Hasher};
+use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 
 use bit_set::BitSet;

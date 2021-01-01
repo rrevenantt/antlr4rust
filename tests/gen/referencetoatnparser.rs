@@ -20,11 +20,11 @@ use antlr_rust::recognizer::{Actions, Recognizer};
 use antlr_rust::rule_context::{BaseRuleContext, CustomRuleContext, RuleContext};
 use antlr_rust::token::{OwningToken, Token, TOKEN_EOF};
 use antlr_rust::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
-use antlr_rust::token_source::TokenSource;
 use antlr_rust::token_stream::TokenStream;
 use antlr_rust::tree::*;
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
 use antlr_rust::PredictionContextCache;
+use antlr_rust::TokenSource;
 use antlr_rust::{TidAble, TidExt};
 
 use std::any::{Any, TypeId};
@@ -134,8 +134,9 @@ where
 }
 
 /// Trait for monomorphized trait object that corresponds to the nodes of parse tree generated for ReferenceToATNParser
-pub trait ReferenceToATNParserContext<'input>: for<'x> Listenable<dyn ReferenceToATNListener<'input> + 'x>
-    + ParserRuleContext<'input, TF = LocalTokenFactory<'input>, Ctx = ReferenceToATNParserContextType>
+pub trait ReferenceToATNParserContext<'input>: for<'x> Listenable<
+    dyn ReferenceToATNListener<'input> + 'x,
+> + ParserRuleContext<'input, TF = LocalTokenFactory<'input>, Ctx = ReferenceToATNParserContextType>
 {
 }
 
@@ -160,7 +161,6 @@ antlr_rust::type_id! {ReferenceToATNParserContextType}
 impl<'input> ParserNodeType<'input> for ReferenceToATNParserContextType {
     type TF = LocalTokenFactory<'input>;
     type Type = dyn ReferenceToATNParserContext<'input> + 'input;
-    type Visitor = dyn ParseTreeVisitor<'input, Self> + 'input;
 }
 
 impl<'input, I, H> Deref for ReferenceToATNParser<'input, I, H>

@@ -1,36 +1,30 @@
-//!
-//!
-//!
-//!
-use std::any::{type_name, Any};
+//! Full parser node
+use std::any::{type_name, Any, TypeId};
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::{Ref, RefCell, RefMut};
-use std::convert::identity;
 use std::fmt::{Debug, Error, Formatter};
 use std::marker::PhantomData;
 use std::ops::{CoerceUnsized, Deref, DerefMut};
 use std::rc::Rc;
 
+use better_any::{Tid, TidAble, TidExt};
+use typed_arena::Arena;
+
 use crate::errors::ANTLRError;
 use crate::interval_set::Interval;
 use crate::parser::ParserNodeType;
-use crate::rule_context::{
-    BaseRuleContext, CustomRuleContext, EmptyCustomRuleContext, RuleContext,
-};
+use crate::rule_context::{BaseRuleContext, CustomRuleContext, RuleContext};
 use crate::token::Token;
-use crate::token_factory::{CommonTokenFactory, TokenFactory};
-use crate::tree::{
-    ErrorNode, ParseTree, ParseTreeListener, ParseTreeVisitor, TerminalNode, Tree, Visitable,
-    VisitableDyn,
-};
-use better_any::{Tid, TidAble, TidExt};
+use crate::token_factory::TokenFactory;
+use crate::tree::{ParseTree, ParseTreeVisitor, TerminalNode, Tree, VisitableDyn};
 
+/// Syntax tree node for particular parser rule.
 pub trait ParserRuleContext<'input>:
     ParseTree<'input> + RuleContext<'input> + Debug + Tid<'input>
 {
-    fn set_exception(&self, e: ANTLRError) {}
+    fn set_exception(&self, _e: ANTLRError) {}
 
-    fn set_start(&self, t: Option<<Self::TF as TokenFactory<'input>>::Tok>) {}
+    fn set_start(&self, _t: Option<<Self::TF as TokenFactory<'input>>::Tok>) {}
 
     /// Get the initial token in this context.
     /// Note that the range from start to stop is inclusive, so for rules that do not consume anything
@@ -49,7 +43,7 @@ pub trait ParserRuleContext<'input>:
         unimplemented!()
     }
 
-    fn set_stop(&self, t: Option<<Self::TF as TokenFactory<'input>>::Tok>) {}
+    fn set_stop(&self, _t: Option<<Self::TF as TokenFactory<'input>>::Tok>) {}
     ///
     /// Get the final token in this context.
     /// Note that the range from start to stop is inclusive, so for rules that do not consume anything
@@ -71,7 +65,7 @@ pub trait ParserRuleContext<'input>:
     // fn add_token_node(&self, token: TerminalNode<'input, Self::TF>) { }
     // fn add_error_node(&self, bad_token: ErrorNode<'input, Self::TF>) { }
 
-    fn add_child(&self, child: Rc<<Self::Ctx as ParserNodeType<'input>>::Type>) {}
+    fn add_child(&self, _child: Rc<<Self::Ctx as ParserNodeType<'input>>::Type>) {}
     fn remove_last_child(&self) {}
 
     // fn enter_rule(&self, listener: &mut dyn Any);
@@ -301,7 +295,7 @@ impl<'input, Ctx: CustomRuleContext<'input>> BorrowMut<Ctx> for BaseParserRuleCo
 impl<'input, Ctx: CustomRuleContext<'input> + TidAble<'input>> ParserRuleContext<'input>
     for BaseParserRuleContext<'input, Ctx>
 {
-    fn set_exception(&self, e: ANTLRError) { /*self.exception = Some(Box::new(e));*/
+    fn set_exception(&self, _e: ANTLRError) { /*self.exception = Some(Box::new(e));*/
     }
 
     fn set_start(&self, t: Option<<Ctx::TF as TokenFactory<'input>>::Tok>) {

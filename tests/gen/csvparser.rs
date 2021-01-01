@@ -20,11 +20,11 @@ use antlr_rust::recognizer::{Actions, Recognizer};
 use antlr_rust::rule_context::{BaseRuleContext, CustomRuleContext, RuleContext};
 use antlr_rust::token::{OwningToken, Token, TOKEN_EOF};
 use antlr_rust::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
-use antlr_rust::token_source::TokenSource;
 use antlr_rust::token_stream::TokenStream;
 use antlr_rust::tree::*;
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
 use antlr_rust::PredictionContextCache;
+use antlr_rust::TokenSource;
 
 use antlr_rust::lazy_static;
 use antlr_rust::{TidAble, TidExt};
@@ -168,7 +168,6 @@ antlr_rust::type_id! {CSVParserContextType}
 impl<'input> ParserNodeType<'input> for CSVParserContextType {
     type TF = LocalTokenFactory<'input>;
     type Type = dyn CSVParserContext<'input> + 'input;
-    type Visitor = dyn CSVVisitor<'input> + 'input;
 }
 
 impl<'input, I, H> Deref for CSVParser<'input, I, H>

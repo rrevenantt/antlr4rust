@@ -1,15 +1,14 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::ops::Deref;
+
 use std::sync::Arc;
 
 use crate::atn::ATN;
 use crate::atn_config_set::ATNConfigSet;
-use crate::atn_state::{ATNDecisionState, ATNState, ATNStateRef, ATNStateType};
+use crate::atn_state::{ATNDecisionState, ATNStateRef, ATNStateType};
 use crate::dfa_serializer::DFASerializer;
 use crate::dfa_state::{DFAState, DFAStateRef};
 use crate::vocabulary::Vocabulary;
-use parking_lot::RwLock;
 
 ///Helper trait for scope management and temporary values not living long enough
 pub(crate) trait ScopeExt: Sized {
@@ -32,6 +31,7 @@ pub(crate) trait ScopeExt: Sized {
 
 impl<Any: Sized> ScopeExt for Any {}
 
+#[derive(Debug)]
 pub struct DFA {
     /// ATN state from which this DFA creation was started from
     pub atn_start_state: ATNStateRef,
@@ -133,8 +133,6 @@ impl DFA {
     pub fn set_precedence_dfa(&mut self, precedence_dfa: bool) {
         self.is_precedence_dfa = precedence_dfa
     }
-
-    fn num_states(&self) -> isize { unimplemented!() }
 
     pub fn to_string(&self, vocabulary: &dyn Vocabulary) -> String {
         if self.s0.is_none() {

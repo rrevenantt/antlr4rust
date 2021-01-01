@@ -1,3 +1,4 @@
+//! Error types
 use std::borrow::Borrow;
 use std::error::Error;
 use std::fmt;
@@ -24,7 +25,10 @@ pub enum ANTLRError {
     /// ERROR_TOKEN: . ;
     /// ```
     /// to prevent lexer from throwing errors and have all error handling in parser.
-    LexerNoAltError { start_index: isize },
+    LexerNoAltError {
+        /// Index at which error has happened
+        start_index: isize,
+    },
 
     /// Indicates that the parser could not decide which of two or more paths
     /// to take based upon the remaining input. It tracks the starting token
@@ -46,8 +50,8 @@ pub enum ANTLRError {
     /// incompatible with current parser state
     IllegalStateError(String),
 
-    /// Unrecoverable error. Indicates that error should not be processed by parser
-    /// and it should abort parsing and immediately return to caller
+    /// Unrecoverable error. Indicates that error should not be processed by parser/error strategy
+    /// and it should abort parsing and immediately return to caller.
     FallThrough(Rc<dyn Error>),
 
     /// Potentially recoverable error.
@@ -86,8 +90,9 @@ impl Error for ANTLRError {
     }
 }
 
-impl RecognitionError for ANTLRError {
-    fn get_offending_token(&self) -> Option<&OwningToken> {
+impl ANTLRError {
+    /// Returns first token that caused parser to fail.
+    pub fn get_offending_token(&self) -> Option<&OwningToken> {
         Some(match self {
             ANTLRError::NoAltError(e) => &e.base.offending_token,
             ANTLRError::InputMismatchError(e) => &e.base.offending_token,
@@ -104,13 +109,9 @@ impl RecognitionError for ANTLRError {
 //    }
 //}
 
-pub trait RecognitionError: Error {
-    fn get_offending_token(&self) -> Option<&OwningToken>;
-    fn get_message(&self) -> String { self.to_string() }
-    //    fn get_input_stream(&self) -> &IntStream;
-}
-
+/// Common part of ANTLR parser errors
 #[derive(Debug, Clone)]
+#[allow(missing_docs)]
 pub struct BaseRecognitionError {
     pub message: String,
     //    recognizer: Box<Recognizer>,
@@ -121,6 +122,7 @@ pub struct BaseRecognitionError {
 }
 
 impl BaseRecognitionError {
+    /// Returns tokens that were expected by parser in error place
     pub fn get_expected_tokens<'a, T: Parser<'a>>(&self, recognizer: &T) -> IntervalSet {
         recognizer
             .get_interpreter()
@@ -139,14 +141,9 @@ impl BaseRecognitionError {
     }
 }
 
+/// See `ANTLRError::NoAltError`
 #[derive(Debug, Clone)]
-pub struct LexerNoViableAltError {
-    base: BaseRecognitionError,
-    start_index: isize,
-    //    dead_end_configs: BaseATNConfigSet,
-}
-
-#[derive(Debug, Clone)]
+#[allow(missing_docs)]
 pub struct NoViableAltError {
     pub base: BaseRecognitionError,
     pub start_token: OwningToken,
@@ -154,6 +151,7 @@ pub struct NoViableAltError {
     //    dead_end_configs: BaseATNConfigSet,
 }
 
+#[allow(missing_docs)]
 impl NoViableAltError {
     pub fn new<'a, T: Parser<'a>>(recog: &mut T) -> NoViableAltError {
         Self {
@@ -186,11 +184,14 @@ impl NoViableAltError {
     }
 }
 
+/// See `ANTLRError::InputMismatchError`
 #[derive(Debug, Clone)]
+#[allow(missing_docs)]
 pub struct InputMisMatchError {
-    pub(crate) base: BaseRecognitionError,
+    pub base: BaseRecognitionError,
 }
 
+#[allow(missing_docs)]
 impl InputMisMatchError {
     pub fn new<'a, T: Parser<'a>>(recognizer: &mut T) -> InputMisMatchError {
         InputMisMatchError {
@@ -213,14 +214,17 @@ impl InputMisMatchError {
 
 //fn new_input_mis_match_exception(recognizer: Parser) -> InputMisMatchError { unimplemented!() }
 
+/// See `ANTLRError::PredicateError`
 #[derive(Debug, Clone)]
+#[allow(missing_docs)]
 pub struct FailedPredicateError {
-    pub(crate) base: BaseRecognitionError,
-    rule_index: isize,
+    pub base: BaseRecognitionError,
+    pub rule_index: isize,
     predicate_index: isize,
-    predicate: String,
+    pub predicate: String,
 }
 
+#[allow(missing_docs)]
 impl FailedPredicateError {
     pub fn new<'a, T: Parser<'a>>(
         recog: &mut T,

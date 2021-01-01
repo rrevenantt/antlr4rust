@@ -12,10 +12,15 @@ use crate::rule_context::EmptyContextType;
 use crate::token::{TOKEN_EOF, TOKEN_EPSILON};
 use crate::token_factory::CommonTokenFactory;
 use crate::transition::RuleTransition;
+use std::fmt::{Debug, Formatter};
 
 pub const INVALID_ALT: isize = 0;
 
-#[doc(hidden)]
+/// Augmented Transition Network
+///
+/// Basically NFA(graph) of states and possible(maybe multiple) transitions on a given particular symbol.
+///
+/// Public mostly because of implementations reasons. From user side is only useful for advanced error handling
 pub struct ATN {
     pub decision_to_state: Vec<ATNStateRef>,
 
@@ -38,8 +43,19 @@ pub struct ATN {
     pub states: Vec<Box<dyn ATNState>>,
 }
 
+impl Debug for ATN {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ATN")
+            .field("grammar_type", &self.grammar_type)
+            .field("max_token_type", &self.max_token_type)
+            .field("states count", &self.states.len())
+            .field("..", &"..")
+            .finish()
+    }
+}
+
 impl ATN {
-    pub fn new_atn(grammar_type: ATNType, max_token_type: isize) -> ATN {
+    crate fn new_atn(grammar_type: ATNType, max_token_type: isize) -> ATN {
         ATN {
             decision_to_state: Vec::new(),
             grammar_type,
@@ -74,17 +90,17 @@ impl ATN {
         _ctx: Option<&Ctx::Type>,
     ) -> IntervalSet {
         let analyzer = LL1Analyzer::new(self);
-        analyzer.look::<'a, Ctx>(s, None, _ctx)
+        analyzer.look::<Ctx>(s, None, _ctx)
     }
 
-    pub(crate) fn add_state(&mut self, state: Box<dyn ATNState>) {
+    crate fn add_state(&mut self, state: Box<dyn ATNState>) {
         debug_assert_eq!(state.get_state_number(), self.states.len());
         self.states.push(state)
     }
 
-    fn remove_state(&self, _state: ATNStateRef) { unimplemented!() }
+    // fn remove_state(&self, _state: ATNStateRef) { unimplemented!() }
 
-    fn define_decision_state(&self, _s: ATNStateRef) -> isize { unimplemented!() }
+    // fn define_decision_state(&self, _s: ATNStateRef) -> isize { unimplemented!() }
 
     pub fn get_decision_state(&self, decision: usize) -> ATNStateRef {
         self.decision_to_state[decision]

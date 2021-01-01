@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::fmt::{Display, Error, Formatter};
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::ops::Deref;
-use std::ptr;
+
 use std::sync::{Arc, RwLock};
 
 use murmur3::murmur3_32::MurmurHasher;
@@ -12,10 +12,10 @@ use crate::atn::ATN;
 use crate::dfa::ScopeExt;
 use crate::parser::ParserNodeType;
 use crate::parser_atn_simulator::MergeCache;
-use crate::parser_rule_context::ParserRuleContext;
+
 use crate::prediction_context::PredictionContext::{Array, Singleton};
 use crate::rule_context::RuleContext;
-use crate::token_factory::TokenFactory;
+
 use crate::transition::RuleTransition;
 
 pub const PREDICTION_CONTEXT_EMPTY_RETURN_STATE: isize = 0x7FFFFFFF;
@@ -108,7 +108,7 @@ impl Display for PredictionContext {
                 }
             }
             Array(arr) => {
-                f.write_str("[");
+                f.write_str("[")?;
                 for i in 0..arr.return_states.len() {
                     if i > 0 {
                         f.write_str(", ")?;
@@ -524,7 +524,7 @@ impl PredictionContext {
             return EMPTY_PREDICTION_CONTEXT.clone();
         }
 
-        let parent = PredictionContext::from_rule_context::<'input, Ctx>(
+        let parent = PredictionContext::from_rule_context::<Ctx>(
             atn,
             outer_context.get_parent_ctx().unwrap().deref(),
         );
@@ -558,12 +558,15 @@ impl PredictionContext {
 //
 //    fn get_cached_base_prediction_context(context PredictionContext, contextCache: * PredictionContextCache, visited: map[PredictionContext]PredictionContext) -> PredictionContext { unimplemented!() }
 
+///Public for implementation reasons
+#[derive(Debug)]
 pub struct PredictionContextCache {
     //todo test dashmap
     cache: RwLock<HashMap<Arc<PredictionContext>, Arc<PredictionContext>, MurmurHasherBuilder>>,
 }
 
-//
+#[doc(hidden)]
+#[derive(Debug)]
 pub struct MurmurHasherBuilder {}
 
 impl BuildHasher for MurmurHasherBuilder {
@@ -573,12 +576,14 @@ impl BuildHasher for MurmurHasherBuilder {
 }
 
 impl PredictionContextCache {
+    #[doc(hidden)]
     pub fn new() -> PredictionContextCache {
         PredictionContextCache {
             cache: RwLock::new(HashMap::with_hasher(MurmurHasherBuilder {})),
         }
     }
 
+    #[doc(hidden)]
     pub fn get_shared_context(
         &self,
         context: &Arc<PredictionContext>,
@@ -641,5 +646,6 @@ impl PredictionContextCache {
         return updated;
     }
 
-    fn length(&self) -> usize { self.cache.read().unwrap().len() }
+    #[doc(hidden)]
+    pub fn length(&self) -> usize { self.cache.read().unwrap().len() }
 }

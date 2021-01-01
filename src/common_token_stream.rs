@@ -1,15 +1,15 @@
+//! Channel based `TokenStream`
 use std::borrow::Borrow;
-use std::ops::Deref;
 
-use crate::errors::ANTLRError;
 use crate::int_stream::{IntStream, IterWrapper, EOF};
-use crate::token::{OwningToken, Token, TOKEN_DEFAULT_CHANNEL, TOKEN_INVALID_TYPE};
+use crate::token::{Token, TOKEN_DEFAULT_CHANNEL, TOKEN_INVALID_TYPE};
 use crate::token_factory::TokenFactory;
 use crate::token_source::TokenSource;
 use crate::token_stream::{TokenStream, UnbufferedTokenStream};
 use better_any::{Tid, TidAble};
 
-#[derive(Tid)]
+/// Default token stream that skips token that not correspond to current channel.
+#[derive(Tid, Debug)]
 pub struct CommonTokenStream<'input, T: TokenSource<'input>> {
     base: UnbufferedTokenStream<'input, T>,
     channel: isize,
@@ -17,13 +17,13 @@ pub struct CommonTokenStream<'input, T: TokenSource<'input>> {
 
 impl<'input, T: TokenSource<'input>> IntStream for CommonTokenStream<'input, T> {
     #[inline]
-    fn consume(&mut self) -> Result<(), ANTLRError> {
-        self.base.consume()?;
+    fn consume(&mut self) {
+        self.base.consume();
         //        self.base.p = self.next_token_on_channel(self.base.p,self.channel);
         //        self.base.current_token_index = self.base.p;
         let next = self.next_token_on_channel(self.base.p, self.channel, 1);
         self.base.seek(next);
-        Ok(())
+        // Ok(())
     }
 
     #[inline]
@@ -71,16 +71,9 @@ impl<'input, T: TokenSource<'input>> TokenStream<'input> for CommonTokenStream<'
     #[inline]
     fn get(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Tok { self.base.get(index) }
 
-    #[inline]
-    fn get_inner(&self, index: isize) -> &<Self::TF as TokenFactory<'input>>::Inner {
-        self.base.get_inner(index)
-    }
-
     fn get_token_source(&self) -> &dyn TokenSource<'input, TF = Self::TF> {
         self.base.get_token_source()
     }
-
-    fn get_all_text(&self) -> String { self.get_text_from_interval(0, self.size() - 1) }
 
     fn get_text_from_interval(&self, start: isize, stop: isize) -> String {
         self.base.get_text_from_interval(start, stop)
@@ -88,10 +81,12 @@ impl<'input, T: TokenSource<'input>> TokenStream<'input> for CommonTokenStream<'
 }
 
 impl<'input, T: TokenSource<'input>> CommonTokenStream<'input, T> {
+    /// Creates CommonTokenStream that produces tokens from `TOKEN_DEFAULT_CHANNEL`
     pub fn new(lexer: T) -> CommonTokenStream<'input, T> {
         Self::with_channel(lexer, TOKEN_DEFAULT_CHANNEL)
     }
 
+    /// Creates CommonTokenStream that produces tokens from `channel`
     pub fn with_channel(lexer: T, channel: isize) -> CommonTokenStream<'input, T> {
         let mut r = CommonTokenStream {
             base: UnbufferedTokenStream::new_buffered(lexer),
@@ -115,15 +110,15 @@ impl<'input, T: TokenSource<'input>> CommonTokenStream<'input, T> {
         //		if ( i>range ) range = i;
         return self.base.tokens.get(i as usize);
     }
-    //
-    //    fn get_all_tokens(&self) -> Vec<Token> { unimplemented!() }
-    //
+
+    /// Restarts this token stream
     pub fn reset(&mut self) {
         self.base.p = 0;
         self.base.current_token_index = 0;
     }
 
-    pub fn iter(&mut self) -> IterWrapper<Self> { IterWrapper(self) }
+    /// Creates iterator over this token stream
+    pub fn iter(&mut self) -> IterWrapper<'_, Self> { IterWrapper(self) }
 
     fn sync(&mut self, i: isize) -> bool {
         let need = i - self.size() + 1;

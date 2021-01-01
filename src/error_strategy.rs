@@ -1,6 +1,4 @@
-//!
-//!
-//!
+//! Error handling and recovery
 use std::borrow::Borrow;
 use std::error::Error;
 use std::fmt;
@@ -12,22 +10,17 @@ use crate::atn_simulator::IATNSimulator;
 use crate::atn_state::*;
 use crate::char_stream::{CharStream, InputData};
 use crate::dfa::ScopeExt;
-use crate::errors::{
-    ANTLRError, FailedPredicateError, InputMisMatchError, NoViableAltError, RecognitionError,
-};
+use crate::errors::{ANTLRError, FailedPredicateError, InputMisMatchError, NoViableAltError};
 use crate::interval_set::IntervalSet;
 use crate::parser::{Parser, ParserNodeType};
 use crate::parser_rule_context::ParserRuleContext;
 use crate::rule_context::{CustomRuleContext, RuleContext};
-use crate::token::{
-    OwningToken, Token, TOKEN_DEFAULT_CHANNEL, TOKEN_EOF, TOKEN_EPSILON, TOKEN_INVALID_TYPE,
-};
-use crate::token_factory::{TokenAware, TokenFactory};
+use crate::token::{Token, TOKEN_DEFAULT_CHANNEL, TOKEN_EOF, TOKEN_EPSILON, TOKEN_INVALID_TYPE};
+use crate::token_factory::TokenFactory;
 use crate::transition::RuleTransition;
 use crate::tree::Tree;
 use crate::utils::escape_whitespaces;
 use better_any::{impl_tid, Tid, TidAble};
-use std::any::Any;
 
 /// The interface for defining strategies to deal with syntax errors encountered
 /// during a parse by ANTLR-generated parsers. We distinguish between three
@@ -37,19 +30,59 @@ use std::any::Any;
 ///  - The current input does not match what we were looking for
 ///  - A predicate evaluated to false
 ///
-/// Implementations of this interface should report syntax errors by calling [`Parser.notifyErrorListeners`]
+/// Implementations of this interface should report syntax errors by calling [`Parser::notifyErrorListeners`]
 ///
-/// [`Parser.notifyErrorListeners`]: crate::parser::Parser::notifyErrorListeners
+/// [`Parser::notifyErrorListeners`]: crate::parser::Parser::notifyErrorListeners
 pub trait ErrorStrategy<'a, T: Parser<'a>>: Tid<'a> {
+    ///Reset the error handler state for the specified `recognizer`.
     fn reset(&mut self, recognizer: &mut T);
+
+    /// This method is called when an unexpected symbol is encountered during an
+    /// inline match operation, such as `Parser::match`. If the error
+    /// strategy successfully recovers from the match failure, this method
+    /// returns the `Token` instance which should be treated as the
+    /// successful result of the match.
+    ///
+    /// This method handles the consumption of any tokens - the caller should
+    /// **not** call `Parser::consume` after a successful recovery.
+    ///
+    /// Note that the calling code will not report an error if this method
+    /// returns successfully. The error strategy implementation is responsible
+    /// for calling `Parser::notifyErrorListeners` as appropriate.
+    ///
+    /// Returns `ANTLRError` if can't recover from unexpected input symbol
     fn recover_inline(
         &mut self,
         recognizer: &mut T,
     ) -> Result<<T::TF as TokenFactory<'a>>::Tok, ANTLRError>;
+
+    /// This method is called to recover from error `e`. This method is
+    /// called after `ErrorStrategy::reportError` by the default error handler
+    /// generated for a rule method.
+    ///
+    ///
     fn recover(&mut self, recognizer: &mut T, e: &ANTLRError) -> Result<(), ANTLRError>;
+
+    /// This method provides the error handler with an opportunity to handle
+    /// syntactic or semantic errors in the input stream before they result in a
+    /// error.
+    ///
+    /// The generated code currently contains calls to `ErrorStrategy::sync` after
+    /// entering the decision state of a closure block ({@code (...)*} or
+    /// {@code (...)+}).</p>
     fn sync(&mut self, recognizer: &mut T) -> Result<(), ANTLRError>;
+
+    /// Tests whether or not {@code recognizer} is in the process of recovering
+    /// from an error. In error recovery mode, `Parser::consume` will create
+    /// `ErrorNode` leaf instead of `TerminalNode` one  
     fn in_error_recovery_mode(&mut self, recognizer: &mut T) -> bool;
+
+    /// Report any kind of `ANTLRError`. This method is called by
+    /// the default exception handler generated for a rule method.
     fn report_error(&mut self, recognizer: &mut T, e: &ANTLRError);
+
+    /// This method is called when the parser successfully matches an input
+    /// symbol.
     fn report_match(&mut self, recognizer: &mut T);
 }
 //
@@ -100,6 +133,8 @@ impl<'a, T: Parser<'a> + TidAble<'a>> ErrorStrategy<'a, T> for Box<dyn ErrorStra
     fn report_match(&mut self, recognizer: &mut T) { self.deref_mut().report_match(recognizer) }
 }
 
+/// This is the default implementation of `ErrorStrategy` used for
+/// error reporting and recovery in ANTLR parsers.
 #[derive(Debug, Tid)]
 pub struct DefaultErrorStrategy<'input, Ctx: ParserNodeType<'input>> {
     error_recovery_mode: bool,
@@ -114,6 +149,7 @@ impl<'input, Ctx: ParserNodeType<'input>> Default for DefaultErrorStrategy<'inpu
 }
 
 impl<'input, Ctx: ParserNodeType<'input>> DefaultErrorStrategy<'input, Ctx> {
+    /// Creates new instance of `DefaultErrorStrategy`
     pub fn new() -> Self {
         Self {
             error_recovery_mode: false,
@@ -236,7 +272,7 @@ impl<'input, Ctx: ParserNodeType<'input>> DefaultErrorStrategy<'input, Ctx> {
             .first()
             .unwrap()
             .get_target();
-        let expect_at_ll2 = atn.next_tokens_in_ctx::<'input, Ctx>(
+        let expect_at_ll2 = atn.next_tokens_in_ctx::<Ctx>(
             atn.states[next].as_ref(),
             Some(recognizer.get_parser_rule_context().deref()),
         );
@@ -285,7 +321,7 @@ impl<'input, Ctx: ParserNodeType<'input>> DefaultErrorStrategy<'input, Ctx> {
         if curr.get_token_type() == TOKEN_EOF {
             curr = recognizer
                 .get_input_stream()
-                .run(|it| it.get_inner((it.index() - 1).max(0)));
+                .run(|it| it.get((it.index() - 1).max(0)).borrow());
         }
         let (line, column) = (curr.get_line(), curr.get_column());
         recognizer.get_token_factory().create(
@@ -355,7 +391,7 @@ impl<'input, Ctx: ParserNodeType<'input>> DefaultErrorStrategy<'input, Ctx> {
 }
 
 impl<'a, T: Parser<'a>> ErrorStrategy<'a, T> for DefaultErrorStrategy<'a, T::Node> {
-    fn reset(&mut self, _recognizer: &mut T) { unimplemented!() }
+    fn reset(&mut self, recognizer: &mut T) { self.end_error_condition(recognizer) }
 
     fn recover_inline(
         &mut self,
@@ -482,42 +518,40 @@ impl<'a, T: Parser<'a>> ErrorStrategy<'a, T> for DefaultErrorStrategy<'a, T::Nod
     }
 }
 
-/**
-This implementation of `ANTLRErrorStrategy` responds to syntax errors
-by immediately canceling the parse operation with a
-`ParseCancellationException`. The implementation ensures that the
-[`ParserRuleContext.exception`] field is set for all parse tree nodes
-that were not completed prior to encountering the error.
-
-<p> This error strategy is useful in the following scenarios.</p>
-
-<ul>
-<li><strong>Two-stage parsing:</strong> This error strategy allows the first
-stage of two-stage parsing to immediately terminate if an error is
-encountered, and immediately fall back to the second stage. In addition to
-avoiding wasted work by attempting to recover from errors here, the empty
-implementation of `sync` improves the performance of
-the first stage.</li>
-<li><strong>Silent validation:</strong> When syntax errors are not being
-reported or logged, and the parse result is simply ignored if errors occur,
-the `BailErrorStrategy` avoids wasting work on recovering from errors
-when the result will be ignored either way.</li>
-</ul>
-
-# Usage
-```ignore
-use antlr_rust::error_strategy::BailErrorStrategy;
-myparser.err_handler = BailErrorStrategy::new();
-```
-
-[`ParserRuleContext.exception`]: todo
-*/
+/// This implementation of `ANTLRErrorStrategy` responds to syntax errors
+/// by immediately canceling the parse operation with a
+/// `ParseCancellationException`. The implementation ensures that the
+/// [`ParserRuleContext.exception`] field is set for all parse tree nodes
+/// that were not completed prior to encountering the error.
+///
+/// <p> This error strategy is useful in the following scenarios.</p>
+///
+///  - Two-stage parsing: This error strategy allows the first
+/// stage of two-stage parsing to immediately terminate if an error is
+/// encountered, and immediately fall back to the second stage. In addition to
+/// avoiding wasted work by attempting to recover from errors here, the empty
+/// implementation of `sync` improves the performance of
+/// the first stage.
+///  - Silent validation: When syntax errors are not being
+/// reported or logged, and the parse result is simply ignored if errors occur,
+/// the `BailErrorStrategy` avoids wasting work on recovering from errors
+/// when the result will be ignored either way.
+///
+/// # Usage
+/// ```ignore
+/// use antlr_rust::error_strategy::BailErrorStrategy;
+/// myparser.err_handler = BailErrorStrategy::new();
+/// ```
+///
+/// [`ParserRuleContext.exception`]: todo
+/// */
 #[derive(Default, Debug, Tid)]
 pub struct BailErrorStrategy<'input, Ctx: ParserNodeType<'input>>(
     DefaultErrorStrategy<'input, Ctx>,
 );
 
 impl<'input, Ctx: ParserNodeType<'input>> BailErrorStrategy<'input, Ctx> {
+    /// Creates new instance of `BailErrorStrategy`
     pub fn new() -> Self { Self(DefaultErrorStrategy::new()) }
 
     fn process_error<T: Parser<'input, Node = Ctx, TF = Ctx::TF>>(
@@ -536,6 +570,7 @@ impl<'input, Ctx: ParserNodeType<'input>> BailErrorStrategy<'input, Ctx> {
     }
 }
 
+/// `ANTLRError::FallThrough` Error returned `BailErrorStrategy` to bail out from parsing
 #[derive(Debug)]
 pub struct ParseCancelledError(ANTLRError);
 
@@ -545,9 +580,8 @@ impl Error for ParseCancelledError {
 
 impl Display for ParseCancelledError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.write_str("ParseCancelledError, caused by ");
-        self.0.fmt(f);
-        Ok(())
+        f.write_str("ParseCancelledError, caused by ")?;
+        self.0.fmt(f)
     }
 }
 
@@ -587,5 +621,5 @@ impl<'a, T: Parser<'a>> ErrorStrategy<'a, T> for BailErrorStrategy<'a, T::Node> 
     }
 
     #[inline(always)]
-    fn report_match(&mut self, recognizer: &mut T) {}
+    fn report_match(&mut self, _recognizer: &mut T) {}
 }

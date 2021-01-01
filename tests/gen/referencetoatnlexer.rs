@@ -2,6 +2,7 @@
 #![allow(dead_code)]
 #![allow(nonstandard_style)]
 #![allow(unused_imports)]
+#![allow(unused_variables)]
 use antlr_rust::atn::ATN;
 use antlr_rust::atn_deserializer::ATNDeserializer;
 use antlr_rust::char_stream::CharStream;
@@ -15,9 +16,9 @@ use antlr_rust::recognizer::{Actions, Recognizer};
 use antlr_rust::rule_context::{BaseRuleContext, EmptyContext, EmptyCustomRuleContext};
 use antlr_rust::token::*;
 use antlr_rust::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
-use antlr_rust::token_source::TokenSource;
 use antlr_rust::vocabulary::{Vocabulary, VocabularyImpl};
 use antlr_rust::PredictionContextCache;
+use antlr_rust::TokenSource;
 
 use antlr_rust::{lazy_static, Tid, TidAble, TidExt};
 
@@ -130,15 +131,11 @@ impl<'input> TokenAware<'input> for ReferenceToATNLexerActions {
     type TF = LocalTokenFactory<'input>;
 }
 
-impl<'input, Input: CharStream<From<'input>>> TokenAware<'input>
-    for ReferenceToATNLexer<'input, Input>
-{
-    type TF = LocalTokenFactory<'input>;
-}
-
 impl<'input, Input: CharStream<From<'input>>> TokenSource<'input>
     for ReferenceToATNLexer<'input, Input>
 {
+    type TF = LocalTokenFactory<'input>;
+
     fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok { self.base.next_token() }
 
     fn get_line(&self) -> isize { self.base.get_line() }

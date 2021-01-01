@@ -1,4 +1,4 @@
-use std::any::Any;
+//! Error reporting
 use std::cell::Ref;
 use std::ops::Deref;
 
@@ -7,13 +7,23 @@ use bit_set::BitSet;
 use crate::atn_config_set::ATNConfigSet;
 use crate::dfa::DFA;
 use crate::errors::ANTLRError;
-use crate::lexer::Lexer;
+
 use crate::parser::Parser;
 use crate::recognizer::Recognizer;
-use crate::token::Token;
-use crate::token_factory::TokenFactory;
 
+use crate::token_factory::TokenFactory;
+use std::borrow::Cow;
+use std::fmt::Debug;
+
+/// Describes interface for listening on parser/lexer errors.
+/// Should only listen for errors, for processing/recovering from errors use `ErrorStrategy`
 pub trait ErrorListener<'a, T: Recognizer<'a>> {
+    /// Called when parser/lexer encounter hard error.
+    ///
+    /// The `_error` is not None for all syntax errors except
+    /// when we discover mismatched token errors that we can recover from
+    /// in-line, without returning from the surrounding rule (via the single
+    /// token insertion and deletion mechanism)
     fn syntax_error(
         &self,
         _recognizer: &T,
@@ -21,10 +31,12 @@ pub trait ErrorListener<'a, T: Recognizer<'a>> {
         _line: isize,
         _column: isize,
         _msg: &str,
-        _e: Option<&ANTLRError>,
+        _error: Option<&ANTLRError>,
     ) {
     }
 
+    /// This method is called by the parser when a full-context prediction
+    /// results in an ambiguity.
     fn report_ambiguity(
         &self,
         _recognizer: &T,
@@ -37,6 +49,8 @@ pub trait ErrorListener<'a, T: Recognizer<'a>> {
     ) {
     }
 
+    /// This method is called when an SLL conflict occurs and the parser is about
+    /// to use the full context information to make an LL decision.
     fn report_attempting_full_context(
         &self,
         _recognizer: &T,
@@ -48,6 +62,8 @@ pub trait ErrorListener<'a, T: Recognizer<'a>> {
     ) {
     }
 
+    /// This method is called by the parser when a full-context prediction has a
+    /// unique result.
     fn report_context_sensitivity(
         &self,
         _recognizer: &T,
@@ -60,6 +76,7 @@ pub trait ErrorListener<'a, T: Recognizer<'a>> {
     }
 }
 
+/// Default error listener that outputs errors to stderr
 #[derive(Debug)]
 pub struct ConsoleErrorListener {}
 
@@ -77,6 +94,7 @@ impl<'a, T: Recognizer<'a>> ErrorListener<'a, T> for ConsoleErrorListener {
     }
 }
 
+// #[derive(Debug)]
 pub(crate) struct ProxyErrorListener<'b, 'a, T> {
     pub delegates: Ref<'b, Vec<Box<dyn ErrorListener<'a, T>>>>,
 }
@@ -162,11 +180,28 @@ impl<'b, 'a, T: Recognizer<'a>> ErrorListener<'a, T> for ProxyErrorListener<'b, 
     }
 }
 
+/// This implementation of `ErrorListener` can be used to identify
+/// certain potential correctness and performance problems in grammars. "Reports"
+/// are made by calling `Parser::notify_error_listeners` with the appropriate
+/// message.
+///
+///  - Ambiguities: These are cases where more than one path through the
+/// grammar can match the input.
+///  - Weak context sensitivity</b>: These are cases where full-context
+/// prediction resolved an SLL conflict to a unique alternative which equaled the
+/// minimum alternative of the SLL conflict.
+///  - Strong (forced) context sensitivity: These are cases where the
+/// full-context prediction resolved an SLL conflict to a unique alternative,
+/// *and* the minimum alternative of the SLL conflict was found to not be
+/// a truly viable alternative. Two-stage parsing cannot be used for inputs where
+/// this situation occurs.
+#[derive(Debug)]
 pub struct DiagnosticErrorListener {
     exact_only: bool,
 }
 
 impl DiagnosticErrorListener {
+    /// When `exact_only` is true, only exactly known ambiguities are reported.
     pub fn new(exact_only: bool) -> Self { Self { exact_only } }
 
     fn get_decision_description<'a, T: Parser<'a>>(&self, recog: &T, dfa: &DFA) -> String {
@@ -174,16 +209,30 @@ impl DiagnosticErrorListener {
         let rule_index = recog.get_atn().states[dfa.atn_start_state].get_rule_index();
 
         let rule_names = recog.get_rule_names();
-        if let Some(&rule_name) = rule_names.get(rule_index as usize) {
+        if let Some(&rule_name) = rule_names.get(rule_index) {
             format!("{} ({})", decision, rule_name)
         } else {
             decision.to_string()
         }
     }
-
-    fn get_conflicting_alts<'a>(&self, alts: &'a BitSet, _configs: &ATNConfigSet) -> &'a BitSet {
-        //alts is never None
-        alts
+    /// Computes the set of conflicting or ambiguous alternatives from a
+    /// configuration set, if that information was not already provided by the
+    /// parser in `alts`.
+    pub fn get_conflicting_alts<'a>(
+        &self,
+        alts: Option<&'a BitSet>,
+        _configs: &ATNConfigSet,
+    ) -> Cow<'a, BitSet> {
+        match alts {
+            Some(alts) => Cow::Borrowed(alts),
+            None => Cow::Owned(
+                _configs
+                    .configs
+                    .iter()
+                    .map(|config| config.get_alt() as usize)
+                    .collect::<BitSet>(),
+            ),
+        }
     }
 }
 

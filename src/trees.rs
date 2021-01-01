@@ -7,6 +7,8 @@ use std::ops::Deref;
 use crate::tree::Tree;
 use crate::utils;
 
+/// Print out a whole tree, not just a node, in LISP format
+/// {@code (root child1 .. childN)}. Print just a node if this is a leaf.
 pub fn string_tree<'a, T: Tree<'a> + ?Sized>(tree: &T, rule_names: &[&str]) -> String {
     let s = utils::escape_whitespaces(get_node_text(tree, rule_names), false);
     if tree.get_child_count() == 0 {
@@ -28,6 +30,7 @@ pub fn string_tree<'a, T: Tree<'a> + ?Sized>(tree: &T, rule_names: &[&str]) -> S
     result
 }
 
+/// Print out tree node text representation (rule name or token text)
 pub fn get_node_text<'a>(t: &(impl Tree<'a> + ?Sized), rule_names: &[&str]) -> String {
     t.get_node_text(rule_names)
 }

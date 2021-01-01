@@ -1,49 +1,44 @@
-use std::fmt::Debug;
-use std::ops::Deref;
+use crate::int_stream::IntStream;
+use crate::token_factory::TokenFactory;
 
-use crate::char_stream::CharStream;
-use crate::int_stream::{IntStream, EOF};
-use crate::token::{Token, TOKEN_DEFAULT_CHANNEL};
-use crate::token_factory::{TokenAware, TokenFactory};
-
-/// Provides tokens for parser via `TokenStream`
-pub trait TokenSource<'input>: TokenAware<'input> {
+/// Produces tokens to be used by parser.
+/// `TokenStream` implementations are responsible for buffering tokens for parser lookahead
+pub trait TokenSource<'input> {
+    /// TokenFactory this token source produce tokens with
+    type TF: TokenFactory<'input> + 'input;
+    /// Return a {@link Token} object from your input stream (usually a
+    /// {@link CharStream}). Do not fail/return upon lexing error; keep chewing
+    /// on the characters until you get a good one; errors are not passed through
+    /// to the parser.
     fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok;
     /**
      * Get the line number for the current position in the input stream. The
      * first line in the input is line 1.
      *
-     * @return The line number for the current position in the input stream, or
+     * Returns the line number for the current position in the input stream, or
      * 0 if the current token source does not track line numbers.
      */
-    fn get_line(&self) -> isize;
+    fn get_line(&self) -> isize { 0 }
     /**
      * Get the index into the current line for the current position in the input
      * stream. The first character on a line has position 0.
      *
-     * @return The line number for the current position in the input stream, or
+     * Returns the line number for the current position in the input stream, or
      * -1 if the current token source does not track character positions.
      */
-    fn get_char_position_in_line(&self) -> isize;
+    fn get_char_position_in_line(&self) -> isize { -1 }
 
-    // todo don't call trait object from lexer
+    /// Returns underlying input stream
     fn get_input_stream(&mut self) -> Option<&mut dyn IntStream>;
+
+    /// Returns string identifier of underlying input e.g. file name
     fn get_source_name(&self) -> String;
     //    fn set_token_factory<'c: 'b>(&mut self, f: &'c TokenFactory);
-    /// Gets the {@link TokenFactory} this token source is currently using for
-    /// creating {@link Token} objects from the input.
+    /// Gets the `TokenFactory` this token source is currently using for
+    /// creating `Token` objects from the input.
     ///
     /// Required by `Parser` for creating missing tokens.
-    ///
-    /// @return The {@link TokenFactory} currently used by this token source.
     fn get_token_factory(&self) -> &'input Self::TF;
-}
-
-impl<'input, T> TokenAware<'input> for &mut T
-where
-    T: TokenSource<'input>,
-{
-    type TF = T::TF;
 }
 
 // allows user to call parser with &mut reference to Lexer
@@ -51,6 +46,7 @@ impl<'input, T> TokenSource<'input> for &mut T
 where
     T: TokenSource<'input>,
 {
+    type TF = T::TF;
     #[inline(always)]
     fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok { (**self).next_token() }
 

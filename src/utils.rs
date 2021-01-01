@@ -1,8 +1,4 @@
 use std::borrow::Borrow;
-use std::cell::Ref;
-use std::marker::PhantomData;
-use std::ops::{Deref, Index};
-
 // use crate::utils::Cow2::{Borrowed2, Owned2};
 
 pub fn escape_whitespaces(data: impl Borrow<str>, escape_spaces: bool) -> String {

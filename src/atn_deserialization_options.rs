@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct ATNDeserializationOptions {
     read_only: bool,
     verify_atn: bool,
@@ -5,11 +6,6 @@ pub struct ATNDeserializationOptions {
 }
 
 impl ATNDeserializationOptions {
-    fn new_atndeserialization_options(
-        _CopyFrom: &ATNDeserializationOptions,
-    ) -> ATNDeserializationOptions {
-        unimplemented!()
-    }
     pub fn is_verify(&self) -> bool { self.verify_atn }
 }
 

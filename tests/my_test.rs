@@ -15,9 +15,9 @@ mod gen {
     use antlr_rust::common_token_stream::CommonTokenStream;
     use antlr_rust::int_stream::IntStream;
     use antlr_rust::lexer::Lexer;
-    use antlr_rust::parser_rule_context::{BaseParserRuleContext, ParserRuleContext};
+
     use antlr_rust::token::{Token, TOKEN_EOF};
-    use antlr_rust::token_factory::{ArenaCommonFactory, CommonTokenFactory, OwningTokenFactory};
+    use antlr_rust::token_factory::{ArenaCommonFactory, OwningTokenFactory};
     use antlr_rust::token_stream::{TokenStream, UnbufferedTokenStream};
     use antlr_rust::tree::{
         ParseTree, ParseTreeListener, ParseTreeVisitor, ParseTreeWalker, TerminalNode, Tree,
@@ -37,7 +37,7 @@ mod gen {
     };
     use crate::gen::csvvisitor::CSVVisitor;
     use crate::gen::labelslexer::LabelsLexer;
-    use crate::gen::labelsparser::{AddContext, EContextAll, LabelsParser};
+    use crate::gen::labelsparser::{EContextAll, LabelsParser};
     use crate::gen::referencetoatnparser::{
         ReferenceToATNParserContext, ReferenceToATNParserContextType,
     };
@@ -59,7 +59,7 @@ mod gen {
     mod simplelrparser;
     mod xmllexer;
 
-    fn test_static<T: 'static>(arg: T) {}
+    fn test_static<T: 'static>(_arg: T) {}
 
     #[test]
     fn lexer_test_xml() -> std::io::Result<()> {
@@ -283,7 +283,7 @@ if (x < x && a > 0) then duh
     impl<'input> ParseTreeListener<'input, SimpleLRParserContextType> for Listener4 {
         fn visit_terminal(&mut self, node: &TerminalNode<'input, SimpleLRParserContextType>) {
             println!("enter terminal");
-            writeln!(&mut self.data, "terminal node {}", node.symbol.get_text());
+            let _ = writeln!(&mut self.data, "terminal node {}", node.symbol.get_text());
         }
         fn enter_every_rule(&mut self, ctx: &dyn SimpleLRParserContext<'input>) {
             println!(
@@ -336,7 +336,7 @@ if (x < x && a > 0) then duh
         let codepoints = "(a+4)*2".chars().map(|x| x as u32).collect::<Vec<_>>();
         // let codepoints = "(a+4)*2";
         let input = InputStream::new(&*codepoints);
-        let mut lexer = LabelsLexer::new(input);
+        let lexer = LabelsLexer::new(input);
         let token_source = CommonTokenStream::new(lexer);
         let mut parser = LabelsParser::new(token_source);
         let result = parser.s().expect("parser error");
@@ -366,7 +366,7 @@ if (x < x && a > 0) then duh
     use std::rc::Rc;
 
     impl<'i, T> CSVVisitor<'i> for MyCSVVisitor<'i, T> {
-        fn visit_hdr(&mut self, ctx: &HdrContext<'i>) {}
+        fn visit_hdr(&mut self, _ctx: &HdrContext<'i>) {}
 
         fn visit_row(&mut self, ctx: &RowContext<'i>) {
             if ctx.field_all().len() > 1 {
@@ -394,6 +394,6 @@ if (x < x && a > 0) then duh
         }
         let tf = ArenaCommonFactory::default();
 
-        let result = parse(&tf);
+        let _result = parse(&tf);
     }
 }

@@ -8,9 +8,6 @@ extern crate test;
 mod gen {
     use test::Bencher;
 
-    use antlr_rust::common_token_stream::CommonTokenStream;
-    use antlr_rust::InputStream;
-
     // use crate::gen::perflexer::PerfLexer;
     // use crate::gen::perfparser::PerfParser;
     // mod perflexer;
@@ -22,7 +19,7 @@ mod gen {
     // fn performance(){
     #[ignore]
     // #[bench]
-    fn performance(b: &mut Bencher) {
+    fn performance(_b: &mut Bencher) {
         // b.iter(|| {
         //     let lexer = PerfLexer::new(Box::new(InputStream::new(input.to_string())));
         //     let source = CommonTokenStream::new(lexer);

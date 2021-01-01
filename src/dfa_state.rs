@@ -22,7 +22,7 @@ impl Display for PredPrediction {
 //index in DFA.states
 pub type DFAStateRef = usize;
 
-#[derive(Eq)]
+#[derive(Eq, Debug)]
 pub struct DFAState {
     /// Number of this state in corresponding DFA
     pub state_number: usize,
@@ -54,9 +54,9 @@ impl DFAState {
         hasher.finish()
     }
 
-    pub fn new_dfastate(stateNumber: usize, configs: Box<ATNConfigSet>) -> DFAState {
+    pub fn new_dfastate(state_number: usize, configs: Box<ATNConfigSet>) -> DFAState {
         DFAState {
-            state_number: stateNumber,
+            state_number,
             configs,
             //            edges: Vec::with_capacity((MAX_DFA_EDGE - MIN_DFA_EDGE + 1) as usize),
             edges: Vec::new(),
@@ -70,5 +70,5 @@ impl DFAState {
 
     //    fn get_alt_set(&self) -> &Set { unimplemented!() }
 
-    fn set_prediction(&self, _v: isize) { unimplemented!() }
+    // fn set_prediction(&self, _v: isize) { unimplemented!() }
 }

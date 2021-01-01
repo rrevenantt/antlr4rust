@@ -7,7 +7,7 @@ use crate::interval_set::IntervalSet;
 use crate::lexer::{LEXER_MAX_CHAR_VALUE, LEXER_MIN_CHAR_VALUE};
 use crate::semantic_context::SemanticContext;
 
-const TransitionNames: [&'static str; 11] = [
+const _TRANSITION_NAMES: [&'static str; 11] = [
     "INVALID",
     "EPSILON",
     "RANGE",

@@ -1,10 +1,7 @@
-use std::any::Any;
+//! Base parser implementation
 use std::borrow::Borrow;
 use std::cell::{Cell, RefCell};
-use std::collections::HashMap;
-use std::iter::from_fn;
 use std::marker::PhantomData;
-use std::mem;
 use std::ops::{CoerceUnsized, Deref, DerefMut};
 use std::rc::Rc;
 use std::sync::Arc;
@@ -14,22 +11,20 @@ use crate::atn_simulator::IATNSimulator;
 use crate::error_listener::{ConsoleErrorListener, ErrorListener, ProxyErrorListener};
 use crate::error_strategy::ErrorStrategy;
 use crate::errors::ANTLRError;
-use crate::int_stream::IntStream;
 use crate::interval_set::IntervalSet;
 use crate::parser_atn_simulator::ParserATNSimulator;
-use crate::parser_rule_context::{BaseParserRuleContext, ParserRuleContext};
+use crate::parser_rule_context::ParserRuleContext;
 use crate::recognizer::{Actions, Recognizer};
 use crate::rule_context::{states_stack, CustomRuleContext, RuleContext};
-use crate::token::{OwningToken, Token, TOKEN_EOF};
-use crate::token_factory::{CommonTokenFactory, TokenAware, TokenFactory};
-use crate::token_source::TokenSource;
+use crate::token::{Token, TOKEN_EOF};
+use crate::token_factory::{TokenAware, TokenFactory};
 use crate::token_stream::TokenStream;
-use crate::tree::{
-    ErrorNode, Listenable, ParseTree, ParseTreeListener, ParseTreeVisitor, TerminalNode,
-};
+use crate::tree::{ErrorNode, Listenable, ParseTreeListener, ParseTreeVisitor, TerminalNode};
 use crate::vocabulary::Vocabulary;
 use better_any::{Tid, TidAble};
 
+/// parser functionality required for `ParserATNSimulator` to work
+#[allow(missing_docs)] // todo rewrite it so downstream crates actually could meaningfully implement it
 pub trait Parser<'input>: Recognizer<'input> {
     fn get_interpreter(&self) -> &ParserATNSimulator;
 
@@ -84,7 +79,7 @@ pub trait Parser<'input>: Recognizer<'input> {
 // }
 
 // workaround trait for rustc not being able to handle cycles in trait defenition yet, e.g. `trait A: Super<Assoc=dyn A>{}`
-// whyyy rustc... whyyy... (╯°□°）╯︵ ┻━┻  It would have been so          much cleaner.
+// whyyy rustc... whyyy... (╯°□°）╯︵ ┻━┻  It would have been so much cleaner.
 /// Workaround trait for rustc current limitations.
 ///
 /// Basically you can consider it as if context trait for generated parser has been implemented as
@@ -95,7 +90,7 @@ pub trait Parser<'input>: Recognizer<'input> {
 pub trait ParserNodeType<'input>: TidAble<'input> + Sized {
     type TF: TokenFactory<'input> + 'input;
     type Type: ?Sized + ParserRuleContext<'input, Ctx = Self, TF = Self::TF> + 'input;
-    type Visitor: ?Sized + ParseTreeVisitor<'input, Self>;
+    // type Visitor: ?Sized + ParseTreeVisitor<'input, Self>;
 }
 
 /// ### Main underlying Parser struct
@@ -113,6 +108,7 @@ pub struct BaseParser<
     T: ParseTreeListener<'input, Ctx> + ?Sized = dyn ParseTreeListener<'input, Ctx>,
 > {
     interp: Arc<ParserATNSimulator>,
+    /// Rule context parser is currently processing
     pub ctx: Option<Rc<Ctx::Type>>,
 
     /// Track the {@link ParserRuleContext} objects during the parse and hook
@@ -133,9 +129,11 @@ pub struct BaseParser<
     /// parsing, otherwise {@code false}
     pub build_parse_trees: bool,
 
+    /// true if parser reached EOF
     pub matched_eof: bool,
 
     state: isize,
+    /// Token stream that is currently used by this parser
     pub input: I,
     precedence_stack: Vec<isize>,
 
@@ -226,7 +224,7 @@ where
     fn get_interpreter(&self) -> &ParserATNSimulator { self.interp.as_ref() }
 
     fn get_token_factory(&self) -> &'input Self::TF {
-        // &**crate::common_token_factory::CommonTokenFactoryDEFAULT
+        // &**crate::common_token_factory::COMMON_TOKEN_FACTORY_DEFAULT
         self.input.get_token_source().get_token_factory()
     }
 
@@ -241,7 +239,7 @@ where
         if self.build_parse_trees || !self.parse_listeners.is_empty() {
             if err_handler.in_error_recovery_mode(self) {
                 // todo report ructc inference issue
-                let node: Rc<ErrorNode<Ctx>> = self.create_error_node(o.clone());
+                let node: Rc<ErrorNode<'_, Ctx>> = self.create_error_node(o.clone());
                 self.ctx
                     .as_deref()
                     .unwrap()
@@ -250,7 +248,7 @@ where
                     listener.visit_error_node(&*node)
                 }
             } else {
-                let node: Rc<TerminalNode<Ctx>> = self.create_token_node(o.clone());
+                let node: Rc<TerminalNode<'_, Ctx>> = self.create_token_node(o.clone());
                 self.ctx
                     .as_deref()
                     .unwrap()
@@ -299,7 +297,7 @@ where
         self._syntax_errors.update(|it| it + 1);
         let offending_token: Option<&_> = match offending_token {
             None => Some(self.get_current_token().borrow()),
-            Some(x) => Some(self.input.get_inner(x)),
+            Some(x) => Some(self.input.get(x).borrow()),
         };
         let line = offending_token.map(|x| x.get_line()).unwrap_or(-1);
         let column = offending_token.map(|x| x.get_column()).unwrap_or(-1);
@@ -518,7 +516,8 @@ where
         self.trigger_exit_rule_event();
         self.set_state(self.get_parser_rule_context().get_invoking_state());
         let parent = self.ctx.as_ref().unwrap().get_parent_ctx();
-        mem::replace(&mut self.ctx, parent);
+        // mem::replace(&mut self.ctx, parent);
+        self.ctx = parent;
     }
 
     // todo make new_ctx not option
@@ -614,6 +613,7 @@ where
         ErrorNode::new(token).into()
     }
 
+    /// Text representation of generated DFA for debugging purposes
     pub fn dump_dfa(&self) {
         let mut seen_one = false;
         for dfa in self.interp.decision_to_dfa() {
@@ -647,6 +647,7 @@ where
 }
 
 /// Allows to safely cast listener back to user type
+#[derive(Debug)]
 pub struct ListenerId<T: ?Sized> {
     pub(crate) actual_id: usize,
     phantom: PhantomData<fn() -> T>,
