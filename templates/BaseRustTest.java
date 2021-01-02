@@ -434,7 +434,9 @@ public class BaseRustTest implements RuntimeTestSupport {
 						"edition=\"2018\"\n" +
 						"\n" +
 						"[dependencies]\n" +
-						"antlr-rust = { path = \"" + locateRuntimeSrc() + "\"}");
+						"antlr-rust = { path = \"" + locateRuntimeSrc() + "\" }\n" +
+						"[profile.release]\n" +
+						"opt-level=1\n");
 
 		cargo("build");
 		this.stderrDuringParse = null;
