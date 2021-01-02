@@ -30,6 +30,18 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 1.8
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1.0.6
+        with:
+          toolchain: nightly-2020-12-23
+          default: true
       - name: Build with Maven
-        run: mvn test -Dtest=rust.* -q
+        run : mvn -DskipTests install -q
+      - name : Maven tests
+        run: |
+          mvn test -Dtest=rust.* -q
+          rc=$?;
+          cat target/surefire-reports/*.dumpstream || true;
+          exit $rc
+        working-directory: runtime-testsuite
         
