@@ -1,14 +1,12 @@
 //! Full parser node
-use std::any::{type_name, Any, TypeId};
+use std::any::{type_name, Any};
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::{Ref, RefCell, RefMut};
 use std::fmt::{Debug, Error, Formatter};
-use std::marker::PhantomData;
 use std::ops::{CoerceUnsized, Deref, DerefMut};
 use std::rc::Rc;
 
 use better_any::{Tid, TidAble, TidExt};
-use typed_arena::Arena;
 
 use crate::errors::ANTLRError;
 use crate::interval_set::Interval;
@@ -19,6 +17,10 @@ use crate::token_factory::TokenFactory;
 use crate::tree::{ParseTree, ParseTreeVisitor, TerminalNode, Tree, VisitableDyn};
 
 /// Syntax tree node for particular parser rule.
+///
+/// Not yet good for custom implementations so currently easiest option
+/// is to just copy `BaseParserRuleContext` or `BaseRuleContext` and strip/extend them
+#[allow(missing_docs)]
 pub trait ParserRuleContext<'input>:
     ParseTree<'input> + RuleContext<'input> + Debug + Tid<'input>
 {
@@ -115,14 +117,17 @@ pub trait ParserRuleContext<'input>:
     // fn upcast(&self) -> &dyn ParserRuleContext<'input, TF=Self::TF>;
 }
 
-// allows to implement generic functions on trait object as well
+//Allows to implement generic functions on trait object as well
+/// Extention trait implemented for all `ParserRuleContext`s
 pub trait RuleContextExt<'input>: ParserRuleContext<'input> {
+    /// Prints list of parent rules
     fn to_string<Z>(self: &Rc<Self>, rule_names: Option<&[&str]>, stop: Option<Rc<Z>>) -> String
     where
         Z: ParserRuleContext<'input, Ctx = Self::Ctx, TF = Self::TF> + ?Sized + 'input,
         Self::Ctx: ParserNodeType<'input, Type = Z>,
         Rc<Self>: CoerceUnsized<Rc<Z>>;
 
+    #[doc(hidden)]
     fn accept_children<V>(&self, visitor: &mut V)
     where
         V: ParseTreeVisitor<'input, Self::Ctx> + ?Sized,
@@ -221,12 +226,14 @@ pub fn cast_mut<'a, T: ParserRuleContext<'a> + 'a + ?Sized, Result: 'a>(
 // pub type ParserRuleContextType<'input, T> = Rc<dyn ParserRuleContext<'input, Ctx=T> + 'input>;
 // pub type ParserRuleContextType<'input,T> = ParseTreeNode<'input,T>;
 
+/// Default rule context implementation that keeps everything provided by parser
 #[derive(Tid)]
 pub struct BaseParserRuleContext<'input, Ctx: CustomRuleContext<'input>> {
     base: BaseRuleContext<'input, Ctx>,
 
     start: RefCell<<Ctx::TF as TokenFactory<'input>>::Tok>,
     stop: RefCell<<Ctx::TF as TokenFactory<'input>>::Tok>,
+    /// error if there was any in this node
     pub exception: Option<Box<ANTLRError>>,
     /// List of children of current node
     pub(crate) children: RefCell<Vec<Rc<<Ctx::Ctx as ParserNodeType<'input>>::Type>>>,
@@ -415,7 +422,7 @@ impl<'input, Ctx: CustomRuleContext<'input> + TidAble<'input>> ParseTree<'input>
         result
     }
 }
-
+#[allow(missing_docs)]
 impl<'input, Ctx: CustomRuleContext<'input> + 'input> BaseParserRuleContext<'input, Ctx> {
     pub fn new_parser_ctx(
         parent_ctx: Option<Rc<<Ctx::Ctx as ParserNodeType<'input>>::Type>>,

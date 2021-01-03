@@ -19,7 +19,7 @@ use crate::rule_context::{states_stack, CustomRuleContext, RuleContext};
 use crate::token::{Token, TOKEN_EOF};
 use crate::token_factory::{TokenAware, TokenFactory};
 use crate::token_stream::TokenStream;
-use crate::tree::{ErrorNode, Listenable, ParseTreeListener, ParseTreeVisitor, TerminalNode};
+use crate::tree::{ErrorNode, Listenable, ParseTreeListener, TerminalNode};
 use crate::vocabulary::Vocabulary;
 use better_any::{Tid, TidAble};
 
@@ -87,8 +87,13 @@ pub trait Parser<'input>: Recognizer<'input> {
 /// trait GenratedParserContext:ParserRuleContext<Ctx=dyn GeneratedParserContext>{ ... }
 /// ```
 /// which is not possible, hence this a bit ugly workaround.
+///
+/// Implemented by generated parser for the type that is going to carry information about
+/// parse tree node.
 pub trait ParserNodeType<'input>: TidAble<'input> + Sized {
+    /// Shortcut for `Type::TF`
     type TF: TokenFactory<'input> + 'input;
+    /// Actual type of the parse tree node
     type Type: ?Sized + ParserRuleContext<'input, Ctx = Self, TF = Self::TF> + 'input;
     // type Visitor: ?Sized + ParseTreeVisitor<'input, Self>;
 }
@@ -98,7 +103,6 @@ pub trait ParserNodeType<'input>: TidAble<'input> + Sized {
 /// It is a member of generated parser struct, so
 /// almost always you don't need to create it yourself.
 /// Generated parser hides complexity of this struct and expose required flexibility via generic parameters
-///
 #[derive(Tid)]
 pub struct BaseParser<
     'input,
@@ -344,6 +348,7 @@ where
     //    }
 }
 
+#[allow(missing_docs)] // todo docs
 impl<'input, Ext, I, Ctx, T> BaseParser<'input, Ext, I, Ctx, T>
 where
     Ext: ParserRecog<'input, Self> + 'static,

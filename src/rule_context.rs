@@ -10,21 +10,26 @@ use crate::atn::INVALID_ALT;
 use crate::parser::ParserNodeType;
 use crate::parser_rule_context::ParserRuleContext;
 use crate::token_factory::TokenFactory;
-use crate::tree::{ParseTree, ParseTreeVisitor, Tree};
+use crate::tree::{ParseTree, Tree};
 use better_any::{Tid, TidAble};
 
 //pub trait RuleContext:RuleNode {
 /// Minimal rule context functionality required for parser to work properly
 pub trait RuleContext<'input>: CustomRuleContext<'input> {
+    /// Internal parser state
     fn get_invoking_state(&self) -> isize { -1 }
+
+    /// Sets internal parser state
     fn set_invoking_state(&self, _t: isize) {}
 
     /// A context is empty if there is no invoking state; meaning nobody called
     /// current context. Which is usually true for the root of the syntax tree
     fn is_empty(&self) -> bool { self.get_invoking_state() == -1 }
 
+    /// Get parent context
     fn get_parent_ctx(&self) -> Option<Rc<<Self::Ctx as ParserNodeType<'input>>::Type>> { None }
 
+    /// Set parent context
     fn set_parent(&self, _parent: &Option<Rc<<Self::Ctx as ParserNodeType<'input>>::Type>>) {}
 }
 
@@ -92,6 +97,8 @@ impl<'a, TF: TokenFactory<'a>> ParserNodeType<'a> for EmptyContextType<'a, TF> {
     // type Visitor = dyn ParseTreeVisitor<'a, Self> + 'a;
 }
 
+/// Implemented by generated parser for context extension for particular rule
+#[allow(missing_docs)]
 pub trait CustomRuleContext<'input> {
     type TF: TokenFactory<'input> + 'input;
     type Ctx: ParserNodeType<'input, TF = Self::TF>;
@@ -104,6 +111,7 @@ pub trait CustomRuleContext<'input> {
     // fn exit(_ctx: &dyn Tree<'input, Node=Self>, _listener: &mut dyn Any) where Self: Sized {}
 }
 
+/// Minimal parse tree node implementation, that stores only data required for correct parsing
 #[derive(Tid)]
 pub struct BaseRuleContext<'input, ExtCtx: CustomRuleContext<'input>> {
     pub(crate) parent_ctx: RefCell<Option<Weak<<ExtCtx::Ctx as ParserNodeType<'input>>::Type>>>,
@@ -111,6 +119,7 @@ pub struct BaseRuleContext<'input, ExtCtx: CustomRuleContext<'input>> {
     pub(crate) ext: ExtCtx,
 }
 
+#[allow(missing_docs)]
 impl<'input, ExtCtx: CustomRuleContext<'input>> BaseRuleContext<'input, ExtCtx> {
     pub fn new_parser_ctx(
         parent_ctx: Option<Rc<<ExtCtx::Ctx as ParserNodeType<'input>>::Type>>,

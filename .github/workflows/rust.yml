@@ -21,7 +21,11 @@ jobs:
       with:
         toolchain: nightly-2020-12-23
         default: true
+        components: rustfmt
     - name: Build
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+    - name: Formatting
+      run: cargo fmt -- --check
+

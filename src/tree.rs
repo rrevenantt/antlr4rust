@@ -22,6 +22,7 @@ use crate::{interval_set, trees};
 use better_any::{Tid, TidAble};
 
 //todo try to make in more generic
+#[allow(missing_docs)]
 pub trait Tree<'input>: NodeText + RuleContext<'input> {
     fn get_parent(&self) -> Option<Rc<<Self::Ctx as ParserNodeType<'input>>::Type>> { None }
     fn has_parent(&self) -> bool { false }
@@ -51,6 +52,7 @@ pub trait Tree<'input>: NodeText + RuleContext<'input> {
     // fn get_children_full(&self) -> &RefCell<Vec<Rc<<Self::Ctx as ParserNodeType<'input, Self::TF>>::Type>>> { unimplemented!() }
 }
 
+/// Tree that knows about underlying text
 pub trait ParseTree<'input>: Tree<'input> {
     /// Return an {@link Interval} indicating the index in the
     /// {@link TokenStream} of the first and last token associated with this
@@ -78,7 +80,11 @@ pub trait ParseTree<'input>: Tree<'input> {
     }
 }
 
+/// text of the node.
+/// Already implemented for all rule contexts
 pub trait NodeText {
+    /// Returns text representation of current node type,
+    /// rule name for context nodes and token text for terminal nodes
     fn get_node_text(&self, rule_names: &[&str]) -> String;
 }
 
@@ -229,6 +235,7 @@ pub trait ParseTreeVisitor<'input, Node: ParserNodeType<'input>>:
 /// Already blanket implemented for all visitors.
 /// To override it you would need to implement `ParseTreeVisitor::visit_children`
 pub trait VisitChildren<'input, Node: ParserNodeType<'input>> {
+    #[doc(hidden)]
     fn visit_children_inner(&mut self, node: &Node::Type);
 }
 
