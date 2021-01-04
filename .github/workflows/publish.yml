@@ -14,7 +14,7 @@ jobs:
         with:
           toolchain: nightly-2020-12-23
           default: true
-      - name: Cargo publish
+      - name: Cargo publish check
         env:
           CRATES_IO_PUBLISH_TOKEN: ${{ secrets.CRATES_IO_PUBLISH_TOKEN }}
         run: |
@@ -35,7 +35,7 @@ jobs:
         with:
           tag_name: antlr4-4.8-2-Rust-0.2
           release_name: antlr4-4.8-2-Rust-0.2
-          draft: true
+          draft: false
           prerelease: false
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
@@ -47,3 +47,5 @@ jobs:
           asset_name: antlr4-4.8-2-SNAPSHOT-complete.jar
           asset_content_type: application/java-archive
 
+      - name: Cargo publish
+        run: cargo publish

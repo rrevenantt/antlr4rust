@@ -12,6 +12,7 @@ use crate::parser_rule_context::ParserRuleContext;
 use crate::token_factory::TokenFactory;
 use crate::tree::{ParseTree, Tree};
 use better_any::{Tid, TidAble};
+use std::any::type_name;
 
 //pub trait RuleContext:RuleNode {
 /// Minimal rule context functionality required for parser to work properly
@@ -101,8 +102,10 @@ impl<'a, TF: TokenFactory<'a>> ParserNodeType<'a> for EmptyContextType<'a, TF> {
 #[allow(missing_docs)]
 pub trait CustomRuleContext<'input> {
     type TF: TokenFactory<'input> + 'input;
+    /// Type that describes type of context nodes, stored in this context
     type Ctx: ParserNodeType<'input, TF = Self::TF>;
     //const RULE_INDEX:usize;
+    /// Rule index that corresponds to this context type
     fn get_rule_index(&self) -> usize;
 
     fn get_alt_number(&self) -> isize { INVALID_ALT }
@@ -194,7 +197,12 @@ impl<'input, ExtCtx: CustomRuleContext<'input>> RuleContext<'input>
 }
 
 impl<'input, ExtCtx: CustomRuleContext<'input>> Debug for BaseRuleContext<'input, ExtCtx> {
-    fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result { unimplemented!() }
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct(type_name::<Self>())
+            .field("invoking_state", &self.invoking_state)
+            .field("..", &"..")
+            .finish()
+    }
 }
 
 impl<'input, ExtCtx: CustomRuleContext<'input>> Tree<'input> for BaseRuleContext<'input, ExtCtx> {}
