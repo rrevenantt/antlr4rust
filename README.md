@@ -2,7 +2,7 @@
 [![Crate](https://flat.badgen.net/crates/v/antlr-rust)](https://crates.io/crates/antlr_rust/0.2.0)
 [![docs](https://flat.badgen.net/badge/docs.rs/v0.2.0)](https://docs.rs/antlr-rust/0.2.0)
 ![ANTLR4 testsuite](https://github.com/rrevenantt/antlr4rust/workflows/ANTLR4%20testsuite/badge.svg?event=push)
-![cargo test](https://github.com/rrevenantt/antlr4rust/workflows/Rust/badge.svg)
+![cargo test](https://github.com/rrevenantt/antlr4rust/workflows/cargo%20test/badge.svg)
 
 [ANTLR4](https://github.com/antlr/antlr4) runtime for Rust programming language.
 
