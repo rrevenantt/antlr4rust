@@ -8,10 +8,17 @@
 
 Tool(generator) part is currently located in rust-target branch of my antlr4 fork [rrevenantt/antlr4/tree/rust-target](https://github.com/rrevenantt/antlr4/tree/rust-target)
 Latest version is automatically built to [releases](https://github.com/rrevenantt/antlr4rust/releases) on this repository.
-Also you can checkout it and `mvn -DskipTests install`
 
 For examples you can see [grammars](grammars), [tests/gen](tests/gen) for corresponding generated code 
 and [tests/my_tests.rs](tests/my_test.rs) for actual usage examples
+
+## Building antlr4/rust-target Tool(generator)
+
+If you would like to work with the rust-target, in the antlr4 repo:
+* `git clone https://github.com/rrevenantt/antlr4`
+* `git checkout rust-target` 
+* `git submodule update --init --recursive`
+* `mvn -DskipTests install`
 
 ### Implementation status
 
