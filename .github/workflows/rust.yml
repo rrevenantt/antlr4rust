@@ -19,7 +19,7 @@ jobs:
     - name: Install Rust
       uses: actions-rs/toolchain@v1.0.6
       with:
-        toolchain: nightly-2020-12-23
+        toolchain: nightly-2021-01-27
         default: true
         components: rustfmt
     - name: Build
