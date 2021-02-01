@@ -3,22 +3,24 @@
 [![docs](https://flat.badgen.net/badge/docs.rs/v0.2.0)](https://docs.rs/antlr-rust/0.2.0)
 ![ANTLR4 testsuite](https://github.com/rrevenantt/antlr4rust/workflows/ANTLR4%20testsuite/badge.svg?event=push)
 ![cargo test](https://github.com/rrevenantt/antlr4rust/workflows/cargo%20test/badge.svg)
+[![](https://tokei.rs/b1/github/rrevenantt/antlr4rust)](https://github.com/rrevenantt/antlr4rust)
 
 [ANTLR4](https://github.com/antlr/antlr4) runtime for Rust programming language.
-
-Tool(generator) part is currently located in rust-target branch of my antlr4 fork [rrevenantt/antlr4/tree/rust-target](https://github.com/rrevenantt/antlr4/tree/rust-target)
-Latest version is automatically built to [releases](https://github.com/rrevenantt/antlr4rust/releases) on this repository.
 
 For examples you can see [grammars](grammars), [tests/gen](tests/gen) for corresponding generated code 
 and [tests/my_tests.rs](tests/my_test.rs) for actual usage examples
 
-## Building antlr4/rust-target Tool(generator)
+## ANTLR4 Tool(parser generator)
 
-If you would like to work with the rust-target, in the antlr4 repo:
-* `git clone https://github.com/rrevenantt/antlr4`
-* `git checkout rust-target` 
-* `git submodule update --init --recursive`
-* `mvn -DskipTests install`
+Generator part is currently located in rust-target branch of my antlr4 fork [rrevenantt/antlr4/tree/rust-target](https://github.com/rrevenantt/antlr4/tree/rust-target)
+Latest version is automatically built to [releases](https://github.com/rrevenantt/antlr4rust/releases) on this repository.
+So if you just want to generate parser 
+or if you want to contribute to only runtime part you don't have to do build it yourself. 
+
+But if you want to build or change generator yourself:
+* `git clone -b rust-target https://github.com/rrevenantt/antlr4` - clone my antlr4 fork  
+* `git submodule update --init --recursive` - update Rust target submodule
+* `mvn -DskipTests install` - build generator
 
 ### Implementation status
 
@@ -37,9 +39,6 @@ Remaining things before merge:
 Can be done after merge: 
  - Documentation
    - [ ] Some things are already documented but still far from perfect, also more links needed.
- - Code quality
-   - [ ] Clippy sanitation 
-   - [ ] Not all warning are fixed
  - cfg to not build potentially unnecessary parts 
  (no Lexer if custom token stream, no ParserATNSimulator if LL(1) grammar)  
  - run rustfmt on generated parser
@@ -54,7 +53,7 @@ Can be done after merge:
 ### Usage
 
 You should use the ANTLR4 "tool" to generate a parser, that will use the ANTLR 
-runtime, located here. You can run it with the following command:
+runtime located here. You can run it with the following command:
 ```bash
 java -jar <path to ANTLR4 tool> -Dlanguage=Rust MyGrammar.g4
 ```
@@ -137,4 +136,7 @@ patch version changes of the crate should not require updating of generator part
   
 ## Licence
 
-BSD 3-clause 
+BSD 3-clause. 
+Unless you explicitly state otherwise, 
+any contribution intentionally submitted for inclusion in this project by you
+shall be licensed as above, without any additional terms or conditions.

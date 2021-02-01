@@ -134,9 +134,8 @@ where
 }
 
 /// Trait for monomorphized trait object that corresponds to the nodes of parse tree generated for ReferenceToATNParser
-pub trait ReferenceToATNParserContext<'input>: for<'x> Listenable<
-    dyn ReferenceToATNListener<'input> + 'x,
-> + ParserRuleContext<'input, TF = LocalTokenFactory<'input>, Ctx = ReferenceToATNParserContextType>
+pub trait ReferenceToATNParserContext<'input>: for<'x> Listenable<dyn ReferenceToATNListener<'input> + 'x>
+    + ParserRuleContext<'input, TF = LocalTokenFactory<'input>, Ctx = ReferenceToATNParserContextType>
 {
 }
 
