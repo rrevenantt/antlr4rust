@@ -53,6 +53,7 @@ pub trait Parser<'input>: Recognizer<'input> {
     fn add_error_listener(&mut self, listener: Box<dyn ErrorListener<'input, Self>>)
     where
         Self: Sized;
+    fn remove_error_listeners(&mut self);
     fn notify_error_listeners(
         &self,
         msg: String,
@@ -291,6 +292,8 @@ where
     fn add_error_listener(&mut self, listener: Box<dyn ErrorListener<'input, Self>>) {
         self.error_listeners.borrow_mut().push(listener)
     }
+
+    fn remove_error_listeners(&mut self) { self.error_listeners.borrow_mut().clear(); }
 
     fn notify_error_listeners(
         &self,
