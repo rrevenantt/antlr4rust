@@ -59,15 +59,15 @@ impl Hash for Key {
 
 impl Debug for ATNConfigSet {
     fn fmt(&self, _f: &mut Formatter<'_>) -> Result<(), Error> {
-        _f.write_str("ATNConfigSet")?;
+        _f.write_str("ATNConfigSet,hash:")?;
         _f.debug_list().entries(self.configs.iter()).finish()?;
         if self.has_semantic_context {
             _f.write_str(",hasSemanticContext=true")?
         }
         if self.conflicting_alts.is_empty() {
-            _f.write_fmt(format_args!(",uniqueAlt={}", self.unique_alt))
+            _f.write_fmt(format_args!(",hash={},uniqueAlt={}", self.cached_hash, self.unique_alt))
         } else {
-            _f.write_fmt(format_args!(",conflictingAlts={:?}", self.conflicting_alts))
+            _f.write_fmt(format_args!(",hash={},conflictingAlts={:?}", self.cached_hash,self.conflicting_alts))
         }
     }
 }

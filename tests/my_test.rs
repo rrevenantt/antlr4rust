@@ -1,6 +1,4 @@
 #![feature(try_blocks)]
-#![feature(inner_deref)]
-#![feature(specialization)]
 #![feature(coerce_unsized)]
 //! Integration tests
 
@@ -9,7 +7,6 @@
 
 mod gen {
     use std::fmt::Write;
-    use std::io::Read;
     use std::iter::FromIterator;
 
     use antlr_rust::common_token_stream::CommonTokenStream;
