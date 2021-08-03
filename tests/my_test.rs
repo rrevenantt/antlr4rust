@@ -1,7 +1,7 @@
-#![feature(try_blocks)]
-#![feature(inner_deref)]
-#![feature(specialization)]
-#![feature(coerce_unsized)]
+// #![feature(try_blocks)]
+// #![feature(inner_deref)]
+// #![feature(specialization)]
+// #![feature(coerce_unsized)]
 //! Integration tests
 
 // #[macro_use]

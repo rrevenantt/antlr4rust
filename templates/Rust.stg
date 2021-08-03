@@ -126,6 +126,8 @@ fn exit_<lname>(&mut self, _ctx: &<lname; format="cap">Context\<'input>) { \}}; 
 
 }
 
+antlr_rust::coerce_from!{ 'input : <file.grammarName>Listener\<'input> }
+
 >>
 
 BaseListenerFile(file, header, namedActions) ::= <<>>
@@ -219,7 +221,7 @@ where
     }
 
     pub fn with_strategy(input: I, strategy: H) -> Self {
-		antlr_rust::recognizer::check_version("0","2");
+		antlr_rust::recognizer::check_version("0","3");
 		let interpreter = Arc::new(ParserATNSimulator::new(
 			_ATN.clone(),
 			_decision_to_DFA.clone(),
@@ -267,6 +269,26 @@ pub trait <parser.name>Context\<'input>:
 	<if(file.genVisitor)>for\<'x> Visitable\<dyn <parser.grammarName>Visitor\<'input> + 'x > + <endif>
 	ParserRuleContext\<'input, TF=<TokenFactory()>, Ctx=<parser.name>ContextType>
 {}
+
+antlr_rust::coerce_from!{ 'input : <parser.name>Context\<'input> }
+<!--
+impl\<'input,T> antlr_rust::CoerceFrom\<T> for dyn <parser.name>Context\<'input>
+where T: <parser.name>Context\<'input>
+{
+	fn coerce_rc(from: Rc\<T>) -> Rc\<Self>{
+		from as _
+	}
+    fn coerce_box(from: Box\<T>) -> Box\<Self>{
+    	from as _
+    }
+    fn coerce_ref(from: &T) -> &Self{
+    	from as _
+    }
+    fn coerce_mut(from: &mut T) -> &mut Self{
+    	from as _
+    }
+}
+--!>
 
 <if(file.genVisitor)>
 impl\<'input, 'x, T> VisitableDyn\<T> for dyn <parser.name>Context\<'input> + 'input
@@ -517,7 +539,7 @@ where
         let mut _localctx: Rc\<<currentRule.ctxType>All> = _localctx;
 		<namedActions.init>
 		<locals; separator="\n">
-		let result: Result\<(), ANTLRError> = try {
+		let result: Result\<(), ANTLRError> = (|| {
 
 	<if(currentRule.hasLookaheadBlock)>
 			let mut _alt: isize;
@@ -525,7 +547,8 @@ where
 			<code>
 			<postamble; separator="\n">
 			<namedActions.after>
-		};
+			Ok(())
+		})();
 		match result {
 		Ok(_)=>{},
 		<if(exceptions)>
@@ -576,14 +599,15 @@ where
 		let _startState = <currentRule.startState>;
 		<namedActions.init>
 		<locals; separator="\n">
-		let result: Result\<(), ANTLRError> = try {
+		let result: Result\<(), ANTLRError> = (|| {
 	<if(currentRule.hasLookaheadBlock)>
 			let mut _alt: isize;
 	<endif>
 			<code>
 			<postamble; separator="\n">
 			<namedActions.after>
-		};
+			Ok(())
+		})();
 		match result {
 		Ok(_) => {},
 		<if(exceptions)>
@@ -913,7 +937,7 @@ let temp = <labelref(a.label,{.clone().unwrap()})>;
 <ctx_mut_action(a.label,{.<a.listName>.push(temp);})> >>
 
 TokenDecl(t) ::= "<t.name>: Option\<<TokenLabelType()>>"
-TokenTypeDecl(t) ::= "let mut <t.name>: isize;"
+TokenTypeDecl(t) ::= "let mut <t.name>: isize = -1;"
 TokenListDecl(t) ::= "<t.name>:Vec\<<TokenLabelType()>>"
 RuleContextDecl(r) ::= "<r.name>: Option\<Rc\<<r.ctxName>All\<'input>>>"
 RuleContextListDecl(rdecl) ::= "<rdecl.name>:Vec\<Rc\<<rdecl.ctxName>All\<'input>>>"
@@ -982,7 +1006,11 @@ impl\<'input> <parser.name>Context\<'input> for <struct.name>\<'input>{}
 <if(parser.file.genListener)>
 impl\<'input,'a> Listenable\<dyn <parser.grammarName>Listener\<'input> + 'a> for <struct.name>\<'input>{
 	<! a bit scuffed but prevents rewriting other targets !>
-	<trunc(dispatchMethods); separator="\n">
+	<if(parser.file.genVisitor)>
+		<trunc(dispatchMethods); separator="\n">
+	<else>
+		<dispatchMethods>
+	<endif>
 }
 <endif>
 
@@ -1297,7 +1325,7 @@ impl\<'input, Input:CharStream\<From\<'input> >\> <lexer.name>\<'input,Input>{
     }
 
 	pub fn new_with_token_factory(input: Input, tf: &'input <TokenFactory()>) -> Self {
-		antlr_rust::recognizer::check_version("0","2");
+		antlr_rust::recognizer::check_version("0","3");
     	Self {
 			base: BaseLexer::new_base_lexer(
 				input,

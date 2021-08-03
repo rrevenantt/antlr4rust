@@ -55,7 +55,7 @@ impl Debug for ATN {
 }
 
 impl ATN {
-    crate fn new_atn(grammar_type: ATNType, max_token_type: isize) -> ATN {
+    pub(crate) fn new_atn(grammar_type: ATNType, max_token_type: isize) -> ATN {
         ATN {
             decision_to_state: Vec::new(),
             grammar_type,
@@ -93,7 +93,7 @@ impl ATN {
         analyzer.look::<Ctx>(s, None, _ctx)
     }
 
-    crate fn add_state(&mut self, state: Box<dyn ATNState>) {
+    pub(crate) fn add_state(&mut self, state: Box<dyn ATNState>) {
         debug_assert_eq!(state.get_state_number(), self.states.len());
         self.states.push(state)
     }

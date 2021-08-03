@@ -640,9 +640,10 @@ public class BaseRustTest implements RuntimeTestSupport {
 	protected void writeParserTestFile(String parserName, String lexerName,
 									   String listenerName, String visitorName,
 									   String parserStartRuleName, boolean debug) {
-		ST outputFileST = new ST("#![feature(try_blocks)]\n" +
-				"#![feature(inner_deref)]\n" +
-				"#![feature(specialization)]\n" +
+		ST outputFileST = new ST(
+//				"#![feature(try_blocks)]\n" +
+//				"#![feature(inner_deref)]\n" +
+//				"#![feature(specialization)]\n" +
 				"mod <importLexer>;\n" +
 				"use <importLexer>::*;\n" +
 				"mod <importParser>;\n" +

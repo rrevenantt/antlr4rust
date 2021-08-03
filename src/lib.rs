@@ -1,21 +1,21 @@
 #![crate_type = "lib"]
-#![feature(try_blocks)]
+// #![feature(try_blocks)]
 //#![feature(nll)]
-#![feature(raw)]
-#![feature(is_sorted)]
-#![feature(cell_update)]
-#![feature(get_mut_unchecked)]
-#![feature(specialization)]
-#![feature(coerce_unsized)]
-#![feature(associated_type_defaults)]
-#![feature(generic_associated_types)]
-#![feature(crate_visibility_modifier)]
+// #![feature(raw)]
+// #![feature(is_sorted)]
+// #![feature(cell_update)]
+// #![feature(get_mut_unchecked)]
+// #![feature(specialization)]
+// #![feature(coerce_unsized)]
+// #![feature(associated_type_defaults)]
+// #![feature(generic_associated_types)]
+// #![feature(crate_visibility_modifier)]
 // #![feature(generic_associated_types)]
 #![warn(rust_2018_idioms)]
 #![warn(missing_docs)] // warn if there is missing docs
 #![warn(missing_debug_implementations)]
 #![warn(trivial_numeric_casts)]
-#![allow(incomplete_features)]
+// #![allow(incomplete_features)]
 
 //! # Antlr4 runtime
 //!
@@ -176,3 +176,53 @@ pub mod rule_context;
 pub mod vocabulary;
 //#[cfg(test)]
 // tests are either integration tests in "tests" foulder or unit tests in some modules
+
+use std::rc::Rc;
+/// Stable workaround for CoerceUnsized
+// #[doc(hidden)]
+pub trait CoerceFrom<T> {
+    fn coerce_rc(from: Rc<T>) -> Rc<Self>;
+    fn coerce_box(from: Box<T>) -> Box<Self>;
+    fn coerce_ref(from: &T) -> &Self;
+    fn coerce_mut(from: &mut T) -> &mut Self;
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! coerce_from {
+    ($lt:lifetime : $p:path) => {
+        const _: () = {
+            use std::rc::Rc;
+            impl<$lt, T> $crate::CoerceFrom<T> for dyn $p + $lt
+            where
+                T: $p + $lt,
+            {
+                fn coerce_rc(from: Rc<T>) -> Rc<Self> { from as _ }
+                fn coerce_box(from: Box<T>) -> Box<Self> { from as _ }
+                fn coerce_ref(from: &T) -> &Self { from as _ }
+                fn coerce_mut(from: &mut T) -> &mut Self { from as _ }
+            }
+        };
+    };
+}
+
+/// Stable workaround for CoerceUnsized
+// #[doc(hidden)]
+pub trait CoerceTo<T: ?Sized> {
+    fn coerce_rc_to(self: Rc<Self>) -> Rc<T>;
+    fn coerce_box_to(self: Box<Self>) -> Box<T>;
+    fn coerce_ref_to(self: &Self) -> &T;
+    fn coerce_mut_to(self: &mut Self) -> &mut T;
+}
+
+impl<T: ?Sized, X> CoerceTo<T> for X
+where
+    T: CoerceFrom<X>,
+{
+    fn coerce_rc_to(self: Rc<Self>) -> Rc<T> { T::coerce_rc(self) }
+    fn coerce_box_to(self: Box<Self>) -> Box<T> { T::coerce_box(self) }
+
+    fn coerce_ref_to(self: &Self) -> &T { T::coerce_ref(self) }
+
+    fn coerce_mut_to(self: &mut Self) -> &mut T { T::coerce_mut(self) }
+}

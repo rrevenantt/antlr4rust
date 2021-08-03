@@ -106,7 +106,7 @@ impl<'input, Input: CharStream<From<'input>>> LabelsLexer<'input, Input> {
     fn get_grammar_file_name(&self) -> &'static str { "LabelsLexer.g4" }
 
     pub fn new_with_token_factory(input: Input, tf: &'input LocalTokenFactory<'input>) -> Self {
-        antlr_rust::recognizer::check_version("0", "2");
+        antlr_rust::recognizer::check_version("0", "3");
         Self {
             base: BaseLexer::new_base_lexer(
                 input,

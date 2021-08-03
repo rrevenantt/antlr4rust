@@ -5,7 +5,7 @@ use std::borrow::Borrow;
 use std::fmt::{Debug, Formatter};
 use std::iter::from_fn;
 use std::marker::PhantomData;
-use std::ops::{CoerceUnsized, Deref};
+use std::ops::Deref;
 use std::rc::Rc;
 
 use crate::atn::INVALID_ALT;
@@ -18,12 +18,12 @@ use crate::recognizer::Recognizer;
 use crate::rule_context::{CustomRuleContext, RuleContext};
 use crate::token::Token;
 use crate::token_factory::TokenFactory;
-use crate::{interval_set, trees};
+use crate::{interval_set, trees, CoerceTo};
 use better_any::{Tid, TidAble};
 
 //todo try to make in more generic
 #[allow(missing_docs)]
-pub trait Tree<'input>: NodeText + RuleContext<'input> {
+pub trait Tree<'input>: RuleContext<'input> {
     fn get_parent(&self) -> Option<Rc<<Self::Ctx as ParserNodeType<'input>>::Type>> { None }
     fn has_parent(&self) -> bool { false }
     fn get_payload(&self) -> Box<dyn Any> { unimplemented!() }
@@ -82,27 +82,25 @@ pub trait ParseTree<'input>: Tree<'input> {
 
 /// text of the node.
 /// Already implemented for all rule contexts
-pub trait NodeText {
-    /// Returns text representation of current node type,
-    /// rule name for context nodes and token text for terminal nodes
-    fn get_node_text(&self, rule_names: &[&str]) -> String;
-}
-
-impl<T> NodeText for T {
-    default fn get_node_text(&self, _rule_names: &[&str]) -> String { "<unknown>".to_owned() }
-}
-
-impl<'input, T: CustomRuleContext<'input>> NodeText for T {
-    default fn get_node_text(&self, rule_names: &[&str]) -> String {
-        let rule_index = self.get_rule_index();
-        let rule_name = rule_names[rule_index];
-        let alt_number = self.get_alt_number();
-        if alt_number != INVALID_ALT {
-            return format!("{}:{}", rule_name, alt_number);
-        }
-        return rule_name.to_owned();
-    }
-}
+// pub trait NodeText {
+//     fn get_node_text(&self, rule_names: &[&str]) -> String;
+// }
+//
+// impl<T> NodeText for T {
+//     default fn get_node_text(&self, _rule_names: &[&str]) -> String { "<unknown>".to_owned() }
+// }
+//
+// impl<'input, T: CustomRuleContext<'input>> NodeText for T {
+//     default fn get_node_text(&self, rule_names: &[&str]) -> String {
+//         let rule_index = self.get_rule_index();
+//         let rule_name = rule_names[rule_index];
+//         let alt_number = self.get_alt_number();
+//         if alt_number != INVALID_ALT {
+//             return format!("{}:{}", rule_name, alt_number);
+//         }
+//         return rule_name.to_owned();
+//     }
+// }
 
 #[doc(hidden)]
 #[derive(Tid, Debug)]
@@ -127,6 +125,10 @@ impl<'input, Node: ParserNodeType<'input>, T: 'static> CustomRuleContext<'input>
     type Ctx = Node;
 
     fn get_rule_index(&self) -> usize { usize::max_value() }
+
+    fn get_node_text(&self, rule_names: &[&str]) -> String {
+        self.symbol.borrow().get_text().to_display()
+    }
 }
 
 impl<'input, Node: ParserNodeType<'input> + TidAble<'input>, T: 'static + TidAble<'input>>
@@ -141,11 +143,11 @@ impl<'input, Node: ParserNodeType<'input>, T: 'static> RuleContext<'input>
 {
 }
 
-impl<'input, Node: ParserNodeType<'input>, T: 'static> NodeText for LeafNode<'input, Node, T> {
-    fn get_node_text(&self, _rule_names: &[&str]) -> String {
-        self.symbol.borrow().get_text().to_display()
-    }
-}
+// impl<'input, Node: ParserNodeType<'input>, T: 'static> NodeText for LeafNode<'input, Node, T> {
+//     fn get_node_text(&self, _rule_names: &[&str]) -> String {
+//         self.symbol.borrow().get_text().to_display()
+//     }
+// }
 
 impl<'input, Node: ParserNodeType<'input>, T: 'static> ParseTree<'input>
     for LeafNode<'input, Node, T>
@@ -312,11 +314,13 @@ where
     /// Walks recursively over tree `t` with `listener`
     pub fn walk<Listener, Ctx>(mut listener: Box<Listener>, t: &Ctx) -> Box<Listener>
     where
-        for<'x> &'x mut Listener: CoerceUnsized<&'x mut T>,
-        for<'x> &'x Ctx: CoerceUnsized<&'x Node::Type>,
+        // for<'x> &'x mut Listener: CoerceUnsized<&'x mut T>,
+        // for<'x> &'x Ctx: CoerceUnsized<&'x Node::Type>,
+        Listener: CoerceTo<T>,
+        Ctx: CoerceTo<Node::Type>,
     {
         // let mut listener = listener as Box<T>;
-        Self::walk_inner(listener.as_mut(), t as &Node::Type);
+        Self::walk_inner(listener.as_mut().coerce_mut_to(), t.coerce_ref_to());
 
         // just cast back
         // unsafe { Box::<Listener>::from_raw(Box::into_raw(listener) as *mut _) }

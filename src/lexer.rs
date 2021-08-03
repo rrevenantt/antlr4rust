@@ -110,9 +110,9 @@ pub struct BaseLexer<
 }
 
 #[derive(Debug)]
-crate struct LexerPosition {
-    crate line: Cell<isize>,
-    crate char_position_in_line: Cell<isize>,
+pub(crate) struct LexerPosition {
+    pub(crate) line: Cell<isize>,
+    pub(crate) char_position_in_line: Cell<isize>,
 }
 
 impl<'input, T, Input, TF> Deref for BaseLexer<'input, T, Input, TF>
@@ -178,8 +178,8 @@ pub use super::token::TOKEN_DEFAULT_CHANNEL as LEXER_DEFAULT_TOKEN_CHANNEL;
 #[doc(inline)]
 pub use super::token::TOKEN_HIDDEN_CHANNEL as LEXER_HIDDEN;
 
-crate const LEXER_MIN_CHAR_VALUE: isize = 0x0000;
-crate const LEXER_MAX_CHAR_VALUE: isize = 0x10FFFF;
+pub(crate) const LEXER_MIN_CHAR_VALUE: isize = 0x0000;
+pub(crate) const LEXER_MAX_CHAR_VALUE: isize = 0x10FFFF;
 
 impl<'input, T, Input, TF> BaseLexer<'input, T, Input, TF>
 where
