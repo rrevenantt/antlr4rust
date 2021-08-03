@@ -26,3 +26,5 @@ pub trait SimpleLRListener<'input>: ParseTreeListener<'input, SimpleLRParserCont
      */
     fn exit_a(&mut self, _ctx: &AContext<'input>) {}
 }
+
+antlr_rust::coerce_from! { 'input : SimpleLRListener<'input> }

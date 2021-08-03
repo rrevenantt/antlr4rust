@@ -2,7 +2,7 @@
 use std::borrow::Borrow;
 use std::cell::{Cell, RefCell};
 use std::marker::PhantomData;
-use std::ops::{CoerceUnsized, Deref, DerefMut};
+use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -20,7 +20,9 @@ use crate::token::{Token, TOKEN_EOF};
 use crate::token_factory::{TokenAware, TokenFactory};
 use crate::token_stream::TokenStream;
 use crate::tree::{ErrorNode, Listenable, ParseTreeListener, TerminalNode};
+use crate::utils::cell_update;
 use crate::vocabulary::Vocabulary;
+use crate::{CoerceFrom, CoerceTo};
 use better_any::{Tid, TidAble};
 
 /// parser functionality required for `ParserATNSimulator` to work
@@ -222,9 +224,10 @@ where
     I: TokenStream<'input>,
     Ctx: ParserNodeType<'input, TF = I::TF>,
     T: ParseTreeListener<'input, Ctx> + ?Sized,
-    Ctx::Type: Listenable<T>,
-    Rc<TerminalNode<'input, Ctx>>: CoerceUnsized<Rc<Ctx::Type>>,
-    Rc<ErrorNode<'input, Ctx>>: CoerceUnsized<Rc<Ctx::Type>>,
+    Ctx::Type:
+        Listenable<T> + CoerceFrom<TerminalNode<'input, Ctx>> + CoerceFrom<ErrorNode<'input, Ctx>>,
+    // TerminalNode<'input, Ctx>: CoerceTo<Ctx::Type>,
+    // ErrorNode<'input, Ctx>: CoerceTo<Ctx::Type>,
 {
     fn get_interpreter(&self) -> &ParserATNSimulator { self.interp.as_ref() }
 
@@ -248,7 +251,7 @@ where
                 self.ctx
                     .as_deref()
                     .unwrap()
-                    .add_child(node.clone() as Rc<Ctx::Type>);
+                    .add_child(node.clone().coerce_rc_to());
                 for listener in &mut self.parse_listeners {
                     listener.visit_error_node(&*node)
                 }
@@ -257,7 +260,7 @@ where
                 self.ctx
                     .as_deref()
                     .unwrap()
-                    .add_child(node.clone() as Rc<Ctx::Type>);
+                    .add_child(node.clone().coerce_rc_to());
                 for listener in &mut self.parse_listeners {
                     listener.visit_terminal(&*node)
                 }
@@ -301,7 +304,7 @@ where
         offending_token: Option<isize>,
         err: Option<&ANTLRError>,
     ) {
-        self._syntax_errors.update(|it| it + 1);
+        cell_update(&self._syntax_errors, |it| it + 1);
         let offending_token: Option<&_> = match offending_token {
             None => Some(self.get_current_token().borrow()),
             Some(x) => Some(self.input.get(x).borrow()),
@@ -358,9 +361,10 @@ where
     I: TokenStream<'input>,
     Ctx: ParserNodeType<'input, TF = I::TF>,
     T: ParseTreeListener<'input, Ctx> + ?Sized,
-    Ctx::Type: Listenable<T>,
-    Rc<TerminalNode<'input, Ctx>>: CoerceUnsized<Rc<Ctx::Type>>,
-    Rc<ErrorNode<'input, Ctx>>: CoerceUnsized<Rc<Ctx::Type>>,
+    Ctx::Type:
+        Listenable<T> + CoerceFrom<TerminalNode<'input, Ctx>> + CoerceFrom<ErrorNode<'input, Ctx>>,
+    //     TerminalNode<'input, Ctx>: CoerceTo<Ctx::Type>,
+    //     ErrorNode<'input, Ctx>: CoerceTo<Ctx::Type>,
 {
     pub fn new_base_parser(input: I, interpreter: Arc<ParserATNSimulator>, ext: Ext) -> Self {
         Self {
@@ -402,7 +406,7 @@ where
                 self.ctx
                     .as_ref()
                     .unwrap()
-                    .add_child(self.create_error_node(token.clone()) as Rc<Ctx::Type>);
+                    .add_child(self.create_error_node(token.clone()).coerce_rc_to());
             }
         }
         return Ok(token);
@@ -423,7 +427,7 @@ where
                 self.ctx
                     .as_ref()
                     .unwrap()
-                    .add_child(self.create_error_node(t.clone()) as Rc<Ctx::Type>);
+                    .add_child(self.create_error_node(t.clone()).coerce_rc_to());
             }
         }
         return Ok(t);
@@ -438,10 +442,10 @@ where
     /// todo
     pub fn add_parse_listener<L>(&mut self, listener: Box<L>) -> ListenerId<L>
     where
-        Box<L>: CoerceUnsized<Box<T>>,
+        L: CoerceTo<T>,
     {
         let id = ListenerId::new(&listener);
-        self.parse_listeners.push(listener);
+        self.parse_listeners.push(listener.coerce_box_to());
         id
     }
 
@@ -449,7 +453,7 @@ where
     /// `listener_id` is returned when listener is added via `add_parse_listener`
     pub fn remove_parse_listener<L>(&mut self, listener_id: ListenerId<L>) -> Box<L>
     where
-        Box<L>: CoerceUnsized<Box<T>>,
+        L: CoerceTo<T>,
     {
         let index = self
             .parse_listeners

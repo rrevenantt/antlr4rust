@@ -385,7 +385,8 @@ impl PredictionContext {
                     parents,
                     return_states: vec![a.return_state, b.return_state],
                 };
-                if !result.return_states.is_sorted() {
+                // if !result.return_states.is_sorted()
+                if !result.return_states.windows(2).all(|x| x[0] <= x[1]) {
                     result.parents.swap(0, 1);
                     result.return_states.swap(0, 1);
                 }

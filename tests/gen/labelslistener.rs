@@ -106,3 +106,5 @@ pub trait LabelsListener<'input>: ParseTreeListener<'input, LabelsParserContextT
      */
     fn exit_inc(&mut self, _ctx: &IncContext<'input>) {}
 }
+
+antlr_rust::coerce_from! { 'input : LabelsListener<'input> }

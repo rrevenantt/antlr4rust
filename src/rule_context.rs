@@ -110,6 +110,18 @@ pub trait CustomRuleContext<'input> {
 
     fn get_alt_number(&self) -> isize { INVALID_ALT }
     fn set_alt_number(&self, _alt_number: isize) {}
+
+    /// Returns text representation of current node type,
+    /// rule name for context nodes and token text for terminal nodes
+    fn get_node_text(&self, rule_names: &[&str]) -> String {
+        let rule_index = self.get_rule_index();
+        let rule_name = rule_names[rule_index];
+        let alt_number = self.get_alt_number();
+        if alt_number != INVALID_ALT {
+            return format!("{}:{}", rule_name, alt_number);
+        }
+        return rule_name.to_owned();
+    }
     // fn enter(_ctx: &dyn Tree<'input, Node=Self>, _listener: &mut dyn Any) where Self: Sized {}
     // fn exit(_ctx: &dyn Tree<'input, Node=Self>, _listener: &mut dyn Any) where Self: Sized {}
 }

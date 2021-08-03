@@ -48,3 +48,5 @@ pub trait CSVListener<'input>: ParseTreeListener<'input, CSVParserContextType> {
      */
     fn exit_field(&mut self, _ctx: &FieldContext<'input>) {}
 }
+
+antlr_rust::coerce_from! { 'input : CSVListener<'input> }

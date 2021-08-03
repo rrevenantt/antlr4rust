@@ -95,7 +95,7 @@ where
     pub fn set_error_strategy(&mut self, strategy: H) { self.err_handler = strategy }
 
     pub fn with_strategy(input: I, strategy: H) -> Self {
-        antlr_rust::recognizer::check_version("0", "2");
+        antlr_rust::recognizer::check_version("0", "3");
         let interpreter = Arc::new(ParserATNSimulator::new(
             _ATN.clone(),
             _decision_to_DFA.clone(),
@@ -138,6 +138,8 @@ pub trait ReferenceToATNParserContext<'input>: for<'x> Listenable<dyn ReferenceT
     + ParserRuleContext<'input, TF = LocalTokenFactory<'input>, Ctx = ReferenceToATNParserContextType>
 {
 }
+
+antlr_rust::coerce_from! { 'input : ReferenceToATNParserContext<'input> }
 
 impl<'input> ReferenceToATNParserContext<'input>
     for TerminalNode<'input, ReferenceToATNParserContextType>
@@ -219,6 +221,10 @@ impl<'input, 'a> Listenable<dyn ReferenceToATNListener<'input> + 'a> for AContex
         listener.enter_every_rule(self);
         listener.enter_a(self);
     }
+    fn exit(&self, listener: &mut (dyn ReferenceToATNListener<'input> + 'a)) {
+        listener.exit_a(self);
+        listener.exit_every_rule(self);
+    }
 }
 
 impl<'input> CustomRuleContext<'input> for AContextExt<'input> {
@@ -290,8 +296,8 @@ where
         let mut _localctx = AContextExt::new(_parentctx.clone(), recog.base.get_state());
         recog.base.enter_rule(_localctx.clone(), 0, RULE_a);
         let mut _localctx: Rc<AContextAll> = _localctx;
-        let mut _la: isize;
-        let result: Result<(), ANTLRError> = try {
+        let mut _la: isize = -1;
+        let result: Result<(), ANTLRError> = (|| {
             let mut _alt: isize;
             //recog.base.enter_outer_alt(_localctx.clone(), 1);
             recog.base.enter_outer_alt(None, 1);
@@ -344,7 +350,8 @@ where
                     )
                 });
             }
-        };
+            Ok(())
+        })();
         match result {
             Ok(_) => {}
             Err(e @ ANTLRError::FallThrough(_)) => return Err(e),

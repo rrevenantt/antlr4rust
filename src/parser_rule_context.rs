@@ -3,7 +3,7 @@ use std::any::{type_name, Any};
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::{Ref, RefCell, RefMut};
 use std::fmt::{Debug, Error, Formatter};
-use std::ops::{CoerceUnsized, Deref, DerefMut};
+use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 
 use better_any::{Tid, TidAble, TidExt};
@@ -15,6 +15,7 @@ use crate::rule_context::{BaseRuleContext, CustomRuleContext, RuleContext};
 use crate::token::Token;
 use crate::token_factory::TokenFactory;
 use crate::tree::{ParseTree, ParseTreeVisitor, TerminalNode, Tree, VisitableDyn};
+use crate::CoerceTo;
 
 /// Syntax tree node for particular parser rule.
 ///
@@ -125,7 +126,7 @@ pub trait RuleContextExt<'input>: ParserRuleContext<'input> {
     where
         Z: ParserRuleContext<'input, Ctx = Self::Ctx, TF = Self::TF> + ?Sized + 'input,
         Self::Ctx: ParserNodeType<'input, Type = Z>,
-        Rc<Self>: CoerceUnsized<Rc<Z>>;
+        Self: CoerceTo<Z>;
 
     #[doc(hidden)]
     fn accept_children<V>(&self, visitor: &mut V)
@@ -139,10 +140,10 @@ impl<'input, T: ParserRuleContext<'input> + ?Sized + 'input> RuleContextExt<'inp
     where
         Z: ParserRuleContext<'input, Ctx = T::Ctx, TF = T::TF> + ?Sized + 'input,
         T::Ctx: ParserNodeType<'input, Type = Z>,
-        Rc<T>: CoerceUnsized<Rc<Z>>,
+        T: CoerceTo<Z>,
     {
         let mut result = String::from("[");
-        let mut next: Option<Rc<Z>> = Some(self.clone() as Rc<Z>);
+        let mut next: Option<Rc<Z>> = Some(self.clone().coerce_rc_to());
         while let Some(ref p) = next {
             if stop.is_some() && (stop.is_none() || Rc::ptr_eq(p, stop.as_ref().unwrap())) {
                 break;
@@ -207,7 +208,12 @@ pub fn cast_mut<'a, T: ParserRuleContext<'a> + 'a + ?Sized, Result: 'a>(
     //    if Rc::strong_count(ctx) != 1 { panic!("cant mutate Rc with multiple strong ref count"); }
     // is it safe because parser does not save/move mutable references anywhere.
     // they are only used to write data immediately in the corresponding expression
-    unsafe { &mut *(Rc::get_mut_unchecked(ctx) as *mut T as *mut Result) }
+    // unsafe { &mut *(Rc::get_mut_unchecked(ctx) as *mut T as *mut Result) }
+    unsafe {
+        let ptr = Rc::as_ptr(ctx) as *mut T as *mut Result;
+
+        &mut *ptr
+    }
 }
 
 // workaround newtype for cycle in trait definition
@@ -240,9 +246,7 @@ pub struct BaseParserRuleContext<'input, Ctx: CustomRuleContext<'input>> {
 }
 
 impl<'input, Ctx: CustomRuleContext<'input>> Debug for BaseParserRuleContext<'input, Ctx> {
-    default fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-        f.write_str(type_name::<Self>())
-    }
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> { f.write_str(type_name::<Self>()) }
 }
 
 impl<'input, Ctx: CustomRuleContext<'input>> RuleContext<'input>
@@ -411,7 +415,7 @@ impl<'input, Ctx: CustomRuleContext<'input> + TidAble<'input>> ParseTree<'input>
         }
     }
 
-    default fn get_text(&self) -> String {
+    fn get_text(&self) -> String {
         let children = self.get_children();
         let mut result = String::new();
 

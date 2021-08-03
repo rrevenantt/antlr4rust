@@ -90,7 +90,7 @@ where
     pub fn set_error_strategy(&mut self, strategy: H) { self.err_handler = strategy }
 
     pub fn with_strategy(input: I, strategy: H) -> Self {
-        antlr_rust::recognizer::check_version("0", "2");
+        antlr_rust::recognizer::check_version("0", "3");
         let interpreter = Arc::new(ParserATNSimulator::new(
             _ATN.clone(),
             _decision_to_DFA.clone(),
@@ -133,6 +133,8 @@ pub trait SimpleLRParserContext<'input>:
     + ParserRuleContext<'input, TF = LocalTokenFactory<'input>, Ctx = SimpleLRParserContextType>
 {
 }
+
+antlr_rust::coerce_from! { 'input : SimpleLRParserContext<'input> }
 
 impl<'input> SimpleLRParserContext<'input> for TerminalNode<'input, SimpleLRParserContextType> {}
 impl<'input> SimpleLRParserContext<'input> for ErrorNode<'input, SimpleLRParserContextType> {}
@@ -239,6 +241,10 @@ impl<'input, 'a> Listenable<dyn SimpleLRListener<'input> + 'a> for SContext<'inp
         listener.enter_every_rule(self);
         listener.enter_s(self);
     }
+    fn exit(&self, listener: &mut (dyn SimpleLRListener<'input> + 'a)) {
+        listener.exit_s(self);
+        listener.exit_every_rule(self);
+    }
 }
 
 impl<'input> CustomRuleContext<'input> for SContextExt<'input> {
@@ -286,7 +292,7 @@ where
         let mut _localctx = SContextExt::new(_parentctx.clone(), recog.base.get_state());
         recog.base.enter_rule(_localctx.clone(), 0, RULE_s);
         let mut _localctx: Rc<SContextAll> = _localctx;
-        let result: Result<(), ANTLRError> = try {
+        let result: Result<(), ANTLRError> = (|| {
             //recog.base.enter_outer_alt(_localctx.clone(), 1);
             recog.base.enter_outer_alt(None, 1);
             {
@@ -297,7 +303,8 @@ where
             let tmp = recog.input.lt(-1).cloned();
             recog.ctx.as_ref().unwrap().set_stop(tmp);
             println!("test");
-        };
+            Ok(())
+        })();
         match result {
             Ok(_) => {}
             Err(e @ ANTLRError::FallThrough(_)) => return Err(e),
@@ -328,6 +335,10 @@ impl<'input, 'a> Listenable<dyn SimpleLRListener<'input> + 'a> for AContext<'inp
     fn enter(&self, listener: &mut (dyn SimpleLRListener<'input> + 'a)) {
         listener.enter_every_rule(self);
         listener.enter_a(self);
+    }
+    fn exit(&self, listener: &mut (dyn SimpleLRListener<'input> + 'a)) {
+        listener.exit_a(self);
+        listener.exit_every_rule(self);
     }
 }
 
@@ -391,7 +402,7 @@ where
         let mut _localctx: Rc<AContextAll> = _localctx;
         let mut _prevctx = _localctx.clone();
         let _startState = 2;
-        let result: Result<(), ANTLRError> = try {
+        let result: Result<(), ANTLRError> = (|| {
             let mut _alt: isize;
             //recog.base.enter_outer_alt(_localctx.clone(), 1);
             recog.base.enter_outer_alt(None, 1);
@@ -434,7 +445,8 @@ where
                     _alt = recog.interpreter.adaptive_predict(0, &mut recog.base)?;
                 }
             }
-        };
+            Ok(())
+        })();
         match result {
             Ok(_) => {}
             Err(e @ ANTLRError::FallThrough(_)) => return Err(e),

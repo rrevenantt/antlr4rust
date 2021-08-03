@@ -29,6 +29,7 @@ use crate::token::TOKEN_EOF;
 use crate::transition::{
     ActionTransition, PredicateTransition, RuleTransition, Transition, TransitionType,
 };
+use crate::utils::cell_update;
 use parking_lot::{RwLock, RwLockUpgradableReadGuard, RwLockWriteGuard};
 
 #[allow(missing_docs)]
@@ -114,10 +115,10 @@ impl ILexerATNSimulator for LexerATNSimulator {
     fn consume<T: IntStream + ?Sized>(&self, _input: &mut T) {
         let ch = _input.la(1);
         if ch == '\n' as isize {
-            self.current_pos.line.update(|x| x + 1);
+            cell_update(&self.current_pos.line, |x| x + 1);
             self.current_pos.char_position_in_line.set(0);
         } else {
-            self.current_pos.char_position_in_line.update(|x| x + 1);
+            cell_update(&self.current_pos.char_position_in_line, |x| x + 1);
         }
         _input.consume();
     }

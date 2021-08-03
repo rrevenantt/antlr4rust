@@ -103,7 +103,7 @@ where
     pub fn set_error_strategy(&mut self, strategy: H) { self.err_handler = strategy }
 
     pub fn with_strategy(input: I, strategy: H) -> Self {
-        antlr_rust::recognizer::check_version("0", "2");
+        antlr_rust::recognizer::check_version("0", "3");
         let interpreter = Arc::new(ParserATNSimulator::new(
             _ATN.clone(),
             _decision_to_DFA.clone(),
@@ -143,6 +143,8 @@ pub trait CSVParserContext<'input>:
     + ParserRuleContext<'input, TF = LocalTokenFactory<'input>, Ctx = CSVParserContextType>
 {
 }
+
+antlr_rust::coerce_from! { 'input : CSVParserContext<'input> }
 
 impl<'input, 'x, T> VisitableDyn<T> for dyn CSVParserContext<'input> + 'input
 where
@@ -294,8 +296,8 @@ where
         let mut _localctx = CsvFileContextExt::new(_parentctx.clone(), recog.base.get_state());
         recog.base.enter_rule(_localctx.clone(), 0, RULE_csvFile);
         let mut _localctx: Rc<CsvFileContextAll> = _localctx;
-        let mut _la: isize;
-        let result: Result<(), ANTLRError> = try {
+        let mut _la: isize = -1;
+        let result: Result<(), ANTLRError> = (|| {
             //recog.base.enter_outer_alt(_localctx.clone(), 1);
             recog.base.enter_outer_alt(None, 1);
             {
@@ -330,7 +332,8 @@ where
                     }
                 }
             }
-        };
+            Ok(())
+        })();
         match result {
             Ok(_) => {}
             Err(e @ ANTLRError::FallThrough(_)) => return Err(e),
@@ -417,7 +420,7 @@ where
         let mut _localctx = HdrContextExt::new(_parentctx.clone(), recog.base.get_state());
         recog.base.enter_rule(_localctx.clone(), 2, RULE_hdr);
         let mut _localctx: Rc<HdrContextAll> = _localctx;
-        let result: Result<(), ANTLRError> = try {
+        let result: Result<(), ANTLRError> = (|| {
             //recog.base.enter_outer_alt(_localctx.clone(), 1);
             recog.base.enter_outer_alt(None, 1);
             {
@@ -425,7 +428,8 @@ where
                 recog.base.set_state(14);
                 recog.row()?;
             }
-        };
+            Ok(())
+        })();
         match result {
             Ok(_) => {}
             Err(e @ ANTLRError::FallThrough(_)) => return Err(e),
@@ -518,8 +522,8 @@ where
         let mut _localctx = RowContextExt::new(_parentctx.clone(), recog.base.get_state());
         recog.base.enter_rule(_localctx.clone(), 4, RULE_row);
         let mut _localctx: Rc<RowContextAll> = _localctx;
-        let mut _la: isize;
-        let result: Result<(), ANTLRError> = try {
+        let mut _la: isize = -1;
+        let result: Result<(), ANTLRError> = (|| {
             //recog.base.enter_outer_alt(_localctx.clone(), 1);
             recog.base.enter_outer_alt(None, 1);
             {
@@ -558,7 +562,8 @@ where
                 recog.base.set_state(27);
                 recog.base.match_token(T__2, &mut recog.err_handler)?;
             }
-        };
+            Ok(())
+        })();
         match result {
             Ok(_) => {}
             Err(e @ ANTLRError::FallThrough(_)) => return Err(e),
@@ -655,7 +660,7 @@ where
         let mut _localctx = FieldContextExt::new(_parentctx.clone(), recog.base.get_state());
         recog.base.enter_rule(_localctx.clone(), 6, RULE_field);
         let mut _localctx: Rc<FieldContextAll> = _localctx;
-        let result: Result<(), ANTLRError> = try {
+        let result: Result<(), ANTLRError> = (|| {
             recog.base.set_state(32);
             recog.err_handler.sync(&mut recog.base)?;
             match recog.base.input.la(1) {
@@ -687,7 +692,8 @@ where
                     &mut recog.base,
                 )))?,
             }
-        };
+            Ok(())
+        })();
         match result {
             Ok(_) => {}
             Err(e @ ANTLRError::FallThrough(_)) => return Err(e),

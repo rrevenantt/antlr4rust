@@ -17,3 +17,5 @@ pub trait ReferenceToATNListener<'input>:
      */
     fn exit_a(&mut self, _ctx: &AContext<'input>) {}
 }
+
+antlr_rust::coerce_from! { 'input : ReferenceToATNListener<'input> }
