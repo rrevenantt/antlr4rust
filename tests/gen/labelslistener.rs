@@ -14,7 +14,6 @@ pub trait LabelsListener<'input>: ParseTreeListener<'input, LabelsParserContextT
      * @param ctx the parse tree
      */
     fn exit_s(&mut self, _ctx: &SContext<'input>) {}
-
     /**
      * Enter a parse tree produced by the {@code add}
      * labeled alternative in {@link LabelsParser#e}.
@@ -27,7 +26,6 @@ pub trait LabelsListener<'input>: ParseTreeListener<'input, LabelsParserContextT
      * @param ctx the parse tree
      */
     fn exit_add(&mut self, _ctx: &AddContext<'input>) {}
-
     /**
      * Enter a parse tree produced by the {@code parens}
      * labeled alternative in {@link LabelsParser#e}.
@@ -40,7 +38,6 @@ pub trait LabelsListener<'input>: ParseTreeListener<'input, LabelsParserContextT
      * @param ctx the parse tree
      */
     fn exit_parens(&mut self, _ctx: &ParensContext<'input>) {}
-
     /**
      * Enter a parse tree produced by the {@code mult}
      * labeled alternative in {@link LabelsParser#e}.
@@ -53,7 +50,6 @@ pub trait LabelsListener<'input>: ParseTreeListener<'input, LabelsParserContextT
      * @param ctx the parse tree
      */
     fn exit_mult(&mut self, _ctx: &MultContext<'input>) {}
-
     /**
      * Enter a parse tree produced by the {@code dec}
      * labeled alternative in {@link LabelsParser#e}.
@@ -66,7 +62,6 @@ pub trait LabelsListener<'input>: ParseTreeListener<'input, LabelsParserContextT
      * @param ctx the parse tree
      */
     fn exit_dec(&mut self, _ctx: &DecContext<'input>) {}
-
     /**
      * Enter a parse tree produced by the {@code anID}
      * labeled alternative in {@link LabelsParser#e}.
@@ -79,7 +74,6 @@ pub trait LabelsListener<'input>: ParseTreeListener<'input, LabelsParserContextT
      * @param ctx the parse tree
      */
     fn exit_anID(&mut self, _ctx: &AnIDContext<'input>) {}
-
     /**
      * Enter a parse tree produced by the {@code anInt}
      * labeled alternative in {@link LabelsParser#e}.
@@ -92,7 +86,6 @@ pub trait LabelsListener<'input>: ParseTreeListener<'input, LabelsParserContextT
      * @param ctx the parse tree
      */
     fn exit_anInt(&mut self, _ctx: &AnIntContext<'input>) {}
-
     /**
      * Enter a parse tree produced by the {@code inc}
      * labeled alternative in {@link LabelsParser#e}.

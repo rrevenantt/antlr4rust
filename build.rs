@@ -9,6 +9,8 @@ use std::process::Command;
 
 fn main() {
     let grammars = vec![
+        "VisitorBasic",
+        "VisitorCalc",
         "CSV",
         "ReferenceToATN",
         "XMLLexer",
@@ -16,7 +18,15 @@ fn main() {
         "Labels",
         "FHIRPath",
     ];
-    let additional_args = vec![Some("-visitor"), None, None, None, None];
+    let additional_args = vec![
+        Some("-visitor"),
+        Some("-visitor"),
+        Some("-visitor"),
+        None,
+        None,
+        None,
+        None,
+    ];
     let antlr_path = "/home/rrevenantt/dev/antlr4/tool/target/antlr4-4.8-2-SNAPSHOT-complete.jar";
 
     for (grammar, arg) in grammars.into_iter().zip(additional_args) {

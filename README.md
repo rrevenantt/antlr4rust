@@ -38,6 +38,8 @@ things to consider for next versions:
 - [ ] remove proc macro dependency
 - [ ] move to once_cell completely
 - [ ] rustfmt in antlr tool
+- [ ] make `Node` and associated type in visitors
+- [ ] bulk import for context extension traits
 - [ ] intradoc links
 - [ ] move benches to repository
 - [ ] LexerAtnSimulator position tracking customization
@@ -46,7 +48,7 @@ things to consider for next versions:
 - [ ] arena allocation for tree nodes
 - [ ] tree utils
 - [ ] features
-- [ ] statefull lexer test
+- [ ] stateful lexer test
 - [ ] better downcasting
 - [ ] options for customizing downcast bounds
 - [ ] token stream rewriter

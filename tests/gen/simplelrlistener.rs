@@ -14,7 +14,6 @@ pub trait SimpleLRListener<'input>: ParseTreeListener<'input, SimpleLRParserCont
      * @param ctx the parse tree
      */
     fn exit_s(&mut self, _ctx: &SContext<'input>) {}
-
     /**
      * Enter a parse tree produced by {@link SimpleLRParser#a}.
      * @param ctx the parse tree

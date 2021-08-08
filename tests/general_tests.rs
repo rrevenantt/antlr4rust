@@ -20,8 +20,8 @@ mod gen {
     use antlr_rust::token_factory::{ArenaCommonFactory, OwningTokenFactory};
     use antlr_rust::token_stream::{TokenStream, UnbufferedTokenStream};
     use antlr_rust::tree::{
-        ParseTree, ParseTreeListener, ParseTreeVisitor, ParseTreeWalker, TerminalNode, Tree,
-        VisitChildren, Visitable,
+        ParseTree, ParseTreeListener, ParseTreeVisitor, ParseTreeVisitorCompat, ParseTreeWalker,
+        TerminalNode, Tree, VisitChildren, Visitable,
     };
     use antlr_rust::InputStream;
     use csvlexer::*;
@@ -57,6 +57,10 @@ mod gen {
     mod simplelrlexer;
     mod simplelrlistener;
     mod simplelrparser;
+    mod visitorcalclexer;
+    mod visitorcalclistener;
+    mod visitorcalcparser;
+    mod visitorcalcvisitor;
     mod xmllexer;
 
     fn test_static<T: 'static>(_arg: T) {}
@@ -347,53 +351,5 @@ if (x < x && a > 0) then duh
             EContextAll::MultContext(x) => assert_eq!("(a+4)", x.a.as_ref().unwrap().get_text()),
             _ => panic!("oops"),
         }
-    }
-
-    struct MyCSVVisitor<'i, T>(Vec<&'i str>, T);
-
-    impl<'i, T> ParseTreeVisitor<'i, CSVParserContextType> for MyCSVVisitor<'i, T> {
-        fn visit_terminal(&mut self, node: &TerminalNode<'i, CSVParserContextType>) {
-            if node.symbol.get_token_type() == csvparser::TEXT {
-                if let Cow::Borrowed(s) = node.symbol.text {
-                    self.0.push(s);
-                }
-            }
-        }
-    }
-
-    use csvparser::RowContextAttrs;
-    use std::borrow::Cow;
-    use std::rc::Rc;
-
-    impl<'i, T> CSVVisitor<'i> for MyCSVVisitor<'i, T> {
-        fn visit_hdr(&mut self, _ctx: &HdrContext<'i>) {}
-
-        fn visit_row(&mut self, ctx: &RowContext<'i>) {
-            if ctx.field_all().len() > 1 {
-                self.visit_children(ctx)
-            }
-        }
-    }
-
-    // tests zero-copy parsing with non static visitor
-    #[test]
-    fn test_visitor() {
-        fn parse<'a>(tf: &'a ArenaCommonFactory<'a>) -> Rc<CsvFileContext<'a>> {
-            let mut _lexer =
-                CSVLexer::new_with_token_factory(InputStream::new("h1,h2\nd1,d2\nd3\n".into()), tf);
-            let token_source = CommonTokenStream::new(_lexer);
-            let mut parser = CSVParser::new(token_source);
-            let result = parser.csvFile().expect("parsed unsuccessfully");
-
-            let mut test = 5;
-            let mut visitor = MyCSVVisitor(Vec::new(), &mut test);
-            result.accept(&mut visitor);
-            assert_eq!(visitor.0, vec!["d1", "d2"]);
-
-            result
-        }
-        let tf = ArenaCommonFactory::default();
-
-        let _result = parse(&tf);
     }
 }

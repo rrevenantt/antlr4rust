@@ -20,6 +20,7 @@ use crate::token::Token;
 use crate::token_factory::TokenFactory;
 use crate::{interval_set, trees, CoerceTo};
 use better_any::{Tid, TidAble};
+use std::mem;
 
 //todo try to make in more generic
 #[allow(missing_docs)]
@@ -220,16 +221,100 @@ impl<'input, Node: ParserNodeType<'input>, Visitor: ParseTreeVisitor<'input, Nod
     fn accept(&self, visitor: &mut Visitor) { visitor.visit_error_node(self) }
 }
 
+pub trait ParseTreeVisitorCompat<'input>: VisitChildren<'input, Self::Node> {
+    type Node: ParserNodeType<'input>;
+    type Return: Default;
+
+    /// Temporary storage for `ParseTreeVisitor` blanket implementation to work
+    fn temp_result(&mut self) -> &mut Self::Return;
+
+    fn visit(&mut self, node: &<Self::Node as ParserNodeType<'input>>::Type) -> Self::Return {
+        self.visit_node(&node);
+        mem::take(self.temp_result())
+    }
+
+    /// Called on terminal(leaf) node
+    fn visit_terminal(&mut self, _node: &TerminalNode<'input, Self::Node>) -> Self::Return {
+        Self::Return::default()
+    }
+    /// Called on error node
+    fn visit_error_node(&mut self, _node: &ErrorNode<'input, Self::Node>) -> Self::Return {
+        Self::Return::default()
+    }
+
+    fn visit_children(
+        &mut self,
+        node: &<Self::Node as ParserNodeType<'input>>::Type,
+    ) -> Self::Return {
+        let mut result = Self::Return::default();
+        for node in node.get_children() {
+            if !self.should_visit_next_child(&node, &result) {
+                break;
+            }
+
+            let child_result = self.visit(&node);
+            result = self.aggregate_results(result, child_result);
+        }
+        return result;
+    }
+
+    fn aggregate_results(&self, aggregate: Self::Return, next: Self::Return) -> Self::Return {
+        next
+    }
+
+    fn should_visit_next_child(
+        &self,
+        node: &<Self::Node as ParserNodeType<'input>>::Type,
+        current: &Self::Return,
+    ) -> bool {
+        true
+    }
+}
+
+// struct VisitorAdapter<'input, T: ParseTreeVisitorCompat<'input>> {
+//     visitor: T,
+//     pub curr_value: T::Return,
+//     _pd: PhantomData<&'input str>,
+// }
+
+impl<'input, Node, T> ParseTreeVisitor<'input, Node> for T
+where
+    Node: ParserNodeType<'input>,
+    Node::Type: VisitableDyn<Self>,
+    T: ParseTreeVisitorCompat<'input, Node = Node>,
+{
+    fn visit_terminal(&mut self, node: &TerminalNode<'input, Node>) {
+        let result = <Self as ParseTreeVisitorCompat>::visit_terminal(self, node);
+        *<Self as ParseTreeVisitorCompat>::temp_result(self) = result;
+    }
+
+    fn visit_error_node(&mut self, node: &ErrorNode<'input, Node>) {
+        let result = <Self as ParseTreeVisitorCompat>::visit_error_node(self, node);
+        *<Self as ParseTreeVisitorCompat>::temp_result(self) = result;
+    }
+
+    fn visit_children(&mut self, node: &Node::Type) {
+        let result = <Self as ParseTreeVisitorCompat>::visit_children(self, node);
+        *<Self as ParseTreeVisitorCompat>::temp_result(self) = result;
+    }
+}
+
 /// Base interface for visiting over syntax tree
 pub trait ParseTreeVisitor<'input, Node: ParserNodeType<'input>>:
     VisitChildren<'input, Node>
 {
+    /// Basically alias for `node.accept(self)` in visitor implementation
+    /// just to make api closer to java
+
     /// Called on terminal(leaf) node
     fn visit_terminal(&mut self, _node: &TerminalNode<'input, Node>) {}
     /// Called on error node
     fn visit_error_node(&mut self, _node: &ErrorNode<'input, Node>) {}
     /// Implement this only if you want to change children visiting algorithm
-    fn visit_children(&mut self, node: &Node::Type) { self.visit_children_inner(node) }
+    fn visit_children(&mut self, node: &Node::Type) {
+        node.get_children()
+            .for_each(|child| self.visit_node(&child))
+    }
 }
 
 /// Workaround for default recursive children visiting
@@ -237,8 +322,8 @@ pub trait ParseTreeVisitor<'input, Node: ParserNodeType<'input>>:
 /// Already blanket implemented for all visitors.
 /// To override it you would need to implement `ParseTreeVisitor::visit_children`
 pub trait VisitChildren<'input, Node: ParserNodeType<'input>> {
-    #[doc(hidden)]
-    fn visit_children_inner(&mut self, node: &Node::Type);
+    // fn visit_children_inner(&mut self, node: &Node::Type);
+    fn visit_node(&mut self, node: &Node::Type);
 }
 
 impl<'input, Node, T> VisitChildren<'input, Node> for T
@@ -248,8 +333,13 @@ where
     // for<'a> &'a mut Self: CoerceUnsized<&'a mut Node::Visitor>,
     Node::Type: VisitableDyn<T>,
 {
-    #[inline(always)]
-    fn visit_children_inner(&mut self, node: &Node::Type) { node.accept_children(self) }
+    // #[inline(always)]
+    // fn visit_children_inner(&mut self, node: &Node::Type) {
+    //     // node.accept_children(self)
+    //
+    // }
+
+    fn visit_node(&mut self, node: &Node::Type) { node.accept_dyn(self) }
 }
 
 /// Types that can accept particular visitor
