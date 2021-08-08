@@ -100,9 +100,7 @@ use antlr_rust::tree::ParseTreeListener;
 use super::<file.parserName; format="low">::*;
 
 pub trait <file.grammarName>Listener\<'input> : ParseTreeListener\<'input,<file.parserName>ContextType>{
-
 <file.listenerNames:{lname |
-
 /**
 <if(file.listenerLabelRuleNames.(lname))>
  * Enter a parse tree produced by the {@code <lname>\}
@@ -128,6 +126,8 @@ fn exit_<lname>(&mut self, _ctx: &<lname; format="cap">Context\<'input>) { \}}; 
 
 antlr_rust::coerce_from!{ 'input : <file.grammarName>Listener\<'input> }
 
+
+
 >>
 
 BaseListenerFile(file, header, namedActions) ::= <<>>
@@ -136,8 +136,9 @@ VisitorFile(file, header, namedActions) ::= <<
 #![allow(nonstandard_style)]
 <fileHeader(file.grammarFileName, file.ANTLRVersion)>
 <header>
-use antlr_rust::tree::{ParseTreeVisitor};
+use antlr_rust::tree::{ParseTreeVisitor,ParseTreeVisitorCompat};
 use super::<file.parserName; format="low">::*;
+use std::mem;
 
 /**
  * This interface defines a complete generic visitor for a parse tree produced
@@ -156,7 +157,35 @@ pub trait <file.grammarName>Visitor\<'input>: ParseTreeVisitor\<'input,<file.par
  */
 fn visit_<lname>(&mut self, ctx: &<lname; format="cap">Context\<'input>) { self.visit_children(ctx) \}
 }; separator="\n">
+}
 
+pub trait <file.grammarName>VisitorCompat\<'input>:ParseTreeVisitorCompat\<'input, Node= <file.parserName>ContextType>{
+	<file.visitorNames:{lname |
+/**
+<if(file.visitorLabelRuleNames.(lname))>
+ * Visit a parse tree produced by the {@code <lname>\}
+ * labeled alternative in {@link <file.parserName>#<file.visitorLabelRuleNames.(lname)>\}.
+<else>
+ * Visit a parse tree produced by {@link <file.parserName>#<lname>\}.
+<endif>
+ * @param ctx the parse tree
+ */
+	fn visit_<lname>(&mut self, ctx: &<lname; format="cap">Context\<'input>) -> Self::Return {
+		self.visit_children(ctx)
+	\}
+}; separator="\n">
+}
+
+impl\<'input,T> <file.grammarName>Visitor\<'input> for T
+where
+	T: <file.grammarName>VisitorCompat\<'input>
+{
+<file.visitorNames:{lname |
+	fn visit_<lname>(&mut self, ctx: &<lname; format="cap">Context\<'input>){
+		let result = \<Self as <file.grammarName>VisitorCompat>::visit_<lname>(self, ctx);
+        *\<Self as ParseTreeVisitorCompat>::temp_result(self) = result;
+	\}
+}; separator="\n">
 }
 >>
 
