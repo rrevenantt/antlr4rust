@@ -9,11 +9,13 @@ use crate::token_stream::{TokenStream, UnbufferedTokenStream};
 use better_any::{Tid, TidAble};
 
 /// Default token stream that skips token that not correspond to current channel.
-#[derive(Tid, Debug)]
+#[derive(Debug)]
 pub struct CommonTokenStream<'input, T: TokenSource<'input>> {
     base: UnbufferedTokenStream<'input, T>,
     channel: isize,
 }
+
+better_any::tid! { impl<'input,T> TidAble<'input> for CommonTokenStream<'input, T> where T: TokenSource<'input>}
 
 impl<'input, T: TokenSource<'input>> IntStream for CommonTokenStream<'input, T> {
     #[inline]

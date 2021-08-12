@@ -233,7 +233,6 @@ pub fn cast_mut<'a, T: ParserRuleContext<'a> + 'a + ?Sized, Result: 'a>(
 // pub type ParserRuleContextType<'input,T> = ParseTreeNode<'input,T>;
 
 /// Default rule context implementation that keeps everything provided by parser
-#[derive(Tid)]
 pub struct BaseParserRuleContext<'input, Ctx: CustomRuleContext<'input>> {
     base: BaseRuleContext<'input, Ctx>,
 
@@ -244,6 +243,8 @@ pub struct BaseParserRuleContext<'input, Ctx: CustomRuleContext<'input>> {
     /// List of children of current node
     pub(crate) children: RefCell<Vec<Rc<<Ctx::Ctx as ParserNodeType<'input>>::Type>>>,
 }
+
+better_any::tid! { impl<'i,Ctx> TidAble<'i> for BaseParserRuleContext<'i,Ctx> where Ctx:CustomRuleContext<'i> }
 
 impl<'input, Ctx: CustomRuleContext<'input>> Debug for BaseParserRuleContext<'input, Ctx> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> { f.write_str(type_name::<Self>()) }

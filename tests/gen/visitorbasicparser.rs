@@ -160,14 +160,12 @@ impl<'input> VisitorBasicParserContext<'input>
 {
 }
 
-#[antlr_rust::impl_tid]
-impl<'input> antlr_rust::TidAble<'input> for dyn VisitorBasicParserContext<'input> + 'input {}
+antlr_rust::tid! { impl<'input> TidAble<'input> for dyn VisitorBasicParserContext<'input> + 'input }
 
-#[antlr_rust::impl_tid]
-impl<'input> antlr_rust::TidAble<'input> for dyn VisitorBasicListener<'input> + 'input {}
+antlr_rust::tid! { impl<'input> TidAble<'input> for dyn VisitorBasicListener<'input> + 'input }
 
 pub struct VisitorBasicParserContextType;
-antlr_rust::type_id! {VisitorBasicParserContextType}
+antlr_rust::tid! {VisitorBasicParserContextType}
 
 impl<'input> ParserNodeType<'input> for VisitorBasicParserContextType {
     type TF = LocalTokenFactory<'input>;
@@ -249,7 +247,7 @@ impl<'input> CustomRuleContext<'input> for SContextExt<'input> {
     fn get_rule_index(&self) -> usize { RULE_s }
     //fn type_rule_index() -> usize where Self: Sized { RULE_s }
 }
-antlr_rust::type_id! {SContextExt<'a>}
+antlr_rust::tid! {SContextExt<'a>}
 
 impl<'input> SContextExt<'input> {
     fn new(

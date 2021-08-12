@@ -68,7 +68,6 @@ impl<'a, 'input: 'a, T: TokenStream<'input>> Iterator for TokenIter<'a, 'input, 
 }
 
 /// Token stream that keeps all data in internal Vec
-#[derive(Tid)]
 pub struct UnbufferedTokenStream<'input, T: TokenSource<'input>> {
     token_source: T,
     pub(crate) tokens: Vec<<T::TF as TokenFactory<'input>>::Tok>,
@@ -77,6 +76,8 @@ pub struct UnbufferedTokenStream<'input, T: TokenSource<'input>> {
     markers_count: isize,
     pub(crate) p: isize,
 }
+better_any::tid! { impl<'input,T> TidAble<'input> for UnbufferedTokenStream<'input, T> where T: TokenSource<'input>}
+
 impl<'input, T: TokenSource<'input>> Debug for UnbufferedTokenStream<'input, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("UnbufferedTokenStream")

@@ -150,14 +150,12 @@ impl<'input> ReferenceToATNParserContext<'input>
 {
 }
 
-#[antlr_rust::impl_tid]
-impl<'input> antlr_rust::TidAble<'input> for dyn ReferenceToATNParserContext<'input> + 'input {}
+antlr_rust::tid! { impl<'input> TidAble<'input> for dyn ReferenceToATNParserContext<'input> + 'input }
 
-#[antlr_rust::impl_tid]
-impl<'input> antlr_rust::TidAble<'input> for dyn ReferenceToATNListener<'input> + 'input {}
+antlr_rust::tid! { impl<'input> TidAble<'input> for dyn ReferenceToATNListener<'input> + 'input }
 
 pub struct ReferenceToATNParserContextType;
-antlr_rust::type_id! {ReferenceToATNParserContextType}
+antlr_rust::tid! {ReferenceToATNParserContextType}
 
 impl<'input> ParserNodeType<'input> for ReferenceToATNParserContextType {
     type TF = LocalTokenFactory<'input>;
@@ -233,7 +231,7 @@ impl<'input> CustomRuleContext<'input> for AContextExt<'input> {
     fn get_rule_index(&self) -> usize { RULE_a }
     //fn type_rule_index() -> usize where Self: Sized { RULE_a }
 }
-antlr_rust::type_id! {AContextExt<'a>}
+antlr_rust::tid! {AContextExt<'a>}
 
 impl<'input> AContextExt<'input> {
     fn new(

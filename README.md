@@ -31,38 +31,6 @@ Since version `0.3` works on stable rust.
 Previous versions are not maintained any more 
 so in case of nightly breakage you should migrate to the latest version. 
 
-###### Long term improvements
-
-things to consider for next versions:
-- [ ] attempt a workaround to use stable rust
-- [ ] remove proc macro dependency
-- [ ] move to once_cell completely
-- [ ] rustfmt in antlr tool
-- [ ] make `Node` and associated type in visitors
-- [ ] bulk import for context extension traits
-- [ ] intradoc links
-- [ ] move benches to repository
-- [ ] LexerAtnSimulator position tracking customization
-- [ ] Lexer position tracking customization
-- [ ] thread local DFA(questionable because of quite slow threadlocals in rust)
-- [ ] arena allocation for tree nodes
-- [ ] tree utils
-- [ ] features
-- [ ] stateful lexer test
-- [ ] better downcasting
-- [ ] options for customizing downcast bounds
-- [ ] token stream rewriter
-- [ ] doctests + dummy parser for them
-- [ ] actual examples
-- [ ] normal visitor example/docs
-- [ ] string interner test/example 
-- [ ] figure out base class api replacement
-- [ ] rustfmt import config
-- [ ] draft upstream PR
-- [ ] add recursion limit
-- [ ] test custom errors
-- [ ] add fuzzer tests 
-
 ### Usage
 
 You should use the ANTLR4 "tool" to generate a parser, that will use the ANTLR 

@@ -139,14 +139,12 @@ antlr_rust::coerce_from! { 'input : SimpleLRParserContext<'input> }
 impl<'input> SimpleLRParserContext<'input> for TerminalNode<'input, SimpleLRParserContextType> {}
 impl<'input> SimpleLRParserContext<'input> for ErrorNode<'input, SimpleLRParserContextType> {}
 
-#[antlr_rust::impl_tid]
-impl<'input> antlr_rust::TidAble<'input> for dyn SimpleLRParserContext<'input> + 'input {}
+antlr_rust::tid! { impl<'input> TidAble<'input> for dyn SimpleLRParserContext<'input> + 'input }
 
-#[antlr_rust::impl_tid]
-impl<'input> antlr_rust::TidAble<'input> for dyn SimpleLRListener<'input> + 'input {}
+antlr_rust::tid! { impl<'input> TidAble<'input> for dyn SimpleLRListener<'input> + 'input }
 
 pub struct SimpleLRParserContextType;
-antlr_rust::type_id! {SimpleLRParserContextType}
+antlr_rust::tid! {SimpleLRParserContextType}
 
 impl<'input> ParserNodeType<'input> for SimpleLRParserContextType {
     type TF = LocalTokenFactory<'input>;
@@ -253,7 +251,7 @@ impl<'input> CustomRuleContext<'input> for SContextExt<'input> {
     fn get_rule_index(&self) -> usize { RULE_s }
     //fn type_rule_index() -> usize where Self: Sized { RULE_s }
 }
-antlr_rust::type_id! {SContextExt<'a>}
+antlr_rust::tid! {SContextExt<'a>}
 
 impl<'input> SContextExt<'input> {
     fn new(
@@ -348,7 +346,7 @@ impl<'input> CustomRuleContext<'input> for AContextExt<'input> {
     fn get_rule_index(&self) -> usize { RULE_a }
     //fn type_rule_index() -> usize where Self: Sized { RULE_a }
 }
-antlr_rust::type_id! {AContextExt<'a>}
+antlr_rust::tid! {AContextExt<'a>}
 
 impl<'input> AContextExt<'input> {
     fn new(
