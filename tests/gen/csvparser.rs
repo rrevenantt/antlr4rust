@@ -158,14 +158,12 @@ where
 impl<'input> CSVParserContext<'input> for TerminalNode<'input, CSVParserContextType> {}
 impl<'input> CSVParserContext<'input> for ErrorNode<'input, CSVParserContextType> {}
 
-#[antlr_rust::impl_tid]
-impl<'input> antlr_rust::TidAble<'input> for dyn CSVParserContext<'input> + 'input {}
+antlr_rust::tid! { impl<'input> TidAble<'input> for dyn CSVParserContext<'input> + 'input }
 
-#[antlr_rust::impl_tid]
-impl<'input> antlr_rust::TidAble<'input> for dyn CSVListener<'input> + 'input {}
+antlr_rust::tid! { impl<'input> TidAble<'input> for dyn CSVListener<'input> + 'input }
 
 pub struct CSVParserContextType;
-antlr_rust::type_id! {CSVParserContextType}
+antlr_rust::tid! {CSVParserContextType}
 
 impl<'input> ParserNodeType<'input> for CSVParserContextType {
     type TF = LocalTokenFactory<'input>;
@@ -245,7 +243,7 @@ impl<'input> CustomRuleContext<'input> for CsvFileContextExt<'input> {
     fn get_rule_index(&self) -> usize { RULE_csvFile }
     //fn type_rule_index() -> usize where Self: Sized { RULE_csvFile }
 }
-antlr_rust::type_id! {CsvFileContextExt<'a>}
+antlr_rust::tid! {CsvFileContextExt<'a>}
 
 impl<'input> CsvFileContextExt<'input> {
     fn new(
@@ -381,7 +379,7 @@ impl<'input> CustomRuleContext<'input> for HdrContextExt<'input> {
     fn get_rule_index(&self) -> usize { RULE_hdr }
     //fn type_rule_index() -> usize where Self: Sized { RULE_hdr }
 }
-antlr_rust::type_id! {HdrContextExt<'a>}
+antlr_rust::tid! {HdrContextExt<'a>}
 
 impl<'input> HdrContextExt<'input> {
     fn new(
@@ -477,7 +475,7 @@ impl<'input> CustomRuleContext<'input> for RowContextExt<'input> {
     fn get_rule_index(&self) -> usize { RULE_row }
     //fn type_rule_index() -> usize where Self: Sized { RULE_row }
 }
-antlr_rust::type_id! {RowContextExt<'a>}
+antlr_rust::tid! {RowContextExt<'a>}
 
 impl<'input> RowContextExt<'input> {
     fn new(
@@ -611,7 +609,7 @@ impl<'input> CustomRuleContext<'input> for FieldContextExt<'input> {
     fn get_rule_index(&self) -> usize { RULE_field }
     //fn type_rule_index() -> usize where Self: Sized { RULE_field }
 }
-antlr_rust::type_id! {FieldContextExt<'a>}
+antlr_rust::tid! {FieldContextExt<'a>}
 
 impl<'input> FieldContextExt<'input> {
     fn new(

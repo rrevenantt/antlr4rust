@@ -300,24 +300,6 @@ pub trait <parser.name>Context\<'input>:
 {}
 
 antlr_rust::coerce_from!{ 'input : <parser.name>Context\<'input> }
-<!--
-impl\<'input,T> antlr_rust::CoerceFrom\<T> for dyn <parser.name>Context\<'input>
-where T: <parser.name>Context\<'input>
-{
-	fn coerce_rc(from: Rc\<T>) -> Rc\<Self>{
-		from as _
-	}
-    fn coerce_box(from: Box\<T>) -> Box\<Self>{
-    	from as _
-    }
-    fn coerce_ref(from: &T) -> &Self{
-    	from as _
-    }
-    fn coerce_mut(from: &mut T) -> &mut Self{
-    	from as _
-    }
-}
---!>
 
 <if(file.genVisitor)>
 impl\<'input, 'x, T> VisitableDyn\<T> for dyn <parser.name>Context\<'input> + 'input
@@ -333,14 +315,12 @@ where
 impl\<'input> <parser.name>Context\<'input> for TerminalNode\<'input,<parser.name>ContextType> {}
 impl\<'input> <parser.name>Context\<'input> for ErrorNode\<'input,<parser.name>ContextType> {}
 
-#[antlr_rust::impl_tid]
-impl\<'input> antlr_rust::TidAble\<'input> for dyn <parser.name>Context\<'input> + 'input{}
+antlr_rust::tid! { impl\<'input> TidAble\<'input> for dyn <parser.name>Context\<'input> + 'input }
 
-#[antlr_rust::impl_tid]
-impl\<'input> antlr_rust::TidAble\<'input> for dyn <parser.grammarName>Listener\<'input> + 'input{}
+antlr_rust::tid! { impl\<'input> TidAble\<'input> for dyn <parser.grammarName>Listener\<'input> + 'input }
 
 pub struct <parser.name>ContextType;
-antlr_rust::type_id!{<parser.name>ContextType}
+antlr_rust::tid!{<parser.name>ContextType}
 
 impl\<'input> ParserNodeType\<'input> for <parser.name>ContextType{
 	type TF = <TokenFactory()>;
@@ -512,7 +492,7 @@ pub enum <currentRule.ctxType>All\<'input>{
 	<altLabelCtxs:{l | <altLabelCtxs.(l).struct.name>(<altLabelCtxs.(l).struct.name>\<'input>),
 	}>Error(<ruleCtx.struct.name>\<'input>)
 }
-antlr_rust::type_id!{<currentRule.ctxType>All\<'a>}
+antlr_rust::tid!{<currentRule.ctxType>All\<'a>}
 
 impl\<'input> antlr_rust::parser_rule_context::DerefSeal for <currentRule.ctxType>All\<'input>{}
 
@@ -1055,7 +1035,7 @@ impl\<'input> CustomRuleContext\<'input> for <struct.name>Ext\<'input>{
 	fn get_rule_index(&self) -> usize { RULE_<struct.derivedFromName> }
 	//fn type_rule_index() -> usize where Self: Sized { RULE_<struct.derivedFromName> }
 }
-antlr_rust::type_id!{<struct.name>Ext\<'a>}
+antlr_rust::tid!{<struct.name>Ext\<'a>}
 
 impl\<'input> <struct.name>Ext\<'input>{
 	fn new(parent: Option\<Rc\<dyn <parser.name>Context\<'input> + 'input > >, invoking_state: isize<ctorAttrs:{a | , <a>}>) -> Rc\<<struct.name>All\<'input>\> {
@@ -1106,7 +1086,7 @@ pub struct <struct.name>Ext\<'input>{
 }>	ph:PhantomData\<&'input str>
 }
 
-antlr_rust::type_id!{<struct.name>Ext\<'a>}
+antlr_rust::tid!{<struct.name>Ext\<'a>}
 
 impl\<'input> <parser.name>Context\<'input> for <struct.name>\<'input>{}
 
@@ -1317,10 +1297,11 @@ pub type LocalTokenFactory\<'input> = CommonTokenFactory;
 
 type From\<'a> = \<LocalTokenFactory\<'a> as TokenFactory\<'a> >::From;
 
-#[derive(Tid)]
 pub struct <lexer.name>\<'input, Input:CharStream\<From\<'input> >\> {
 	base: BaseLexer\<'input,<lexer.name>Actions,Input,<TokenFactory()>\>,
 }
+
+antlr_rust::tid! { impl\<'input,Input> TidAble\<'input> for <lexer.name>\<'input,Input> where Input:CharStream\<From\<'input> > }
 
 impl\<'input, Input:CharStream\<From\<'input> >\> Deref for <lexer.name>\<'input,Input>{
 	type Target = BaseLexer\<'input,<lexer.name>Actions,Input,<TokenFactory()>\>;

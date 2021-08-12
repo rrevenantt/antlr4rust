@@ -80,8 +80,10 @@ pub trait TokenFactory<'a>: TidAble<'a> + Sized {
 }
 
 /// Default token factory
-#[derive(Default, Tid, Debug)]
+#[derive(Default, Debug)]
 pub struct CommonTokenFactory;
+
+better_any::tid! {CommonTokenFactory}
 
 impl Default for &'_ CommonTokenFactory {
     fn default() -> Self { &**COMMON_TOKEN_FACTORY_DEFAULT }
@@ -139,8 +141,10 @@ impl<'a> TokenFactory<'a> for CommonTokenFactory {
 
 /// Token factory that produces heap allocated
 /// `OwningToken`s
-#[derive(Default, Tid, Debug)]
+#[derive(Default, Debug)]
 pub struct OwningTokenFactory;
+
+better_any::tid! {OwningTokenFactory}
 
 impl<'a> TokenFactory<'a> for OwningTokenFactory {
     type Inner = OwningToken;
@@ -220,12 +224,13 @@ pub type ArenaCommonFactory<'a> = ArenaFactory<'a, CommonTokenFactory, CommonTok
 /// const INVALID_TOKEN:CustomToken = ...
 /// ```
 // Box is used here because it is almost always should be used for token factory
-#[derive(Tid)]
 pub struct ArenaFactory<'input, TF, T> {
     arena: Arena<T>,
     factory: TF,
     pd: PhantomData<&'input str>,
 }
+
+better_any::tid! {impl<'input,TF,T> TidAble<'input> for ArenaFactory<'input,TF,T>}
 
 impl<'input, TF: Debug, T> Debug for ArenaFactory<'input, TF, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

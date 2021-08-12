@@ -161,14 +161,12 @@ antlr_rust::coerce_from! { 'input : LabelsParserContext<'input> }
 impl<'input> LabelsParserContext<'input> for TerminalNode<'input, LabelsParserContextType> {}
 impl<'input> LabelsParserContext<'input> for ErrorNode<'input, LabelsParserContextType> {}
 
-#[antlr_rust::impl_tid]
-impl<'input> antlr_rust::TidAble<'input> for dyn LabelsParserContext<'input> + 'input {}
+antlr_rust::tid! { impl<'input> TidAble<'input> for dyn LabelsParserContext<'input> + 'input }
 
-#[antlr_rust::impl_tid]
-impl<'input> antlr_rust::TidAble<'input> for dyn LabelsListener<'input> + 'input {}
+antlr_rust::tid! { impl<'input> TidAble<'input> for dyn LabelsListener<'input> + 'input }
 
 pub struct LabelsParserContextType;
-antlr_rust::type_id! {LabelsParserContextType}
+antlr_rust::tid! {LabelsParserContextType}
 
 impl<'input> ParserNodeType<'input> for LabelsParserContextType {
     type TF = LocalTokenFactory<'input>;
@@ -279,7 +277,7 @@ impl<'input> CustomRuleContext<'input> for SContextExt<'input> {
     fn get_rule_index(&self) -> usize { RULE_s }
     //fn type_rule_index() -> usize where Self: Sized { RULE_s }
 }
-antlr_rust::type_id! {SContextExt<'a>}
+antlr_rust::tid! {SContextExt<'a>}
 
 impl<'input> SContextExt<'input> {
     fn new(
@@ -358,7 +356,7 @@ pub enum EContextAll<'input> {
     IncContext(IncContext<'input>),
     Error(EContext<'input>),
 }
-antlr_rust::type_id! {EContextAll<'a>}
+antlr_rust::tid! {EContextAll<'a>}
 
 impl<'input> antlr_rust::parser_rule_context::DerefSeal for EContextAll<'input> {}
 
@@ -405,7 +403,7 @@ impl<'input> CustomRuleContext<'input> for EContextExt<'input> {
     fn get_rule_index(&self) -> usize { RULE_e }
     //fn type_rule_index() -> usize where Self: Sized { RULE_e }
 }
-antlr_rust::type_id! {EContextExt<'a>}
+antlr_rust::tid! {EContextExt<'a>}
 
 impl<'input> EContextExt<'input> {
     fn new(
@@ -463,7 +461,7 @@ pub struct AddContextExt<'input> {
     ph: PhantomData<&'input str>,
 }
 
-antlr_rust::type_id! {AddContextExt<'a>}
+antlr_rust::tid! {AddContextExt<'a>}
 
 impl<'input> LabelsParserContext<'input> for AddContext<'input> {}
 
@@ -523,7 +521,7 @@ pub struct ParensContextExt<'input> {
     ph: PhantomData<&'input str>,
 }
 
-antlr_rust::type_id! {ParensContextExt<'a>}
+antlr_rust::tid! {ParensContextExt<'a>}
 
 impl<'input> LabelsParserContext<'input> for ParensContext<'input> {}
 
@@ -592,7 +590,7 @@ pub struct MultContextExt<'input> {
     ph: PhantomData<&'input str>,
 }
 
-antlr_rust::type_id! {MultContextExt<'a>}
+antlr_rust::tid! {MultContextExt<'a>}
 
 impl<'input> LabelsParserContext<'input> for MultContext<'input> {}
 
@@ -653,7 +651,7 @@ pub struct DecContextExt<'input> {
     ph: PhantomData<&'input str>,
 }
 
-antlr_rust::type_id! {DecContextExt<'a>}
+antlr_rust::tid! {DecContextExt<'a>}
 
 impl<'input> LabelsParserContext<'input> for DecContext<'input> {}
 
@@ -714,7 +712,7 @@ pub struct AnIDContextExt<'input> {
     ph: PhantomData<&'input str>,
 }
 
-antlr_rust::type_id! {AnIDContextExt<'a>}
+antlr_rust::tid! {AnIDContextExt<'a>}
 
 impl<'input> LabelsParserContext<'input> for AnIDContext<'input> {}
 
@@ -775,7 +773,7 @@ pub struct AnIntContextExt<'input> {
     ph: PhantomData<&'input str>,
 }
 
-antlr_rust::type_id! {AnIntContextExt<'a>}
+antlr_rust::tid! {AnIntContextExt<'a>}
 
 impl<'input> LabelsParserContext<'input> for AnIntContext<'input> {}
 
@@ -834,7 +832,7 @@ pub struct IncContextExt<'input> {
     ph: PhantomData<&'input str>,
 }
 
-antlr_rust::type_id! {IncContextExt<'a>}
+antlr_rust::tid! {IncContextExt<'a>}
 
 impl<'input> LabelsParserContext<'input> for IncContext<'input> {}
 

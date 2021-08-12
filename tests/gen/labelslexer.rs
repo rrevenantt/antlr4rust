@@ -82,10 +82,11 @@ pub type LocalTokenFactory<'input> = CommonTokenFactory;
 
 type From<'a> = <LocalTokenFactory<'a> as TokenFactory<'a>>::From;
 
-#[derive(Tid)]
 pub struct LabelsLexer<'input, Input: CharStream<From<'input>>> {
     base: BaseLexer<'input, LabelsLexerActions, Input, LocalTokenFactory<'input>>,
 }
+
+antlr_rust::tid! { impl<'input,Input> TidAble<'input> for LabelsLexer<'input,Input> where Input:CharStream<From<'input> > }
 
 impl<'input, Input: CharStream<From<'input>>> Deref for LabelsLexer<'input, Input> {
     type Target = BaseLexer<'input, LabelsLexerActions, Input, LocalTokenFactory<'input>>;

@@ -174,14 +174,12 @@ impl<'input> VisitorCalcParserContext<'input>
 }
 impl<'input> VisitorCalcParserContext<'input> for ErrorNode<'input, VisitorCalcParserContextType> {}
 
-#[antlr_rust::impl_tid]
-impl<'input> antlr_rust::TidAble<'input> for dyn VisitorCalcParserContext<'input> + 'input {}
+antlr_rust::tid! { impl<'input> TidAble<'input> for dyn VisitorCalcParserContext<'input> + 'input }
 
-#[antlr_rust::impl_tid]
-impl<'input> antlr_rust::TidAble<'input> for dyn VisitorCalcListener<'input> + 'input {}
+antlr_rust::tid! { impl<'input> TidAble<'input> for dyn VisitorCalcListener<'input> + 'input }
 
 pub struct VisitorCalcParserContextType;
-antlr_rust::type_id! {VisitorCalcParserContextType}
+antlr_rust::tid! {VisitorCalcParserContextType}
 
 impl<'input> ParserNodeType<'input> for VisitorCalcParserContextType {
     type TF = LocalTokenFactory<'input>;
@@ -294,7 +292,7 @@ impl<'input> CustomRuleContext<'input> for SContextExt<'input> {
     fn get_rule_index(&self) -> usize { RULE_s }
     //fn type_rule_index() -> usize where Self: Sized { RULE_s }
 }
-antlr_rust::type_id! {SContextExt<'a>}
+antlr_rust::tid! {SContextExt<'a>}
 
 impl<'input> SContextExt<'input> {
     fn new(
@@ -376,7 +374,7 @@ pub enum ExprContextAll<'input> {
     MultiplyContext(MultiplyContext<'input>),
     Error(ExprContext<'input>),
 }
-antlr_rust::type_id! {ExprContextAll<'a>}
+antlr_rust::tid! {ExprContextAll<'a>}
 
 impl<'input> antlr_rust::parser_rule_context::DerefSeal for ExprContextAll<'input> {}
 
@@ -427,7 +425,7 @@ impl<'input> CustomRuleContext<'input> for ExprContextExt<'input> {
     fn get_rule_index(&self) -> usize { RULE_expr }
     //fn type_rule_index() -> usize where Self: Sized { RULE_expr }
 }
-antlr_rust::type_id! {ExprContextExt<'a>}
+antlr_rust::tid! {ExprContextExt<'a>}
 
 impl<'input> ExprContextExt<'input> {
     fn new(
@@ -491,7 +489,7 @@ pub struct AddContextExt<'input> {
     ph: PhantomData<&'input str>,
 }
 
-antlr_rust::type_id! {AddContextExt<'a>}
+antlr_rust::tid! {AddContextExt<'a>}
 
 impl<'input> VisitorCalcParserContext<'input> for AddContext<'input> {}
 
@@ -562,7 +560,7 @@ pub struct NumberContextExt<'input> {
     ph: PhantomData<&'input str>,
 }
 
-antlr_rust::type_id! {NumberContextExt<'a>}
+antlr_rust::tid! {NumberContextExt<'a>}
 
 impl<'input> VisitorCalcParserContext<'input> for NumberContext<'input> {}
 
@@ -653,7 +651,7 @@ pub struct MultiplyContextExt<'input> {
     ph: PhantomData<&'input str>,
 }
 
-antlr_rust::type_id! {MultiplyContextExt<'a>}
+antlr_rust::tid! {MultiplyContextExt<'a>}
 
 impl<'input> VisitorCalcParserContext<'input> for MultiplyContext<'input> {}
 

@@ -133,10 +133,11 @@ pub type LocalTokenFactory<'input> = CommonTokenFactory;
 
 type From<'a> = <LocalTokenFactory<'a> as TokenFactory<'a>>::From;
 
-#[derive(Tid)]
 pub struct XMLLexer<'input, Input: CharStream<From<'input>>> {
     base: BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>,
 }
+
+antlr_rust::tid! { impl<'input,Input> TidAble<'input> for XMLLexer<'input,Input> where Input:CharStream<From<'input> > }
 
 impl<'input, Input: CharStream<From<'input>>> Deref for XMLLexer<'input, Input> {
     type Target = BaseLexer<'input, XMLLexerActions, Input, LocalTokenFactory<'input>>;

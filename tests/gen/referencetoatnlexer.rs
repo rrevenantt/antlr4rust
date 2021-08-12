@@ -56,10 +56,11 @@ pub type LocalTokenFactory<'input> = antlr_rust::token_factory::OwningTokenFacto
 
 type From<'a> = <LocalTokenFactory<'a> as TokenFactory<'a>>::From;
 
-#[derive(Tid)]
 pub struct ReferenceToATNLexer<'input, Input: CharStream<From<'input>>> {
     base: BaseLexer<'input, ReferenceToATNLexerActions, Input, LocalTokenFactory<'input>>,
 }
+
+antlr_rust::tid! { impl<'input,Input> TidAble<'input> for ReferenceToATNLexer<'input,Input> where Input:CharStream<From<'input> > }
 
 impl<'input, Input: CharStream<From<'input>>> Deref for ReferenceToATNLexer<'input, Input> {
     type Target = BaseLexer<'input, ReferenceToATNLexerActions, Input, LocalTokenFactory<'input>>;

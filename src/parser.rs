@@ -106,7 +106,6 @@ pub trait ParserNodeType<'input>: TidAble<'input> + Sized {
 /// It is a member of generated parser struct, so
 /// almost always you don't need to create it yourself.
 /// Generated parser hides complexity of this struct and expose required flexibility via generic parameters
-#[derive(Tid)]
 pub struct BaseParser<
     'input,
     Ext: 'static, //: ParserRecog<'input, Self> + 'static, // user provided behavior, such as semantic predicates
@@ -150,6 +149,13 @@ pub struct BaseParser<
 
     ext: Ext,
     pd: PhantomData<fn() -> &'input str>,
+}
+
+better_any::tid! {
+    impl<'input, Ext:'static, I, Ctx, T> TidAble<'input> for BaseParser<'input,Ext, I, Ctx, T>
+    where I: TokenStream<'input>,
+        Ctx: ParserNodeType<'input, TF = I::TF>,
+        T: ParseTreeListener<'input, Ctx> + ?Sized
 }
 
 impl<'input, Ext, I, Ctx, T> Deref for BaseParser<'input, Ext, I, Ctx, T>

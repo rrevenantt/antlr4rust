@@ -104,20 +104,20 @@ pub trait ParseTree<'input>: Tree<'input> {
 // }
 
 #[doc(hidden)]
-#[derive(Tid, Debug)]
+#[derive(Debug)]
 pub struct NoError;
 
 #[doc(hidden)]
-#[derive(Tid, Debug)]
+#[derive(Debug)]
 pub struct IsError;
 
 /// Generic leaf AST node
-#[derive(Tid)]
 pub struct LeafNode<'input, Node: ParserNodeType<'input>, T: 'static> {
     /// Token, this leaf consist of
     pub symbol: <Node::TF as TokenFactory<'input>>::Tok,
     iserror: PhantomData<T>,
 }
+better_any::tid! { impl <'input, Node, T:'static> TidAble<'input> for LeafNode<'input, Node, T> where Node:ParserNodeType<'input> }
 
 impl<'input, Node: ParserNodeType<'input>, T: 'static> CustomRuleContext<'input>
     for LeafNode<'input, Node, T>
@@ -132,8 +132,8 @@ impl<'input, Node: ParserNodeType<'input>, T: 'static> CustomRuleContext<'input>
     }
 }
 
-impl<'input, Node: ParserNodeType<'input> + TidAble<'input>, T: 'static + TidAble<'input>>
-    ParserRuleContext<'input> for LeafNode<'input, Node, T>
+impl<'input, Node: ParserNodeType<'input>, T: 'static> ParserRuleContext<'input>
+    for LeafNode<'input, Node, T>
 {
 }
 

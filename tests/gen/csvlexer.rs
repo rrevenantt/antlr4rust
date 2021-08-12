@@ -68,10 +68,11 @@ pub type LocalTokenFactory<'input> = antlr_rust::token_factory::ArenaCommonFacto
 
 type From<'a> = <LocalTokenFactory<'a> as TokenFactory<'a>>::From;
 
-#[derive(Tid)]
 pub struct CSVLexer<'input, Input: CharStream<From<'input>>> {
     base: BaseLexer<'input, CSVLexerActions, Input, LocalTokenFactory<'input>>,
 }
+
+antlr_rust::tid! { impl<'input,Input> TidAble<'input> for CSVLexer<'input,Input> where Input:CharStream<From<'input> > }
 
 impl<'input, Input: CharStream<From<'input>>> Deref for CSVLexer<'input, Input> {
     type Target = BaseLexer<'input, CSVLexerActions, Input, LocalTokenFactory<'input>>;

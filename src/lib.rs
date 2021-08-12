@@ -94,7 +94,7 @@ pub use lazy_static::lazy_static;
 pub use parking_lot::RwLock;
 
 #[doc(hidden)]
-pub use better_any::{impl_tid, type_id, Tid, TidAble, TidExt};
+pub use better_any::{tid, Tid, TidAble, TidExt};
 
 #[doc(inline)]
 pub use error_strategy::{BailErrorStrategy, DefaultErrorStrategy, ErrorStrategy};
