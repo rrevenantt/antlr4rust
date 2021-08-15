@@ -1,4 +1,4 @@
-name: ANTLR4 testsuite
+name: CI
 
 on:
   push:
@@ -8,26 +8,32 @@ on:
   
   workflow_dispatch:
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+env:
+  CARGO_TERM_COLOR: always
+  RUST_VERSION: nightly-2021-04-23
 
+jobs:
+  tests-antlr:
+    name: ANTLR4 testsuite
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         with:
           repository: rrevenantt/antlr4
           ref: rust-target
           submodules: true
-      - run:  git fetch origin $GITHUB_REF
+      - run: |
+          git fetch origin $GITHUB_REF
+          git checkout FETCH_HEAD
         working-directory: runtime/Rust
       - name: Set up JDK 1.8
         uses: actions/setup-java@v1
         with:
           java-version: 1.8
       - name: Install Rust
-        uses: actions-rs/toolchain@v1.0.6
+        uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2020-12-23
+          toolchain: ${{ env.RUST_VERSION }}
           default: true
       - name: Cache local Maven repository
         uses: actions/cache@v2
@@ -51,4 +57,96 @@ jobs:
           name: antlr-tool
           path: tool/target/antlr4-4.8-2-SNAPSHOT-complete.jar
 
-        
+  tests-rust:
+    name: cargo test
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.check_ver.outputs.new_version }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          default: true
+          components: rustfmt
+      - name: Build
+        run: cargo build --verbose
+      - name: Run tests
+        run: cargo test --verbose
+      - name: Formatting
+        run: cargo fmt -- --check
+      - uses: actions/checkout@v2
+        if: ${{ github.event_name == 'push' }}
+        with:
+          ref: ${{ github.event.before }}
+          path: base_branch
+      - name: check version bump
+        if: ${{ github.event_name == 'push' }}
+        id: check_ver
+        run: |
+          NEW_VER = $(cat Cargo.toml | sed -nE "s/^version.*\"([0-9a-z.\-]+)\".*$/\1/p")
+          BASE_VER = $(cat base_branch/Cargo.toml | sed -nE "s/^version.*\"([0-9a-z.\-]+)\".*$/\1/p")
+          if [[ "$s1" != "$s2" ]] then
+            echo "::set-output name=new_version::$NEW_VER"
+          fi
+
+  publish:
+    runs-on: ubuntu-latest
+    if: |
+      success() && github.event_name == 'push'
+      && needs.tests-rust.outputs.new_version != null
+      && needs.tests-rust.outputs.new_version != ''
+    needs: [tests-rust,tests-antlr]
+    env:
+      RELEASE_NAME: ${{ format('antlr4-4.8-2-Rust{0}',needs.tests-rust.outputs.new_version) }}
+      PRERELEASE: ${{ contains(needs.tests-rust.outputs.new_version, '-') }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          default: true
+      - name: Cargo publish check
+        env:
+          CRATES_IO_PUBLISH_TOKEN: ${{ secrets.CRATES_IO_PUBLISH_TOKEN }}
+        run: |
+          cargo login $CRATES_IO_PUBLISH_TOKEN
+          cargo publish --dry-run
+      - uses: actions/download-artifact@v2
+        with:
+          name: antlr-tool
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.RELEASE_NAME }}
+          release_name: ${{ env.RELEASE_NAME }}
+          # make release a draft first in case `cargo publish` still fail
+          draft: true
+          prerelease: ${{ env.PRERELEASE }}
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: antlr4-4.8-2-SNAPSHOT-complete.jar
+          asset_name: antlr4-4.8-2-SNAPSHOT-complete.jar
+          asset_content_type: application/java-archive
+      - name: Cargo publish
+        run: cargo publish
+      - name: Publish github release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          release_name: ${{ env.RELEASE_NAME }}
+          allowUpdates: true
+          omitNameDuringUpdate: true
+          omitPrereleaseDuringUpdate: true
+          replacesArtifacts: false
+          draft: false
