@@ -85,11 +85,12 @@ jobs:
         if: ${{ github.event_name == 'push' }}
         id: check_ver
         run: |
-          NEW_VER = $(cat Cargo.toml | sed -nE "s/^version.*\"([0-9a-z.\-]+)\".*$/\1/p")
-          BASE_VER = $(cat base_branch/Cargo.toml | sed -nE "s/^version.*\"([0-9a-z.\-]+)\".*$/\1/p")
-          if [[ "$s1" != "$s2" ]] then
+          NEW_VER=$(cat Cargo.toml | sed -nE "s/^version.*\"([0-9a-z.\-]+)\".*$/\1/p")
+          BASE_VER=$(cat base_branch/Cargo.toml | sed -nE "s/^version.*\"([0-9a-z.\-]+)\".*$/\1/p")
+          if [[ "$NEW_VER" != "$BASE_VER" ]]; then
             echo "::set-output name=new_version::$NEW_VER"
           fi
+
 
   publish:
     runs-on: ubuntu-latest
