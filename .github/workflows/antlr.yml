@@ -4,15 +4,10 @@ on:
   push:
     branches: [ master ]
   pull_request:
-    branches:
-      - master
-      - v0.3
-  
-  workflow_dispatch:
+    branches: [ master ]
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_VERSION: nightly-2021-11-30
 
 jobs:
   tests-antlr:
@@ -35,7 +30,7 @@ jobs:
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: ${{ env.RUST_VERSION }}
+          toolchain: stable
           default: true
       - name: Cache local Maven repository
         uses: actions/cache@v2
@@ -64,12 +59,15 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       new_version: ${{ steps.check_ver.outputs.new_version }}
+    strategy:
+      matrix:
+        rust_version: [ 1.52 , stable]
     steps:
       - uses: actions/checkout@v2
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: ${{ env.RUST_VERSION }}
+          toolchain: ${{ matrix.rust_version }}
           default: true
           components: rustfmt
       - name: Build
@@ -81,7 +79,6 @@ jobs:
       - uses: actions/checkout@v2
         if: ${{ github.event_name == 'push' }}
         with:
-          # todo change to `fetch-depth: 2` and HEAD^
           ref: ${{ github.event.before }}
           path: base_branch
       - name: check version bump
@@ -110,7 +107,7 @@ jobs:
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: ${{ env.RUST_VERSION }}
+          toolchain: stable
           default: true
       - name: Cargo publish check
         run: |
