@@ -5,12 +5,9 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
-  
-  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_VERSION: nightly-2021-04-23
 
 jobs:
   tests-antlr:
@@ -33,7 +30,7 @@ jobs:
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: ${{ env.RUST_VERSION }}
+          toolchain: stable
           default: true
       - name: Cache local Maven repository
         uses: actions/cache@v2
@@ -62,20 +59,24 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       new_version: ${{ steps.check_ver.outputs.new_version }}
+    strategy:
+      matrix:
+        rust_version: [ 1.52 , stable]
     steps:
       - uses: actions/checkout@v2
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: ${{ env.RUST_VERSION }}
+          toolchain: ${{ matrix.rust_version }}
           default: true
           components: rustfmt
       - name: Build
         run: cargo build --verbose
       - name: Run tests
         run: cargo test --verbose
-      - name: Formatting
-        run: cargo fmt -- --check
+# todo use stable formatting
+#      - name: Formatting
+#        run: cargo fmt -- --check
       - uses: actions/checkout@v2
         if: ${{ github.event_name == 'push' }}
         with:
@@ -90,7 +91,6 @@ jobs:
           if [[ "$NEW_VER" != "$BASE_VER" ]]; then
             echo "::set-output name=new_version::$NEW_VER"
           fi
-
 
   publish:
     runs-on: ubuntu-latest
@@ -107,7 +107,7 @@ jobs:
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: ${{ env.RUST_VERSION }}
+          toolchain: stable
           default: true
       - name: Cargo publish check
         env:
