@@ -1,7 +1,5 @@
 #![crate_type = "lib"]
 #![feature(try_blocks)]
-//#![feature(nll)]
-#![feature(raw)]
 #![feature(is_sorted)]
 #![feature(cell_update)]
 #![feature(get_mut_unchecked)]
@@ -13,7 +11,6 @@
 // #![feature(generic_associated_types)]
 #![warn(rust_2018_idioms)]
 #![warn(missing_docs)] // warn if there is missing docs
-#![warn(missing_debug_implementations)]
 #![warn(trivial_numeric_casts)]
 #![allow(incomplete_features)]
 

@@ -25,6 +25,8 @@ pub trait ParserRuleContext<'input>:
     ParseTree<'input> + RuleContext<'input> + Debug + Tid<'input>
 {
     fn set_exception(&self, _e: ANTLRError) {}
+    fn has_exception(&self) -> bool { false }
+    fn get_exception(&self) -> Option<Box<ANTLRError>> { None }
 
     fn set_start(&self, _t: Option<<Self::TF as TokenFactory<'input>>::Tok>) {}
 
@@ -234,7 +236,7 @@ pub struct BaseParserRuleContext<'input, Ctx: CustomRuleContext<'input>> {
     start: RefCell<<Ctx::TF as TokenFactory<'input>>::Tok>,
     stop: RefCell<<Ctx::TF as TokenFactory<'input>>::Tok>,
     /// error if there was any in this node
-    pub exception: Option<Box<ANTLRError>>,
+    pub exception: RefCell<Option<Box<ANTLRError>>>,
     /// List of children of current node
     pub(crate) children: RefCell<Vec<Rc<<Ctx::Ctx as ParserNodeType<'input>>::Type>>>,
 }
@@ -302,7 +304,31 @@ impl<'input, Ctx: CustomRuleContext<'input>> BorrowMut<Ctx> for BaseParserRuleCo
 impl<'input, Ctx: CustomRuleContext<'input> + TidAble<'input>> ParserRuleContext<'input>
     for BaseParserRuleContext<'input, Ctx>
 {
-    fn set_exception(&self, _e: ANTLRError) { /*self.exception = Some(Box::new(e));*/
+    fn set_exception(&self, e: ANTLRError) {
+        {
+            if self.exception.try_borrow_mut().is_err() {
+                eprintln!("Unable to borrow as mutable: {:?}", self);
+                return;
+            }
+        }
+        self.exception.replace(Some(Box::new(e)));
+    }
+
+    fn has_exception(&self) -> bool {
+        if let Ok(exc) = self.exception.try_borrow() {
+            exc.is_some()
+        } else {
+            true
+        }
+    }
+
+    fn get_exception(&self) -> Option<Box<ANTLRError>> {
+        if let Ok(exc) = self.exception.try_borrow() {
+            exc.clone()
+        } else {
+            eprintln!("Unable to check exception: {:?}", self);
+            None
+        }
     }
 
     fn set_start(&self, t: Option<<Ctx::TF as TokenFactory<'input>>::Tok>) {
@@ -433,7 +459,7 @@ impl<'input, Ctx: CustomRuleContext<'input> + 'input> BaseParserRuleContext<'inp
             base: BaseRuleContext::new_parser_ctx(parent_ctx, invoking_state, ext),
             start: RefCell::new(Ctx::TF::create_invalid()),
             stop: RefCell::new(Ctx::TF::create_invalid()),
-            exception: None,
+            exception: RefCell::new(None),
             children: RefCell::new(vec![]),
         }
     }
@@ -449,7 +475,7 @@ impl<'input, Ctx: CustomRuleContext<'input> + 'input> BaseParserRuleContext<'inp
             ),
             start: RefCell::new(ctx.start_mut().clone()),
             stop: RefCell::new(ctx.stop_mut().clone()),
-            exception: None,
+            exception: RefCell::new(None),
             children: RefCell::new(ctx.get_children().collect()),
         }
     }
@@ -474,6 +500,8 @@ where
     I: ParserRuleContext<'input> + 'input + ?Sized,
 {
     fn set_exception(&self, e: ANTLRError) { self.deref().set_exception(e) }
+    fn has_exception(&self) -> bool { self.deref().has_exception() }
+    fn get_exception(&self) -> Option<Box<ANTLRError>> { self.deref().get_exception() }
 
     fn set_start(&self, t: Option<<Self::TF as TokenFactory<'input>>::Tok>) {
         self.deref().set_start(t)
