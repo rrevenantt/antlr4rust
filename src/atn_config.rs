@@ -30,6 +30,10 @@ impl Eq for ATNConfig {}
 
 impl PartialEq for ATNConfig {
     fn eq(&self, other: &Self) -> bool {
+        if self.get_context().is_none() {
+            return false;
+        }
+
         self.get_state() == other.get_state()
             && self.get_alt() == other.get_alt()
             && (Arc::ptr_eq(self.get_context().unwrap(), other.get_context().unwrap())
