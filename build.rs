@@ -34,9 +34,9 @@ fn main() {
         let _ = gen_for_grammar(grammar, antlr_path, arg);
     }
 
-    println!("cargo:rerun-if-changed=build.rs");
+    // println!("cargo:rerun-if-changed=build.rs");
 
-    println!("cargo:rerun-if-changed=/home/rrevenantt/dev/antlr4/tool/target/antlr4-4.8-2-SNAPSHOT-complete.jar");
+    // println!("cargo:rerun-if-changed=/home/rrevenantt/dev/antlr4/tool/target/antlr4-4.8-2-SNAPSHOT-complete.jar");
 }
 
 fn gen_for_grammar(
@@ -67,6 +67,6 @@ fn gen_for_grammar(
     // .stdout;
     // eprintln!("xx{}",String::from_utf8(x).unwrap());
 
-    println!("cargo:rerun-if-changed=grammars/{}", file_name);
+    // println!("cargo:rerun-if-changed=grammars/{}", file_name);
     Ok(())
 }
