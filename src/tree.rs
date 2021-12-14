@@ -226,6 +226,15 @@ pub trait ParseTreeVisitorCompat<'input>: VisitChildren<'input, Self::Node> {
     type Return: Default;
 
     /// Temporary storage for `ParseTreeVisitor` blanket implementation to work
+    ///
+    /// If you have `()` as a return value
+    /// either use `YourGrammarParseTreeVisitor` directly
+    /// or make
+    /// ```rust
+    /// Box::leak(Box::new(()))
+    /// # ;
+    /// ```
+    /// as an implementation of that method so that there is no need to create dummy field in your visitor
     fn temp_result(&mut self) -> &mut Self::Return;
 
     fn visit(&mut self, node: &<Self::Node as ParserNodeType<'input>>::Type) -> Self::Return {

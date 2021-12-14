@@ -129,7 +129,20 @@ mod gen {
 
         let result = TestVisitor(String::new()).visit(&*root);
         let expected = "[@0,0:0='A',<1>,1:0]\n";
-        assert_eq!(result, expected)
+        assert_eq!(result, expected);
+
+        struct TestVisitorUnit(String);
+        impl ParseTreeVisitorCompat<'_> for TestVisitorUnit {
+            type Node = VisitorBasicParserContextType;
+            type Return = ();
+
+            fn temp_result(&mut self) -> &mut Self::Return { Box::leak(Box::new(())) }
+
+            fn visit_terminal(&mut self, _node: &TerminalNode<'_, Self::Node>) -> Self::Return {
+                self.0 += &_node.symbol.to_string();
+            }
+        }
+        impl VisitorBasicVisitorCompat<'_> for TestVisitorUnit {}
     }
 
     #[test]
