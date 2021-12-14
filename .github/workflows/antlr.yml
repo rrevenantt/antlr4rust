@@ -4,13 +4,15 @@ on:
   push:
     branches: [ master ]
   pull_request:
-    branches: [ master ]
+    branches:
+      - master
+      - v0.3
   
   workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_VERSION: nightly-2021-04-23
+  RUST_VERSION: nightly-2021-12-23
 
 jobs:
   tests-antlr:
@@ -110,10 +112,7 @@ jobs:
           toolchain: ${{ env.RUST_VERSION }}
           default: true
       - name: Cargo publish check
-        env:
-          CRATES_IO_PUBLISH_TOKEN: ${{ secrets.CRATES_IO_PUBLISH_TOKEN }}
         run: |
-          cargo login $CRATES_IO_PUBLISH_TOKEN
           cargo publish --dry-run
       - uses: actions/download-artifact@v2
         with:
@@ -139,7 +138,11 @@ jobs:
           asset_name: antlr4-4.8-2-SNAPSHOT-complete.jar
           asset_content_type: application/java-archive
       - name: Cargo publish
-        run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_PUBLISH_TOKEN }}
+        run: |
+          git clean -f
+          cargo publish
       - name: Publish github release
         uses: actions/create-release@v1
         env:

@@ -1,6 +1,6 @@
 [package]
 name = "antlr-rust"
-version = "0.2.0"
+version = "0.2.2"
 authors = ["Konstantin Anisimov <rrevenantt@gmail.com>"]
 homepage = "https://github.com/rrevenantt/antlr4rust"
 repository = "https://github.com/rrevenantt/antlr4rust"
