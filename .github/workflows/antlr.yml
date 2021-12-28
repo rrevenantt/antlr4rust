@@ -10,7 +10,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_VERSION: nightly-2021-04-23
+  RUST_VERSION: nightly-2021-11-30
 
 jobs:
   tests-antlr:

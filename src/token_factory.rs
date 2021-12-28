@@ -14,7 +14,6 @@ use crate::token::Token;
 use crate::token::{CommonToken, OwningToken, TOKEN_INVALID_TYPE};
 use better_any::{Tid, TidAble};
 
-#[allow(non_upper_case_globals)]
 lazy_static! {
     pub(crate) static ref COMMON_TOKEN_FACTORY_DEFAULT: Box<CommonTokenFactory> =
         Box::new(CommonTokenFactory {});
