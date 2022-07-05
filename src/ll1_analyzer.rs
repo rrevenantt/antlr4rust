@@ -20,7 +20,9 @@ pub struct LL1Analyzer<'a> {
 }
 
 impl LL1Analyzer<'_> {
-    pub fn new(atn: &ATN) -> LL1Analyzer<'_> { LL1Analyzer { atn } }
+    pub fn new(atn: &ATN) -> LL1Analyzer<'_> {
+        LL1Analyzer { atn }
+    }
 
     //    fn get_decision_lookahead(&self, _s: &dyn ATNState) -> &Vec<IntervalSet> { unimplemented!() }
 

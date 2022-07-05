@@ -106,9 +106,13 @@ where
     I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
-    pub fn get_serialized_atn() -> &'static str { _serializedATN }
+    pub fn get_serialized_atn() -> &'static str {
+        _serializedATN
+    }
 
-    pub fn set_error_strategy(&mut self, strategy: H) { self.err_handler = strategy }
+    pub fn set_error_strategy(&mut self, strategy: H) {
+        self.err_handler = strategy
+    }
 
     pub fn with_strategy(input: I, strategy: H) -> Self {
         antlr_rust::recognizer::check_version("0", "3");
@@ -148,7 +152,9 @@ impl<'input, I>
 where
     I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
 {
-    pub fn new(input: I) -> Self { Self::with_strategy(input, DefaultErrorStrategy::new()) }
+    pub fn new(input: I) -> Self {
+        Self::with_strategy(input, DefaultErrorStrategy::new())
+    }
 }
 
 /// Trait for monomorphized trait object that corresponds to the nodes of parse tree generated for VisitorCalcParser
@@ -195,7 +201,9 @@ where
 {
     type Target = BaseParserType<'input, I>;
 
-    fn deref(&self) -> &Self::Target { &self.base }
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
 }
 
 impl<'input, I, H> DerefMut for VisitorCalcParser<'input, I, H>
@@ -203,7 +211,9 @@ where
     I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.base }
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.base
+    }
 }
 
 pub struct VisitorCalcParserExt<'input> {
@@ -225,11 +235,17 @@ impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'i
 impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
     Actions<'input, BaseParserType<'input, I>> for VisitorCalcParserExt<'input>
 {
-    fn get_grammar_file_name(&self) -> &str { "VisitorCalc.g4" }
+    fn get_grammar_file_name(&self) -> &str {
+        "VisitorCalc.g4"
+    }
 
-    fn get_rule_names(&self) -> &[&str] { &ruleNames }
+    fn get_rule_names(&self) -> &[&str] {
+        &ruleNames
+    }
 
-    fn get_vocabulary(&self) -> &dyn Vocabulary { &**VOCABULARY }
+    fn get_vocabulary(&self) -> &dyn Vocabulary {
+        &**VOCABULARY
+    }
     fn sempred(
         _localctx: Option<&(dyn VisitorCalcParserContext<'input> + 'input)>,
         rule_index: isize,
@@ -288,13 +304,17 @@ impl<'input, 'a> Listenable<dyn VisitorCalcListener<'input> + 'a> for SContext<'
 }
 
 impl<'input, 'a> Visitable<dyn VisitorCalcVisitor<'input> + 'a> for SContext<'input> {
-    fn accept(&self, visitor: &mut (dyn VisitorCalcVisitor<'input> + 'a)) { visitor.visit_s(self); }
+    fn accept(&self, visitor: &mut (dyn VisitorCalcVisitor<'input> + 'a)) {
+        visitor.visit_s(self);
+    }
 }
 
 impl<'input> CustomRuleContext<'input> for SContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = VisitorCalcParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_s }
+    fn get_rule_index(&self) -> usize {
+        RULE_s
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_s }
 }
 antlr_rust::tid! {SContextExt<'a>}
@@ -427,7 +447,9 @@ impl<'input, 'a> Visitable<dyn VisitorCalcVisitor<'input> + 'a> for ExprContext<
 impl<'input> CustomRuleContext<'input> for ExprContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = VisitorCalcParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_expr }
+    fn get_rule_index(&self) -> usize {
+        RULE_expr
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_expr }
 }
 antlr_rust::tid! {ExprContextExt<'a>}
@@ -518,15 +540,21 @@ impl<'input, 'a> Visitable<dyn VisitorCalcVisitor<'input> + 'a> for AddContext<'
 impl<'input> CustomRuleContext<'input> for AddContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = VisitorCalcParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_expr }
+    fn get_rule_index(&self) -> usize {
+        RULE_expr
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_expr }
 }
 
 impl<'input> Borrow<ExprContextExt<'input>> for AddContext<'input> {
-    fn borrow(&self) -> &ExprContextExt<'input> { &self.base }
+    fn borrow(&self) -> &ExprContextExt<'input> {
+        &self.base
+    }
 }
 impl<'input> BorrowMut<ExprContextExt<'input>> for AddContext<'input> {
-    fn borrow_mut(&mut self) -> &mut ExprContextExt<'input> { &mut self.base }
+    fn borrow_mut(&mut self) -> &mut ExprContextExt<'input> {
+        &mut self.base
+    }
 }
 
 impl<'input> ExprContextAttrs<'input> for AddContext<'input> {}
@@ -589,15 +617,21 @@ impl<'input, 'a> Visitable<dyn VisitorCalcVisitor<'input> + 'a> for NumberContex
 impl<'input> CustomRuleContext<'input> for NumberContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = VisitorCalcParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_expr }
+    fn get_rule_index(&self) -> usize {
+        RULE_expr
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_expr }
 }
 
 impl<'input> Borrow<ExprContextExt<'input>> for NumberContext<'input> {
-    fn borrow(&self) -> &ExprContextExt<'input> { &self.base }
+    fn borrow(&self) -> &ExprContextExt<'input> {
+        &self.base
+    }
 }
 impl<'input> BorrowMut<ExprContextExt<'input>> for NumberContext<'input> {
-    fn borrow_mut(&mut self) -> &mut ExprContextExt<'input> { &mut self.base }
+    fn borrow_mut(&mut self) -> &mut ExprContextExt<'input> {
+        &mut self.base
+    }
 }
 
 impl<'input> ExprContextAttrs<'input> for NumberContext<'input> {}
@@ -680,15 +714,21 @@ impl<'input, 'a> Visitable<dyn VisitorCalcVisitor<'input> + 'a> for MultiplyCont
 impl<'input> CustomRuleContext<'input> for MultiplyContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = VisitorCalcParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_expr }
+    fn get_rule_index(&self) -> usize {
+        RULE_expr
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_expr }
 }
 
 impl<'input> Borrow<ExprContextExt<'input>> for MultiplyContext<'input> {
-    fn borrow(&self) -> &ExprContextExt<'input> { &self.base }
+    fn borrow(&self) -> &ExprContextExt<'input> {
+        &self.base
+    }
 }
 impl<'input> BorrowMut<ExprContextExt<'input>> for MultiplyContext<'input> {
-    fn borrow_mut(&mut self) -> &mut ExprContextExt<'input> { &mut self.base }
+    fn borrow_mut(&mut self) -> &mut ExprContextExt<'input> {
+        &mut self.base
+    }
 }
 
 impl<'input> ExprContextAttrs<'input> for MultiplyContext<'input> {}
@@ -712,7 +752,9 @@ where
     I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
-    pub fn expr(&mut self) -> Result<Rc<ExprContextAll<'input>>, ANTLRError> { self.expr_rec(0) }
+    pub fn expr(&mut self) -> Result<Rc<ExprContextAll<'input>>, ANTLRError> {
+        self.expr_rec(0)
+    }
 
     fn expr_rec(&mut self, _p: isize) -> Result<Rc<ExprContextAll<'input>>, ANTLRError> {
         let recog = self;

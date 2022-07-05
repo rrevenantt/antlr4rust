@@ -202,7 +202,9 @@ pub struct DiagnosticErrorListener {
 
 impl DiagnosticErrorListener {
     /// When `exact_only` is true, only exactly known ambiguities are reported.
-    pub fn new(exact_only: bool) -> Self { Self { exact_only } }
+    pub fn new(exact_only: bool) -> Self {
+        Self { exact_only }
+    }
 
     fn get_decision_description<'a, T: Parser<'a>>(&self, recog: &T, dfa: &DFA) -> String {
         let decision = dfa.decision;

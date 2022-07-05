@@ -15,28 +15,36 @@ pub trait VisitorCalcVisitor<'input>:
      * Visit a parse tree produced by {@link VisitorCalcParser#s}.
      * @param ctx the parse tree
      */
-    fn visit_s(&mut self, ctx: &SContext<'input>) { self.visit_children(ctx) }
+    fn visit_s(&mut self, ctx: &SContext<'input>) {
+        self.visit_children(ctx)
+    }
 
     /**
      * Visit a parse tree produced by the {@code add}
      * labeled alternative in {@link VisitorCalcParser#expr}.
      * @param ctx the parse tree
      */
-    fn visit_add(&mut self, ctx: &AddContext<'input>) { self.visit_children(ctx) }
+    fn visit_add(&mut self, ctx: &AddContext<'input>) {
+        self.visit_children(ctx)
+    }
 
     /**
      * Visit a parse tree produced by the {@code number}
      * labeled alternative in {@link VisitorCalcParser#expr}.
      * @param ctx the parse tree
      */
-    fn visit_number(&mut self, ctx: &NumberContext<'input>) { self.visit_children(ctx) }
+    fn visit_number(&mut self, ctx: &NumberContext<'input>) {
+        self.visit_children(ctx)
+    }
 
     /**
      * Visit a parse tree produced by the {@code multiply}
      * labeled alternative in {@link VisitorCalcParser#expr}.
      * @param ctx the parse tree
      */
-    fn visit_multiply(&mut self, ctx: &MultiplyContext<'input>) { self.visit_children(ctx) }
+    fn visit_multiply(&mut self, ctx: &MultiplyContext<'input>) {
+        self.visit_children(ctx)
+    }
 }
 
 pub trait VisitorCalcVisitorCompat<'input>:
@@ -46,14 +54,18 @@ pub trait VisitorCalcVisitorCompat<'input>:
      * Visit a parse tree produced by {@link VisitorCalcParser#s}.
      * @param ctx the parse tree
      */
-    fn visit_s(&mut self, ctx: &SContext<'input>) -> Self::Return { self.visit_children(ctx) }
+    fn visit_s(&mut self, ctx: &SContext<'input>) -> Self::Return {
+        self.visit_children(ctx)
+    }
 
     /**
      * Visit a parse tree produced by the {@code add}
      * labeled alternative in {@link VisitorCalcParser#expr}.
      * @param ctx the parse tree
      */
-    fn visit_add(&mut self, ctx: &AddContext<'input>) -> Self::Return { self.visit_children(ctx) }
+    fn visit_add(&mut self, ctx: &AddContext<'input>) -> Self::Return {
+        self.visit_children(ctx)
+    }
 
     /**
      * Visit a parse tree produced by the {@code number}

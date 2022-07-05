@@ -197,10 +197,18 @@ macro_rules! coerce_from {
             where
                 T: $p + $lt,
             {
-                fn coerce_rc(from: Rc<T>) -> Rc<Self> { from as _ }
-                fn coerce_box(from: Box<T>) -> Box<Self> { from as _ }
-                fn coerce_ref(from: &T) -> &Self { from as _ }
-                fn coerce_mut(from: &mut T) -> &mut Self { from as _ }
+                fn coerce_rc(from: Rc<T>) -> Rc<Self> {
+                    from as _
+                }
+                fn coerce_box(from: Box<T>) -> Box<Self> {
+                    from as _
+                }
+                fn coerce_ref(from: &T) -> &Self {
+                    from as _
+                }
+                fn coerce_mut(from: &mut T) -> &mut Self {
+                    from as _
+                }
             }
         };
     };
@@ -219,10 +227,18 @@ impl<T: ?Sized, X> CoerceTo<T> for X
 where
     T: CoerceFrom<X>,
 {
-    fn coerce_rc_to(self: Rc<Self>) -> Rc<T> { T::coerce_rc(self) }
-    fn coerce_box_to(self: Box<Self>) -> Box<T> { T::coerce_box(self) }
+    fn coerce_rc_to(self: Rc<Self>) -> Rc<T> {
+        T::coerce_rc(self)
+    }
+    fn coerce_box_to(self: Box<Self>) -> Box<T> {
+        T::coerce_box(self)
+    }
 
-    fn coerce_ref_to(self: &Self) -> &T { T::coerce_ref(self) }
+    fn coerce_ref_to(self: &Self) -> &T {
+        T::coerce_ref(self)
+    }
 
-    fn coerce_mut_to(self: &mut Self) -> &mut T { T::coerce_mut(self) }
+    fn coerce_mut_to(self: &mut Self) -> &mut T {
+        T::coerce_mut(self)
+    }
 }

@@ -122,28 +122,48 @@ impl BaseATNState {
 }
 
 impl ATNState for BaseATNState {
-    fn has_epsilon_only_transitions(&self) -> bool { self.epsilon_only_transitions }
-    fn get_rule_index(&self) -> usize { self.rule_index }
+    fn has_epsilon_only_transitions(&self) -> bool {
+        self.epsilon_only_transitions
+    }
+    fn get_rule_index(&self) -> usize {
+        self.rule_index
+    }
 
-    fn set_rule_index(&self, _v: usize) { unimplemented!() }
+    fn set_rule_index(&self, _v: usize) {
+        unimplemented!()
+    }
 
     fn get_next_tokens_within_rule(&self) -> &OnceCell<IntervalSet> {
         &self.next_tokens_within_rule
     }
 
-    fn get_state_type(&self) -> &ATNStateType { &self.state_type }
+    fn get_state_type(&self) -> &ATNStateType {
+        &self.state_type
+    }
 
-    fn get_state_type_mut(&mut self) -> &mut ATNStateType { &mut self.state_type }
+    fn get_state_type_mut(&mut self) -> &mut ATNStateType {
+        &mut self.state_type
+    }
 
-    fn get_state_type_id(&self) -> isize { self.state_type_id }
+    fn get_state_type_id(&self) -> isize {
+        self.state_type_id
+    }
 
-    fn get_state_number(&self) -> usize { self.state_number }
+    fn get_state_number(&self) -> usize {
+        self.state_number
+    }
 
-    fn set_state_number(&self, _state_number: isize) { unimplemented!() }
+    fn set_state_number(&self, _state_number: isize) {
+        unimplemented!()
+    }
 
-    fn get_transitions(&self) -> &Vec<Box<dyn Transition>> { &self.transitions }
+    fn get_transitions(&self) -> &Vec<Box<dyn Transition>> {
+        &self.transitions
+    }
 
-    fn set_transitions(&self, _t: Vec<Box<dyn Transition>>) { unimplemented!() }
+    fn set_transitions(&self, _t: Vec<Box<dyn Transition>>) {
+        unimplemented!()
+    }
 
     fn add_transition(&mut self, trans: Box<dyn Transition>) {
         if self.transitions.is_empty() {

@@ -111,9 +111,13 @@ where
     I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
-    pub fn get_serialized_atn() -> &'static str { _serializedATN }
+    pub fn get_serialized_atn() -> &'static str {
+        _serializedATN
+    }
 
-    pub fn set_error_strategy(&mut self, strategy: H) { self.err_handler = strategy }
+    pub fn set_error_strategy(&mut self, strategy: H) {
+        self.err_handler = strategy
+    }
 
     pub fn with_strategy(input: I, strategy: H) -> Self {
         antlr_rust::recognizer::check_version("0", "3");
@@ -152,7 +156,9 @@ impl<'input, I> LabelsParser<'input, I, DefaultErrorStrategy<'input, LabelsParse
 where
     I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
 {
-    pub fn new(input: I) -> Self { Self::with_strategy(input, DefaultErrorStrategy::new()) }
+    pub fn new(input: I) -> Self {
+        Self::with_strategy(input, DefaultErrorStrategy::new())
+    }
 }
 
 /// Trait for monomorphized trait object that corresponds to the nodes of parse tree generated for LabelsParser
@@ -186,7 +192,9 @@ where
 {
     type Target = BaseParserType<'input, I>;
 
-    fn deref(&self) -> &Self::Target { &self.base }
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
 }
 
 impl<'input, I, H> DerefMut for LabelsParser<'input, I, H>
@@ -194,7 +202,9 @@ where
     I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.base }
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.base
+    }
 }
 
 pub struct LabelsParserExt<'input> {
@@ -216,11 +226,17 @@ impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'i
 impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
     Actions<'input, BaseParserType<'input, I>> for LabelsParserExt<'input>
 {
-    fn get_grammar_file_name(&self) -> &str { "Labels.g4" }
+    fn get_grammar_file_name(&self) -> &str {
+        "Labels.g4"
+    }
 
-    fn get_rule_names(&self) -> &[&str] { &ruleNames }
+    fn get_rule_names(&self) -> &[&str] {
+        &ruleNames
+    }
 
-    fn get_vocabulary(&self) -> &dyn Vocabulary { &**VOCABULARY }
+    fn get_vocabulary(&self) -> &dyn Vocabulary {
+        &**VOCABULARY
+    }
     fn sempred(
         _localctx: Option<&(dyn LabelsParserContext<'input> + 'input)>,
         rule_index: isize,
@@ -283,7 +299,9 @@ impl<'input, 'a> Listenable<dyn LabelsListener<'input> + 'a> for SContext<'input
 impl<'input> CustomRuleContext<'input> for SContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = LabelsParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_s }
+    fn get_rule_index(&self) -> usize {
+        RULE_s
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_s }
 }
 antlr_rust::tid! {SContextExt<'a>}
@@ -391,7 +409,9 @@ impl<'input, 'a> Listenable<dyn LabelsListener<'input> + 'a> for EContextAll<'in
     fn enter(&self, listener: &mut (dyn LabelsListener<'input> + 'a)) {
         self.deref().enter(listener)
     }
-    fn exit(&self, listener: &mut (dyn LabelsListener<'input> + 'a)) { self.deref().exit(listener) }
+    fn exit(&self, listener: &mut (dyn LabelsListener<'input> + 'a)) {
+        self.deref().exit(listener)
+    }
 }
 
 pub type EContext<'input> = BaseParserRuleContext<'input, EContextExt<'input>>;
@@ -409,7 +429,9 @@ impl<'input, 'a> Listenable<dyn LabelsListener<'input> + 'a> for EContext<'input
 impl<'input> CustomRuleContext<'input> for EContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = LabelsParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_e }
+    fn get_rule_index(&self) -> usize {
+        RULE_e
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_e }
 }
 antlr_rust::tid! {EContextExt<'a>}
@@ -439,7 +461,9 @@ pub trait EContextAttrs<'input>:
     {
         &self.borrow().v
     }
-    fn set_v(&mut self, attr: String) { self.borrow_mut().v = attr; }
+    fn set_v(&mut self, attr: String) {
+        self.borrow_mut().v = attr;
+    }
 }
 
 impl<'input> EContextAttrs<'input> for EContext<'input> {}
@@ -484,15 +508,21 @@ impl<'input, 'a> Listenable<dyn LabelsListener<'input> + 'a> for AddContext<'inp
 impl<'input> CustomRuleContext<'input> for AddContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = LabelsParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_e }
+    fn get_rule_index(&self) -> usize {
+        RULE_e
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_e }
 }
 
 impl<'input> Borrow<EContextExt<'input>> for AddContext<'input> {
-    fn borrow(&self) -> &EContextExt<'input> { &self.base }
+    fn borrow(&self) -> &EContextExt<'input> {
+        &self.base
+    }
 }
 impl<'input> BorrowMut<EContextExt<'input>> for AddContext<'input> {
-    fn borrow_mut(&mut self) -> &mut EContextExt<'input> { &mut self.base }
+    fn borrow_mut(&mut self) -> &mut EContextExt<'input> {
+        &mut self.base
+    }
 }
 
 impl<'input> EContextAttrs<'input> for AddContext<'input> {}
@@ -544,15 +574,21 @@ impl<'input, 'a> Listenable<dyn LabelsListener<'input> + 'a> for ParensContext<'
 impl<'input> CustomRuleContext<'input> for ParensContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = LabelsParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_e }
+    fn get_rule_index(&self) -> usize {
+        RULE_e
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_e }
 }
 
 impl<'input> Borrow<EContextExt<'input>> for ParensContext<'input> {
-    fn borrow(&self) -> &EContextExt<'input> { &self.base }
+    fn borrow(&self) -> &EContextExt<'input> {
+        &self.base
+    }
 }
 impl<'input> BorrowMut<EContextExt<'input>> for ParensContext<'input> {
-    fn borrow_mut(&mut self) -> &mut EContextExt<'input> { &mut self.base }
+    fn borrow_mut(&mut self) -> &mut EContextExt<'input> {
+        &mut self.base
+    }
 }
 
 impl<'input> EContextAttrs<'input> for ParensContext<'input> {}
@@ -613,15 +649,21 @@ impl<'input, 'a> Listenable<dyn LabelsListener<'input> + 'a> for MultContext<'in
 impl<'input> CustomRuleContext<'input> for MultContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = LabelsParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_e }
+    fn get_rule_index(&self) -> usize {
+        RULE_e
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_e }
 }
 
 impl<'input> Borrow<EContextExt<'input>> for MultContext<'input> {
-    fn borrow(&self) -> &EContextExt<'input> { &self.base }
+    fn borrow(&self) -> &EContextExt<'input> {
+        &self.base
+    }
 }
 impl<'input> BorrowMut<EContextExt<'input>> for MultContext<'input> {
-    fn borrow_mut(&mut self) -> &mut EContextExt<'input> { &mut self.base }
+    fn borrow_mut(&mut self) -> &mut EContextExt<'input> {
+        &mut self.base
+    }
 }
 
 impl<'input> EContextAttrs<'input> for MultContext<'input> {}
@@ -674,15 +716,21 @@ impl<'input, 'a> Listenable<dyn LabelsListener<'input> + 'a> for DecContext<'inp
 impl<'input> CustomRuleContext<'input> for DecContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = LabelsParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_e }
+    fn get_rule_index(&self) -> usize {
+        RULE_e
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_e }
 }
 
 impl<'input> Borrow<EContextExt<'input>> for DecContext<'input> {
-    fn borrow(&self) -> &EContextExt<'input> { &self.base }
+    fn borrow(&self) -> &EContextExt<'input> {
+        &self.base
+    }
 }
 impl<'input> BorrowMut<EContextExt<'input>> for DecContext<'input> {
-    fn borrow_mut(&mut self) -> &mut EContextExt<'input> { &mut self.base }
+    fn borrow_mut(&mut self) -> &mut EContextExt<'input> {
+        &mut self.base
+    }
 }
 
 impl<'input> EContextAttrs<'input> for DecContext<'input> {}
@@ -735,15 +783,21 @@ impl<'input, 'a> Listenable<dyn LabelsListener<'input> + 'a> for AnIDContext<'in
 impl<'input> CustomRuleContext<'input> for AnIDContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = LabelsParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_e }
+    fn get_rule_index(&self) -> usize {
+        RULE_e
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_e }
 }
 
 impl<'input> Borrow<EContextExt<'input>> for AnIDContext<'input> {
-    fn borrow(&self) -> &EContextExt<'input> { &self.base }
+    fn borrow(&self) -> &EContextExt<'input> {
+        &self.base
+    }
 }
 impl<'input> BorrowMut<EContextExt<'input>> for AnIDContext<'input> {
-    fn borrow_mut(&mut self) -> &mut EContextExt<'input> { &mut self.base }
+    fn borrow_mut(&mut self) -> &mut EContextExt<'input> {
+        &mut self.base
+    }
 }
 
 impl<'input> EContextAttrs<'input> for AnIDContext<'input> {}
@@ -796,15 +850,21 @@ impl<'input, 'a> Listenable<dyn LabelsListener<'input> + 'a> for AnIntContext<'i
 impl<'input> CustomRuleContext<'input> for AnIntContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = LabelsParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_e }
+    fn get_rule_index(&self) -> usize {
+        RULE_e
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_e }
 }
 
 impl<'input> Borrow<EContextExt<'input>> for AnIntContext<'input> {
-    fn borrow(&self) -> &EContextExt<'input> { &self.base }
+    fn borrow(&self) -> &EContextExt<'input> {
+        &self.base
+    }
 }
 impl<'input> BorrowMut<EContextExt<'input>> for AnIntContext<'input> {
-    fn borrow_mut(&mut self) -> &mut EContextExt<'input> { &mut self.base }
+    fn borrow_mut(&mut self) -> &mut EContextExt<'input> {
+        &mut self.base
+    }
 }
 
 impl<'input> EContextAttrs<'input> for AnIntContext<'input> {}
@@ -855,15 +915,21 @@ impl<'input, 'a> Listenable<dyn LabelsListener<'input> + 'a> for IncContext<'inp
 impl<'input> CustomRuleContext<'input> for IncContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = LabelsParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_e }
+    fn get_rule_index(&self) -> usize {
+        RULE_e
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_e }
 }
 
 impl<'input> Borrow<EContextExt<'input>> for IncContext<'input> {
-    fn borrow(&self) -> &EContextExt<'input> { &self.base }
+    fn borrow(&self) -> &EContextExt<'input> {
+        &self.base
+    }
 }
 impl<'input> BorrowMut<EContextExt<'input>> for IncContext<'input> {
-    fn borrow_mut(&mut self) -> &mut EContextExt<'input> { &mut self.base }
+    fn borrow_mut(&mut self) -> &mut EContextExt<'input> {
+        &mut self.base
+    }
 }
 
 impl<'input> EContextAttrs<'input> for IncContext<'input> {}
@@ -886,7 +952,9 @@ where
     I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
-    pub fn e(&mut self) -> Result<Rc<EContextAll<'input>>, ANTLRError> { self.e_rec(0) }
+    pub fn e(&mut self) -> Result<Rc<EContextAll<'input>>, ANTLRError> {
+        self.e_rec(0)
+    }
 
     fn e_rec(&mut self, _p: isize) -> Result<Rc<EContextAll<'input>>, ANTLRError> {
         let recog = self;

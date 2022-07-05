@@ -99,7 +99,9 @@ better_any::tid! { impl<'a, T> TidAble<'a> for Box<dyn ErrorStrategy<'a, T> + 'a
 
 impl<'a, T: Parser<'a> + TidAble<'a>> ErrorStrategy<'a, T> for Box<dyn ErrorStrategy<'a, T> + 'a> {
     #[inline(always)]
-    fn reset(&mut self, recognizer: &mut T) { self.deref_mut().reset(recognizer) }
+    fn reset(&mut self, recognizer: &mut T) {
+        self.deref_mut().reset(recognizer)
+    }
 
     #[inline(always)]
     fn recover_inline(
@@ -130,7 +132,9 @@ impl<'a, T: Parser<'a> + TidAble<'a>> ErrorStrategy<'a, T> for Box<dyn ErrorStra
     }
 
     #[inline(always)]
-    fn report_match(&mut self, recognizer: &mut T) { self.deref_mut().report_match(recognizer) }
+    fn report_match(&mut self, recognizer: &mut T) {
+        self.deref_mut().report_match(recognizer)
+    }
 }
 
 /// This is the default implementation of `ErrorStrategy` used for
@@ -147,7 +151,9 @@ pub struct DefaultErrorStrategy<'input, Ctx: ParserNodeType<'input>> {
 better_any::tid! { impl<'i,Ctx> TidAble<'i> for DefaultErrorStrategy<'i,Ctx> where Ctx: ParserNodeType<'i>}
 
 impl<'input, Ctx: ParserNodeType<'input>> Default for DefaultErrorStrategy<'input, Ctx> {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<'input, Ctx: ParserNodeType<'input>> DefaultErrorStrategy<'input, Ctx> {
@@ -393,7 +399,9 @@ impl<'input, Ctx: ParserNodeType<'input>> DefaultErrorStrategy<'input, Ctx> {
 }
 
 impl<'a, T: Parser<'a>> ErrorStrategy<'a, T> for DefaultErrorStrategy<'a, T::Node> {
-    fn reset(&mut self, recognizer: &mut T) { self.end_error_condition(recognizer) }
+    fn reset(&mut self, recognizer: &mut T) {
+        self.end_error_condition(recognizer)
+    }
 
     fn recover_inline(
         &mut self,
@@ -496,7 +504,9 @@ impl<'a, T: Parser<'a>> ErrorStrategy<'a, T> for DefaultErrorStrategy<'a, T::Nod
         Ok(())
     }
 
-    fn in_error_recovery_mode(&mut self, _recognizer: &mut T) -> bool { self.error_recovery_mode }
+    fn in_error_recovery_mode(&mut self, _recognizer: &mut T) -> bool {
+        self.error_recovery_mode
+    }
 
     fn report_error(&mut self, recognizer: &mut T, e: &ANTLRError) {
         if self.in_error_recovery_mode(recognizer) {
@@ -556,7 +566,9 @@ better_any::tid! {impl<'i,Ctx> TidAble<'i> for BailErrorStrategy<'i,Ctx> where C
 
 impl<'input, Ctx: ParserNodeType<'input>> BailErrorStrategy<'input, Ctx> {
     /// Creates new instance of `BailErrorStrategy`
-    pub fn new() -> Self { Self(DefaultErrorStrategy::new()) }
+    pub fn new() -> Self {
+        Self(DefaultErrorStrategy::new())
+    }
 
     fn process_error<T: Parser<'input, Node = Ctx, TF = Ctx::TF>>(
         &self,
@@ -580,7 +592,9 @@ impl<'input, Ctx: ParserNodeType<'input>> BailErrorStrategy<'input, Ctx> {
 pub struct ParseCancelledError(ANTLRError);
 
 impl Error for ParseCancelledError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> { Some(&self.0) }
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        Some(&self.0)
+    }
 }
 
 impl Display for ParseCancelledError {
@@ -592,7 +606,9 @@ impl Display for ParseCancelledError {
 
 impl<'a, T: Parser<'a>> ErrorStrategy<'a, T> for BailErrorStrategy<'a, T::Node> {
     #[inline(always)]
-    fn reset(&mut self, recognizer: &mut T) { self.0.reset(recognizer) }
+    fn reset(&mut self, recognizer: &mut T) {
+        self.0.reset(recognizer)
+    }
 
     #[cold]
     fn recover_inline(

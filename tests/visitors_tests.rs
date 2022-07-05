@@ -42,7 +42,9 @@ mod gen {
             type Node = VisitorBasicParserContextType;
             type Return = String;
 
-            fn temp_result(&mut self) -> &mut Self::Return { &mut self.0 }
+            fn temp_result(&mut self) -> &mut Self::Return {
+                &mut self.0
+            }
 
             fn visit_terminal(&mut self, _node: &TerminalNode<'_, Self::Node>) -> Self::Return {
                 _node.symbol.to_string() + "\n"
@@ -77,7 +79,9 @@ mod gen {
             type Node = VisitorBasicParserContextType;
             type Return = String;
 
-            fn temp_result(&mut self) -> &mut Self::Return { &mut self.0 }
+            fn temp_result(&mut self) -> &mut Self::Return {
+                &mut self.0
+            }
 
             fn visit_error_node(&mut self, _node: &ErrorNode<'_, Self::Node>) -> Self::Return {
                 format!("Error encountered: {}", _node.symbol)
@@ -111,7 +115,9 @@ mod gen {
             type Node = VisitorBasicParserContextType;
             type Return = String;
 
-            fn temp_result(&mut self) -> &mut Self::Return { &mut self.0 }
+            fn temp_result(&mut self) -> &mut Self::Return {
+                &mut self.0
+            }
 
             fn visit_terminal(&mut self, _node: &TerminalNode<'_, Self::Node>) -> Self::Return {
                 _node.symbol.to_string() + "\n"
@@ -136,7 +142,9 @@ mod gen {
             type Node = VisitorBasicParserContextType;
             type Return = ();
 
-            fn temp_result(&mut self) -> &mut Self::Return { Box::leak(Box::new(())) }
+            fn temp_result(&mut self) -> &mut Self::Return {
+                Box::leak(Box::new(()))
+            }
 
             fn visit_terminal(&mut self, _node: &TerminalNode<'_, Self::Node>) -> Self::Return {
                 self.0 += &_node.symbol.to_string();
@@ -158,7 +166,9 @@ mod gen {
             type Node = VisitorBasicParserContextType;
             type Return = String;
 
-            fn temp_result(&mut self) -> &mut Self::Return { &mut self.0 }
+            fn temp_result(&mut self) -> &mut Self::Return {
+                &mut self.0
+            }
 
             fn visit_terminal(&mut self, _node: &TerminalNode<'_, Self::Node>) -> Self::Return {
                 unreachable!()
@@ -187,7 +197,9 @@ mod gen {
             type Node = VisitorCalcParserContextType;
             type Return = isize;
 
-            fn temp_result(&mut self) -> &mut Self::Return { &mut self.0 }
+            fn temp_result(&mut self) -> &mut Self::Return {
+                &mut self.0
+            }
 
             fn aggregate_results(
                 &self,
@@ -313,7 +325,9 @@ mod gen {
             type Node = CSVParserContextType;
             type Return = Vec<&'i str>;
 
-            fn temp_result(&mut self) -> &mut Self::Return { &mut self.0 }
+            fn temp_result(&mut self) -> &mut Self::Return {
+                &mut self.0
+            }
 
             fn visit_terminal(
                 &mut self,
@@ -338,7 +352,9 @@ mod gen {
         }
 
         impl<'i> CSVVisitorCompat<'i> for MyCSVVisitor<'i> {
-            fn visit_hdr(&mut self, _ctx: &HdrContext<'i>) -> Self::Return { vec![] }
+            fn visit_hdr(&mut self, _ctx: &HdrContext<'i>) -> Self::Return {
+                vec![]
+            }
 
             fn visit_row(&mut self, ctx: &RowContext<'i>) -> Self::Return {
                 if ctx.field_all().len() > 1 {

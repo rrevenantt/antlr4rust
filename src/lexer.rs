@@ -123,7 +123,9 @@ where
 {
     type Target = T;
 
-    fn deref(&self) -> &Self::Target { &self.recog }
+    fn deref(&self) -> &Self::Target {
+        &self.recog
+    }
 }
 
 impl<'input, T, Input, TF> DerefMut for BaseLexer<'input, T, Input, TF>
@@ -132,7 +134,9 @@ where
     Input: CharStream<TF::From>,
     TF: TokenFactory<'input>,
 {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.recog }
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.recog
+    }
 }
 
 impl<'input, T, Input, TF> Recognizer<'input> for BaseLexer<'input, T, Input, TF>
@@ -187,7 +191,9 @@ where
     Input: CharStream<TF::From>,
     TF: TokenFactory<'input>,
 {
-    fn emit_token(&mut self, token: TF::Tok) { self.token = Some(token); }
+    fn emit_token(&mut self, token: TF::Tok) {
+        self.token = Some(token);
+    }
 
     fn emit(&mut self) {
         <T as LexerRecog<Self>>::before_emit(self);
@@ -220,7 +226,9 @@ where
     }
 
     /// Current position in input stream
-    pub fn get_char_index(&self) -> isize { self.input.as_ref().unwrap().index() }
+    pub fn get_char_index(&self) -> isize {
+        self.input.as_ref().unwrap().index()
+    }
 
     /// Current token text
     pub fn get_text<'a>(&'a self) -> Cow<'a, TF::Data>
@@ -242,7 +250,9 @@ where
     }
 
     /// Used from lexer actions to override text of the token that will be emitted next
-    pub fn set_text(&mut self, _text: <TF::Data as ToOwned>::Owned) { self.text = Some(_text); }
+    pub fn set_text(&mut self, _text: <TF::Data as ToOwned>::Owned) {
+        self.text = Some(_text);
+    }
 
     // fn get_all_tokens(&mut self) -> Vec<TF::Tok> { unimplemented!() }
 
@@ -254,7 +264,9 @@ where
     }
 
     /// Remove and drop all error listeners
-    pub fn remove_error_listeners(&mut self) { self.error_listeners.borrow_mut().clear(); }
+    pub fn remove_error_listeners(&mut self) {
+        self.error_listeners.borrow_mut().clear();
+    }
 
     /// Creates new lexer instance
     pub fn new_base_lexer(
@@ -375,9 +387,13 @@ where
         self.token.take().unwrap()
     }
 
-    fn get_line(&self) -> isize { self.current_pos.line.get() }
+    fn get_line(&self) -> isize {
+        self.current_pos.line.get()
+    }
 
-    fn get_char_position_in_line(&self) -> isize { self.current_pos.char_position_in_line.get() }
+    fn get_char_position_in_line(&self) -> isize {
+        self.current_pos.char_position_in_line.get()
+    }
 
     fn get_input_stream(&mut self) -> Option<&mut dyn IntStream> {
         match &mut self.input {
@@ -397,7 +413,9 @@ where
     //        self.factory = f;
     //    }
 
-    fn get_token_factory(&self) -> &'input TF { self.factory }
+    fn get_token_factory(&self) -> &'input TF {
+        self.factory
+    }
 }
 
 #[cold]
@@ -440,9 +458,13 @@ where
 {
     type Input = Input;
 
-    fn input(&mut self) -> &mut Self::Input { self.input.as_mut().unwrap() }
+    fn input(&mut self) -> &mut Self::Input {
+        self.input.as_mut().unwrap()
+    }
 
-    fn set_channel(&mut self, v: isize) { self.channel = v; }
+    fn set_channel(&mut self, v: isize) {
+        self.channel = v;
+    }
 
     fn push_mode(&mut self, m: usize) {
         self.mode_stack.push(self.mode);
@@ -456,15 +478,27 @@ where
         })
     }
 
-    fn set_type(&mut self, t: isize) { self.token_type = t; }
+    fn set_type(&mut self, t: isize) {
+        self.token_type = t;
+    }
 
-    fn set_mode(&mut self, m: usize) { self.mode = m; }
+    fn set_mode(&mut self, m: usize) {
+        self.mode = m;
+    }
 
-    fn more(&mut self) { self.set_type(LEXER_MORE) }
+    fn more(&mut self) {
+        self.set_type(LEXER_MORE)
+    }
 
-    fn skip(&mut self) { self.set_type(LEXER_SKIP) }
+    fn skip(&mut self) {
+        self.set_type(LEXER_SKIP)
+    }
 
-    fn reset(&mut self) { unimplemented!() }
+    fn reset(&mut self) {
+        unimplemented!()
+    }
 
-    fn get_interpreter(&self) -> Option<&LexerATNSimulator> { self.interpreter.as_deref() }
+    fn get_interpreter(&self) -> Option<&LexerATNSimulator> {
+        self.interpreter.as_deref()
+    }
 }

@@ -18,7 +18,9 @@ pub trait TokenSource<'input> {
      * Returns the line number for the current position in the input stream, or
      * 0 if the current token source does not track line numbers.
      */
-    fn get_line(&self) -> isize { 0 }
+    fn get_line(&self) -> isize {
+        0
+    }
     /**
      * Get the index into the current line for the current position in the input
      * stream. The first character on a line has position 0.
@@ -26,7 +28,9 @@ pub trait TokenSource<'input> {
      * Returns the line number for the current position in the input stream, or
      * -1 if the current token source does not track character positions.
      */
-    fn get_char_position_in_line(&self) -> isize { -1 }
+    fn get_char_position_in_line(&self) -> isize {
+        -1
+    }
 
     /// Returns underlying input stream
     fn get_input_stream(&mut self) -> Option<&mut dyn IntStream>;
@@ -48,22 +52,34 @@ where
 {
     type TF = T::TF;
     #[inline(always)]
-    fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok { (**self).next_token() }
+    fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok {
+        (**self).next_token()
+    }
 
     #[inline(always)]
-    fn get_line(&self) -> isize { (**self).get_line() }
+    fn get_line(&self) -> isize {
+        (**self).get_line()
+    }
 
     #[inline(always)]
-    fn get_char_position_in_line(&self) -> isize { (**self).get_char_position_in_line() }
+    fn get_char_position_in_line(&self) -> isize {
+        (**self).get_char_position_in_line()
+    }
 
     #[inline(always)]
-    fn get_input_stream(&mut self) -> Option<&mut dyn IntStream> { (**self).get_input_stream() }
+    fn get_input_stream(&mut self) -> Option<&mut dyn IntStream> {
+        (**self).get_input_stream()
+    }
 
     #[inline(always)]
-    fn get_source_name(&self) -> String { (**self).get_source_name() }
+    fn get_source_name(&self) -> String {
+        (**self).get_source_name()
+    }
 
     #[inline(always)]
-    fn get_token_factory(&self) -> &'input Self::TF { (**self).get_token_factory() }
+    fn get_token_factory(&self) -> &'input Self::TF {
+        (**self).get_token_factory()
+    }
 }
 
 // / adaptor to feed parser with existing tokens

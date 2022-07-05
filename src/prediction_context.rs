@@ -137,7 +137,9 @@ impl Display for PredictionContext {
 //}
 
 impl Hash for PredictionContext {
-    fn hash<H: Hasher>(&self, state: &mut H) { state.write_i32(self.hash_code()) }
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_i32(self.hash_code())
+    }
 }
 
 lazy_static! {
@@ -573,7 +575,9 @@ pub struct MurmurHasherBuilder {}
 impl BuildHasher for MurmurHasherBuilder {
     type Hasher = MurmurHasher;
 
-    fn build_hasher(&self) -> Self::Hasher { MurmurHasher::default() }
+    fn build_hasher(&self) -> Self::Hasher {
+        MurmurHasher::default()
+    }
 }
 
 impl PredictionContextCache {
@@ -648,5 +652,7 @@ impl PredictionContextCache {
     }
 
     #[doc(hidden)]
-    pub fn length(&self) -> usize { self.cache.read().unwrap().len() }
+    pub fn length(&self) -> usize {
+        self.cache.read().unwrap().len()
+    }
 }

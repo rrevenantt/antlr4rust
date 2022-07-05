@@ -15,7 +15,9 @@ pub trait VisitorBasicVisitor<'input>:
      * Visit a parse tree produced by {@link VisitorBasicParser#s}.
      * @param ctx the parse tree
      */
-    fn visit_s(&mut self, ctx: &SContext<'input>) { self.visit_children(ctx) }
+    fn visit_s(&mut self, ctx: &SContext<'input>) {
+        self.visit_children(ctx)
+    }
 }
 
 pub trait VisitorBasicVisitorCompat<'input>:
@@ -25,7 +27,9 @@ pub trait VisitorBasicVisitorCompat<'input>:
      * Visit a parse tree produced by {@link VisitorBasicParser#s}.
      * @param ctx the parse tree
      */
-    fn visit_s(&mut self, ctx: &SContext<'input>) -> Self::Return { self.visit_children(ctx) }
+    fn visit_s(&mut self, ctx: &SContext<'input>) -> Self::Return {
+        self.visit_children(ctx)
+    }
 }
 
 impl<'input, T> VisitorBasicVisitor<'input> for T

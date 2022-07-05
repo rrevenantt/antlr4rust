@@ -90,9 +90,13 @@ where
     I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
-    pub fn get_serialized_atn() -> &'static str { _serializedATN }
+    pub fn get_serialized_atn() -> &'static str {
+        _serializedATN
+    }
 
-    pub fn set_error_strategy(&mut self, strategy: H) { self.err_handler = strategy }
+    pub fn set_error_strategy(&mut self, strategy: H) {
+        self.err_handler = strategy
+    }
 
     pub fn with_strategy(input: I, strategy: H) -> Self {
         antlr_rust::recognizer::check_version("0", "3");
@@ -132,7 +136,9 @@ impl<'input, I>
 where
     I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
 {
-    pub fn new(input: I) -> Self { Self::with_strategy(input, DefaultErrorStrategy::new()) }
+    pub fn new(input: I) -> Self {
+        Self::with_strategy(input, DefaultErrorStrategy::new())
+    }
 }
 
 /// Trait for monomorphized trait object that corresponds to the nodes of parse tree generated for ReferenceToATNParser
@@ -171,7 +177,9 @@ where
 {
     type Target = BaseParserType<'input, I>;
 
-    fn deref(&self) -> &Self::Target { &self.base }
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
 }
 
 impl<'input, I, H> DerefMut for ReferenceToATNParser<'input, I, H>
@@ -179,7 +187,9 @@ where
     I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.base }
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.base
+    }
 }
 
 pub struct ReferenceToATNParserExt<'input> {
@@ -201,11 +211,17 @@ impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'i
 impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
     Actions<'input, BaseParserType<'input, I>> for ReferenceToATNParserExt<'input>
 {
-    fn get_grammar_file_name(&self) -> &str { "ReferenceToATN.g4" }
+    fn get_grammar_file_name(&self) -> &str {
+        "ReferenceToATN.g4"
+    }
 
-    fn get_rule_names(&self) -> &[&str] { &ruleNames }
+    fn get_rule_names(&self) -> &[&str] {
+        &ruleNames
+    }
 
-    fn get_vocabulary(&self) -> &dyn Vocabulary { &**VOCABULARY }
+    fn get_vocabulary(&self) -> &dyn Vocabulary {
+        &**VOCABULARY
+    }
 }
 //------------------- a ----------------
 pub type AContextAll<'input> = AContext<'input>;
@@ -233,7 +249,9 @@ impl<'input, 'a> Listenable<dyn ReferenceToATNListener<'input> + 'a> for AContex
 impl<'input> CustomRuleContext<'input> for AContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = ReferenceToATNParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_a }
+    fn get_rule_index(&self) -> usize {
+        RULE_a
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_a }
 }
 antlr_rust::tid! {AContextExt<'a>}
