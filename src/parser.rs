@@ -108,7 +108,7 @@ pub trait ParserNodeType<'input>: TidAble<'input> + Sized {
 /// Generated parser hides complexity of this struct and expose required flexibility via generic parameters
 pub struct BaseParser<
     'input,
-    Ext: 'static, //: ParserRecog<'input, Self> + 'static, // user provided behavior, such as semantic predicates
+    Ext, //: 'static, //: ParserRecog<'input, Self> + 'static, // user provided behavior, such as semantic predicates
     I: TokenStream<'input>, // input stream
     Ctx: ParserNodeType<'input, TF = I::TF>, // Ctx::Type is trait object type for tree node of the parser
     T: ParseTreeListener<'input, Ctx> + ?Sized = dyn ParseTreeListener<'input, Ctx>,
@@ -152,7 +152,7 @@ pub struct BaseParser<
 }
 
 better_any::tid! {
-    impl<'input, Ext:'static, I, Ctx, T> TidAble<'input> for BaseParser<'input,Ext, I, Ctx, T>
+    impl<'input, Ext, I, Ctx, T> TidAble<'input> for BaseParser<'input,Ext, I, Ctx, T>
     where I: TokenStream<'input>,
         Ctx: ParserNodeType<'input, TF = I::TF>,
         T: ParseTreeListener<'input, Ctx> + ?Sized
@@ -160,7 +160,7 @@ better_any::tid! {
 
 impl<'input, Ext, I, Ctx, T> Deref for BaseParser<'input, Ext, I, Ctx, T>
 where
-    Ext: ParserRecog<'input, Self> + 'static,
+    Ext: ParserRecog<'input, Self>,
     I: TokenStream<'input>,
     Ctx: ParserNodeType<'input, TF = I::TF>,
     T: ParseTreeListener<'input, Ctx> + ?Sized,
@@ -173,7 +173,7 @@ where
 
 impl<'input, Ext, I, Ctx, T> DerefMut for BaseParser<'input, Ext, I, Ctx, T>
 where
-    Ext: ParserRecog<'input, Self> + 'static,
+    Ext: ParserRecog<'input, Self>,
     I: TokenStream<'input>,
     Ctx: ParserNodeType<'input, TF = I::TF>,
     T: ParseTreeListener<'input, Ctx> + ?Sized,
@@ -187,7 +187,7 @@ pub trait ParserRecog<'a, P: Recognizer<'a>>: Actions<'a, P> {}
 
 impl<'input, Ext, I, Ctx, T> Recognizer<'input> for BaseParser<'input, Ext, I, Ctx, T>
 where
-    Ext: ParserRecog<'input, Self> + 'static,
+    Ext: ParserRecog<'input, Self>,
     I: TokenStream<'input>,
     Ctx: ParserNodeType<'input, TF = I::TF>,
     T: ParseTreeListener<'input, Ctx> + ?Sized,
@@ -215,7 +215,7 @@ where
 
 impl<'input, Ext, I, Ctx, T> TokenAware<'input> for BaseParser<'input, Ext, I, Ctx, T>
 where
-    Ext: ParserRecog<'input, Self> + 'static,
+    Ext: ParserRecog<'input, Self>,
     I: TokenStream<'input>,
     Ctx: ParserNodeType<'input, TF = I::TF>,
     T: ParseTreeListener<'input, Ctx> + ?Sized,
@@ -226,7 +226,7 @@ where
 
 impl<'input, Ext, I, Ctx, T> Parser<'input> for BaseParser<'input, Ext, I, Ctx, T>
 where
-    Ext: ParserRecog<'input, Self> + 'static,
+    Ext: ParserRecog<'input, Self>,
     I: TokenStream<'input>,
     Ctx: ParserNodeType<'input, TF = I::TF>,
     T: ParseTreeListener<'input, Ctx> + ?Sized,
@@ -363,7 +363,7 @@ where
 #[allow(missing_docs)] // todo docs
 impl<'input, Ext, I, Ctx, T> BaseParser<'input, Ext, I, Ctx, T>
 where
-    Ext: ParserRecog<'input, Self> + 'static,
+    Ext: ParserRecog<'input, Self>,
     I: TokenStream<'input>,
     Ctx: ParserNodeType<'input, TF = I::TF>,
     T: ParseTreeListener<'input, Ctx> + ?Sized,

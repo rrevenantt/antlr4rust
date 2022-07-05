@@ -56,7 +56,7 @@ lazy_static! {
 
 type BaseParserType<'input, I> = BaseParser<
     'input,
-    SimpleLRParserExt,
+    SimpleLRParserExt<'input>,
     I,
     SimpleLRParserContextType,
     dyn SimpleLRListener<'input> + 'input,
@@ -100,7 +100,9 @@ where
             base: BaseParser::new_base_parser(
                 input,
                 Arc::clone(&interpreter),
-                SimpleLRParserExt {},
+                SimpleLRParserExt {
+                    _pd: Default::default(),
+                },
             ),
             interpreter,
             _shared_context_cache: Box::new(PredictionContextCache::new()),
@@ -169,21 +171,24 @@ where
     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.base }
 }
 
-pub struct SimpleLRParserExt {}
+pub struct SimpleLRParserExt<'input> {
+    _pd: PhantomData<&'input str>,
+}
 
-impl SimpleLRParserExt {}
+impl<'input> SimpleLRParserExt<'input> {}
+antlr_rust::tid! { SimpleLRParserExt<'a> }
 
-impl<'input> TokenAware<'input> for SimpleLRParserExt {
+impl<'input> TokenAware<'input> for SimpleLRParserExt<'input> {
     type TF = LocalTokenFactory<'input>;
 }
 
 impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
-    ParserRecog<'input, BaseParserType<'input, I>> for SimpleLRParserExt
+    ParserRecog<'input, BaseParserType<'input, I>> for SimpleLRParserExt<'input>
 {
 }
 
 impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
-    Actions<'input, BaseParserType<'input, I>> for SimpleLRParserExt
+    Actions<'input, BaseParserType<'input, I>> for SimpleLRParserExt<'input>
 {
     fn get_grammar_file_name(&self) -> &str { "SimpleLR.g4" }
 

@@ -56,7 +56,7 @@ lazy_static! {
 
 type BaseParserType<'input, I> = BaseParser<
     'input,
-    VisitorBasicParserExt,
+    VisitorBasicParserExt<'input>,
     I,
     VisitorBasicParserContextType,
     dyn VisitorBasicListener<'input> + 'input,
@@ -104,7 +104,9 @@ where
             base: BaseParser::new_base_parser(
                 input,
                 Arc::clone(&interpreter),
-                VisitorBasicParserExt {},
+                VisitorBasicParserExt {
+                    _pd: Default::default(),
+                },
             ),
             interpreter,
             _shared_context_cache: Box::new(PredictionContextCache::new()),
@@ -190,21 +192,24 @@ where
     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.base }
 }
 
-pub struct VisitorBasicParserExt {}
+pub struct VisitorBasicParserExt<'input> {
+    _pd: PhantomData<&'input str>,
+}
 
-impl VisitorBasicParserExt {}
+impl<'input> VisitorBasicParserExt<'input> {}
+antlr_rust::tid! { VisitorBasicParserExt<'a> }
 
-impl<'input> TokenAware<'input> for VisitorBasicParserExt {
+impl<'input> TokenAware<'input> for VisitorBasicParserExt<'input> {
     type TF = LocalTokenFactory<'input>;
 }
 
 impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
-    ParserRecog<'input, BaseParserType<'input, I>> for VisitorBasicParserExt
+    ParserRecog<'input, BaseParserType<'input, I>> for VisitorBasicParserExt<'input>
 {
 }
 
 impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
-    Actions<'input, BaseParserType<'input, I>> for VisitorBasicParserExt
+    Actions<'input, BaseParserType<'input, I>> for VisitorBasicParserExt<'input>
 {
     fn get_grammar_file_name(&self) -> &str { "VisitorBasic.g4" }
 

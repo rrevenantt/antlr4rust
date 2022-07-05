@@ -71,8 +71,13 @@ lazy_static! {
     ));
 }
 
-type BaseParserType<'input, I> =
-    BaseParser<'input, CSVParserExt, I, CSVParserContextType, dyn CSVListener<'input> + 'input>;
+type BaseParserType<'input, I> = BaseParser<
+    'input,
+    CSVParserExt<'input>,
+    I,
+    CSVParserContextType,
+    dyn CSVListener<'input> + 'input,
+>;
 
 type TokenType<'input> = <LocalTokenFactory<'input> as TokenFactory<'input>>::Tok;
 
@@ -110,7 +115,13 @@ where
             _shared_context_cache.clone(),
         ));
         Self {
-            base: BaseParser::new_base_parser(input, Arc::clone(&interpreter), CSVParserExt {}),
+            base: BaseParser::new_base_parser(
+                input,
+                Arc::clone(&interpreter),
+                CSVParserExt {
+                    _pd: Default::default(),
+                },
+            ),
             interpreter,
             _shared_context_cache: Box::new(PredictionContextCache::new()),
             err_handler: strategy,
@@ -188,21 +199,24 @@ where
     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.base }
 }
 
-pub struct CSVParserExt {}
+pub struct CSVParserExt<'input> {
+    _pd: PhantomData<&'input str>,
+}
 
-impl CSVParserExt {}
+impl<'input> CSVParserExt<'input> {}
+antlr_rust::tid! { CSVParserExt<'a> }
 
-impl<'input> TokenAware<'input> for CSVParserExt {
+impl<'input> TokenAware<'input> for CSVParserExt<'input> {
     type TF = LocalTokenFactory<'input>;
 }
 
 impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
-    ParserRecog<'input, BaseParserType<'input, I>> for CSVParserExt
+    ParserRecog<'input, BaseParserType<'input, I>> for CSVParserExt<'input>
 {
 }
 
 impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
-    Actions<'input, BaseParserType<'input, I>> for CSVParserExt
+    Actions<'input, BaseParserType<'input, I>> for CSVParserExt<'input>
 {
     fn get_grammar_file_name(&self) -> &str { "CSV.g4" }
 

@@ -56,7 +56,7 @@ lazy_static! {
 
 type BaseParserType<'input, I> = BaseParser<
     'input,
-    ReferenceToATNParserExt,
+    ReferenceToATNParserExt<'input>,
     I,
     ReferenceToATNParserContextType,
     dyn ReferenceToATNListener<'input> + 'input,
@@ -105,7 +105,9 @@ where
             base: BaseParser::new_base_parser(
                 input,
                 Arc::clone(&interpreter),
-                ReferenceToATNParserExt {},
+                ReferenceToATNParserExt {
+                    _pd: Default::default(),
+                },
             ),
             interpreter,
             _shared_context_cache: Box::new(PredictionContextCache::new()),
@@ -180,21 +182,24 @@ where
     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.base }
 }
 
-pub struct ReferenceToATNParserExt {}
+pub struct ReferenceToATNParserExt<'input> {
+    _pd: PhantomData<&'input str>,
+}
 
-impl ReferenceToATNParserExt {}
+impl<'input> ReferenceToATNParserExt<'input> {}
+antlr_rust::tid! { ReferenceToATNParserExt<'a> }
 
-impl<'input> TokenAware<'input> for ReferenceToATNParserExt {
+impl<'input> TokenAware<'input> for ReferenceToATNParserExt<'input> {
     type TF = LocalTokenFactory<'input>;
 }
 
 impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
-    ParserRecog<'input, BaseParserType<'input, I>> for ReferenceToATNParserExt
+    ParserRecog<'input, BaseParserType<'input, I>> for ReferenceToATNParserExt<'input>
 {
 }
 
 impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
-    Actions<'input, BaseParserType<'input, I>> for ReferenceToATNParserExt
+    Actions<'input, BaseParserType<'input, I>> for ReferenceToATNParserExt<'input>
 {
     fn get_grammar_file_name(&self) -> &str { "ReferenceToATN.g4" }
 

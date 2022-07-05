@@ -82,7 +82,7 @@ lazy_static! {
 
 type BaseParserType<'input, I> = BaseParser<
     'input,
-    LabelsParserExt,
+    LabelsParserExt<'input>,
     I,
     LabelsParserContextType,
     dyn LabelsListener<'input> + 'input,
@@ -123,7 +123,13 @@ where
             _shared_context_cache.clone(),
         ));
         Self {
-            base: BaseParser::new_base_parser(input, Arc::clone(&interpreter), LabelsParserExt {}),
+            base: BaseParser::new_base_parser(
+                input,
+                Arc::clone(&interpreter),
+                LabelsParserExt {
+                    _pd: Default::default(),
+                },
+            ),
             interpreter,
             _shared_context_cache: Box::new(PredictionContextCache::new()),
             err_handler: strategy,
@@ -191,21 +197,24 @@ where
     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.base }
 }
 
-pub struct LabelsParserExt {}
+pub struct LabelsParserExt<'input> {
+    _pd: PhantomData<&'input str>,
+}
 
-impl LabelsParserExt {}
+impl<'input> LabelsParserExt<'input> {}
+antlr_rust::tid! { LabelsParserExt<'a> }
 
-impl<'input> TokenAware<'input> for LabelsParserExt {
+impl<'input> TokenAware<'input> for LabelsParserExt<'input> {
     type TF = LocalTokenFactory<'input>;
 }
 
 impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
-    ParserRecog<'input, BaseParserType<'input, I>> for LabelsParserExt
+    ParserRecog<'input, BaseParserType<'input, I>> for LabelsParserExt<'input>
 {
 }
 
 impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
-    Actions<'input, BaseParserType<'input, I>> for LabelsParserExt
+    Actions<'input, BaseParserType<'input, I>> for LabelsParserExt<'input>
 {
     fn get_grammar_file_name(&self) -> &str { "Labels.g4" }
 

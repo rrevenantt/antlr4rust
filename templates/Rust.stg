@@ -214,7 +214,7 @@ Parser_(parser, funcs, atn, sempredFuncs, ctor, superClass) ::= <<
 <namedActions.definitions>
 
 type BaseParserType\<'input, I> =
-	BaseParser\<'input,<parser.name>Ext, I, <parser.name>ContextType <if(file.genListener)>, dyn <parser.grammarName>Listener\<'input> + 'input<endif> >;
+	BaseParser\<'input,<parser.name>Ext\<'input>, I, <parser.name>ContextType <if(file.genListener)>, dyn <parser.grammarName>Listener\<'input> + 'input<endif> >;
 
 type TokenType\<'input> = \<<TokenFactory()> as TokenFactory\<'input>\>::Tok;
 <if(namedActions.tokenfactory)>
@@ -261,6 +261,7 @@ where
 				input,
 				Arc::clone(&interpreter),
 				<parser.name>Ext{
+					_pd: Default::default(),
 					<namedActions.init>
 				}
 			),
@@ -353,22 +354,23 @@ where
     }
 }
 
-pub struct <parser.name>Ext{
+pub struct <parser.name>Ext\<'input>{
+	_pd: PhantomData\<&'input str>,
 	<namedActions.fields>
 }
 
-impl <parser.name>Ext{
+impl\<'input> <parser.name>Ext\<'input>{
 	<namedActions.members>
 }
+antlr_rust::tid! { <parser.name>Ext\<'a> }
 
-
-impl\<'input> TokenAware\<'input> for <parser.name>Ext{
+impl\<'input> TokenAware\<'input> for <parser.name>Ext\<'input>{
 	type TF = <TokenFactory()>;
 }
 
-impl\<'input,I: TokenStream\<'input, TF = <TokenFactory()> > + TidAble\<'input>\> ParserRecog\<'input, BaseParserType\<'input,I>\> for <parser.name>Ext{}
+impl\<'input,I: TokenStream\<'input, TF = <TokenFactory()> > + TidAble\<'input>\> ParserRecog\<'input, BaseParserType\<'input,I>\> for <parser.name>Ext\<'input>{}
 
-impl\<'input,I: TokenStream\<'input, TF = <TokenFactory()> > + TidAble\<'input>\> Actions\<'input, BaseParserType\<'input,I>\> for <parser.name>Ext{
+impl\<'input,I: TokenStream\<'input, TF = <TokenFactory()> > + TidAble\<'input>\> Actions\<'input, BaseParserType\<'input,I>\> for <parser.name>Ext\<'input>{
 	fn get_grammar_file_name(&self) -> & str{ "<parser.grammarFileName>"}
 
    	fn get_rule_names(&self) -> &[& str] {&ruleNames}
