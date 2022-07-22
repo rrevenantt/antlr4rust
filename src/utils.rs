@@ -1,4 +1,5 @@
 use std::borrow::Borrow;
+use std::cell::Cell;
 // use crate::utils::Cow2::{Borrowed2, Owned2};
 
 pub fn escape_whitespaces(data: impl Borrow<str>, escape_spaces: bool) -> String {
@@ -15,6 +16,16 @@ pub fn escape_whitespaces(data: impl Borrow<str>, escape_spaces: bool) -> String
 }
 
 pub trait Sealed {}
+
+pub fn cell_update<T: Copy, F>(cell: &Cell<T>, f: F) -> T
+where
+    F: FnOnce(T) -> T,
+{
+    let old = cell.get();
+    let new = f(old);
+    cell.set(new);
+    new
+}
 
 // pub enum Cow2<'a,Ref,T:Borrow<Ref> = Ref>{
 //     Borrowed2(&'a Ref),

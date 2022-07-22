@@ -29,7 +29,9 @@ pub trait TokenStream<'input>: IntStream {
     fn get_token_source(&self) -> &dyn TokenSource<'input, TF = Self::TF>;
     //    fn set_token_source(&self,source: Box<TokenSource>);
     /// Get combined text of all tokens in this stream
-    fn get_all_text(&self) -> String { self.get_text_from_interval(0, self.size() - 1) }
+    fn get_all_text(&self) -> String {
+        self.get_text_from_interval(0, self.size() - 1)
+    }
     /// Get combined text of tokens in start..=stop interval
     fn get_text_from_interval(&self, start: isize, stop: isize) -> String;
     //    fn get_text_from_rule_context(&self,context: RuleContext) -> String;
@@ -68,7 +70,6 @@ impl<'a, 'input: 'a, T: TokenStream<'input>> Iterator for TokenIter<'a, 'input, 
 }
 
 /// Token stream that keeps all data in internal Vec
-#[derive(Tid)]
 pub struct UnbufferedTokenStream<'input, T: TokenSource<'input>> {
     token_source: T,
     pub(crate) tokens: Vec<<T::TF as TokenFactory<'input>>::Tok>,
@@ -77,6 +78,8 @@ pub struct UnbufferedTokenStream<'input, T: TokenSource<'input>> {
     markers_count: isize,
     pub(crate) p: isize,
 }
+better_any::tid! { impl<'input,T> TidAble<'input> for UnbufferedTokenStream<'input, T> where T: TokenSource<'input>}
+
 impl<'input, T: TokenSource<'input>> Debug for UnbufferedTokenStream<'input, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("UnbufferedTokenStream")
@@ -90,7 +93,9 @@ impl<'input, T: TokenSource<'input>> Debug for UnbufferedTokenStream<'input, T> 
 
 impl<'input, T: TokenSource<'input>> UnbufferedTokenStream<'input, T> {
     /// Creates iterator over this token stream
-    pub fn iter(&mut self) -> IterWrapper<'_, Self> { IterWrapper(self) }
+    pub fn iter(&mut self) -> IterWrapper<'_, Self> {
+        IterWrapper(self)
+    }
 
     /// Creates iterator over tokens in this token stream
     pub fn token_iter(&mut self) -> TokenIter<'_, 'input, Self> {
@@ -122,7 +127,9 @@ impl<'input, T: TokenSource<'input>> UnbufferedTokenStream<'input, T> {
         }
     }
 
-    fn get_buffer_start_index(&self) -> isize { self.current_token_index - self.p }
+    fn get_buffer_start_index(&self) -> isize {
+        self.current_token_index - self.p
+    }
 
     pub(crate) fn fill(&mut self, need: isize) -> isize {
         for i in 0..need {
@@ -161,7 +168,9 @@ impl<'input, T: TokenSource<'input>> TokenStream<'input> for UnbufferedTokenStre
         &self.tokens[(index - self.get_buffer_start_index()) as usize]
     }
 
-    fn get_token_source(&self) -> &dyn TokenSource<'input, TF = Self::TF> { &self.token_source }
+    fn get_token_source(&self) -> &dyn TokenSource<'input, TF = Self::TF> {
+        &self.token_source
+    }
 
     fn get_text_from_interval(&self, start: isize, stop: isize) -> String {
         //        println!("get_text_from_interval {}..{}",start,stop);
@@ -255,7 +264,9 @@ impl<'input, T: TokenSource<'input>> IntStream for UnbufferedTokenStream<'input,
     }
 
     #[inline(always)]
-    fn index(&self) -> isize { self.current_token_index }
+    fn index(&self) -> isize {
+        self.current_token_index
+    }
 
     #[inline]
     fn seek(&mut self, mut index: isize) {
@@ -276,7 +287,11 @@ impl<'input, T: TokenSource<'input>> IntStream for UnbufferedTokenStream<'input,
     }
 
     #[inline(always)]
-    fn size(&self) -> isize { self.tokens.len() as isize }
+    fn size(&self) -> isize {
+        self.tokens.len() as isize
+    }
 
-    fn get_source_name(&self) -> String { self.token_source.get_source_name() }
+    fn get_source_name(&self) -> String {
+        self.token_source.get_source_name()
+    }
 }

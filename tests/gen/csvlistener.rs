@@ -14,7 +14,6 @@ pub trait CSVListener<'input>: ParseTreeListener<'input, CSVParserContextType> {
      * @param ctx the parse tree
      */
     fn exit_csvFile(&mut self, _ctx: &CsvFileContext<'input>) {}
-
     /**
      * Enter a parse tree produced by {@link CSVParser#hdr}.
      * @param ctx the parse tree
@@ -25,7 +24,6 @@ pub trait CSVListener<'input>: ParseTreeListener<'input, CSVParserContextType> {
      * @param ctx the parse tree
      */
     fn exit_hdr(&mut self, _ctx: &HdrContext<'input>) {}
-
     /**
      * Enter a parse tree produced by {@link CSVParser#row}.
      * @param ctx the parse tree
@@ -36,7 +34,6 @@ pub trait CSVListener<'input>: ParseTreeListener<'input, CSVParserContextType> {
      * @param ctx the parse tree
      */
     fn exit_row(&mut self, _ctx: &RowContext<'input>) {}
-
     /**
      * Enter a parse tree produced by {@link CSVParser#field}.
      * @param ctx the parse tree
@@ -48,3 +45,5 @@ pub trait CSVListener<'input>: ParseTreeListener<'input, CSVParserContextType> {
      */
     fn exit_field(&mut self, _ctx: &FieldContext<'input>) {}
 }
+
+antlr_rust::coerce_from! { 'input : CSVListener<'input> }

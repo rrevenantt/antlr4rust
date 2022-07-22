@@ -86,7 +86,9 @@ impl PartialEq for ATNConfigSet {
 impl Eq for ATNConfigSet {}
 
 impl Hash for ATNConfigSet {
-    fn hash<H: Hasher>(&self, state: &mut H) { self.configs.hash(state) }
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.configs.hash(state)
+    }
 }
 
 impl ATNConfigSet {
@@ -113,7 +115,9 @@ impl ATNConfigSet {
         a
     }
 
-    fn full_hash_key(config: &ATNConfig) -> Key { Key::Full(config.clone()) }
+    fn full_hash_key(config: &ATNConfig) -> Key {
+        Key::Full(config.clone())
+    }
 
     fn local_hash_key(config: &ATNConfig) -> Key {
         let mut hasher = MurmurHasher::default();
@@ -176,7 +180,9 @@ impl ATNConfigSet {
         true
     }
 
-    pub fn add(&mut self, config: Box<ATNConfig>) -> bool { self.add_cached(config, None) }
+    pub fn add(&mut self, config: Box<ATNConfig>) -> bool {
+        self.add_cached(config, None)
+    }
 
     pub fn get_items(&self) -> impl Iterator<Item = &ATNConfig> {
         self.configs.iter().map(|c| c.as_ref())
@@ -197,19 +203,33 @@ impl ATNConfigSet {
         }
     }
 
-    pub fn length(&self) -> usize { self.configs.len() }
+    pub fn length(&self) -> usize {
+        self.configs.len()
+    }
 
-    pub fn is_empty(&self) -> bool { self.configs.is_empty() }
+    pub fn is_empty(&self) -> bool {
+        self.configs.is_empty()
+    }
 
-    pub fn has_semantic_context(&self) -> bool { self.has_semantic_context }
+    pub fn has_semantic_context(&self) -> bool {
+        self.has_semantic_context
+    }
 
-    pub fn set_has_semantic_context(&mut self, _v: bool) { self.has_semantic_context = _v; }
+    pub fn set_has_semantic_context(&mut self, _v: bool) {
+        self.has_semantic_context = _v;
+    }
 
-    pub fn read_only(&self) -> bool { self.read_only }
+    pub fn read_only(&self) -> bool {
+        self.read_only
+    }
 
-    pub fn set_read_only(&mut self, _read_only: bool) { self.read_only = _read_only; }
+    pub fn set_read_only(&mut self, _read_only: bool) {
+        self.read_only = _read_only;
+    }
 
-    pub fn full_context(&self) -> bool { self.full_ctx }
+    pub fn full_context(&self) -> bool {
+        self.full_ctx
+    }
 
     //duplicate of the self.conflicting_alts???
     pub fn get_alts(&self) -> BitSet {
@@ -219,11 +239,19 @@ impl ATNConfigSet {
         })
     }
 
-    pub fn get_unique_alt(&self) -> isize { self.unique_alt }
+    pub fn get_unique_alt(&self) -> isize {
+        self.unique_alt
+    }
 
-    pub fn set_unique_alt(&mut self, _v: isize) { self.unique_alt = _v }
+    pub fn set_unique_alt(&mut self, _v: isize) {
+        self.unique_alt = _v
+    }
 
-    pub fn get_dips_into_outer_context(&self) -> bool { self.dips_into_outer_context }
+    pub fn get_dips_into_outer_context(&self) -> bool {
+        self.dips_into_outer_context
+    }
 
-    pub fn set_dips_into_outer_context(&mut self, _v: bool) { self.dips_into_outer_context = _v }
+    pub fn set_dips_into_outer_context(&mut self, _v: bool) {
+        self.dips_into_outer_context = _v
+    }
 }

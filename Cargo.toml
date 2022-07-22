@@ -1,6 +1,6 @@
 [package]
 name = "antlr-rust"
-version = "0.2.2"
+version = "0.3.0-beta"
 authors = ["Konstantin Anisimov <rrevenantt@gmail.com>"]
 homepage = "https://github.com/rrevenantt/antlr4rust"
 repository = "https://github.com/rrevenantt/antlr4rust"
@@ -23,7 +23,8 @@ bit-set = "=0.5.*"
 once_cell = "^1.2"
 #backtrace = "=0.3"
 typed-arena = "^2.0"
-better_any = "=0.1"
+better_any = "0.2.0-dev.1"
+#better_any = "=0.1"
 parking_lot = "0.11"
 #qcell = { path="../qcell" }
 

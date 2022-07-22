@@ -137,7 +137,9 @@ impl Display for PredictionContext {
 //}
 
 impl Hash for PredictionContext {
-    fn hash<H: Hasher>(&self, state: &mut H) { state.write_i32(self.hash_code()) }
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_i32(self.hash_code())
+    }
 }
 
 lazy_static! {
@@ -385,7 +387,8 @@ impl PredictionContext {
                     parents,
                     return_states: vec![a.return_state, b.return_state],
                 };
-                if !result.return_states.is_sorted() {
+                // if !result.return_states.is_sorted()
+                if !result.return_states.windows(2).all(|x| x[0] <= x[1]) {
                     result.parents.swap(0, 1);
                     result.return_states.swap(0, 1);
                 }
@@ -572,7 +575,9 @@ pub struct MurmurHasherBuilder {}
 impl BuildHasher for MurmurHasherBuilder {
     type Hasher = MurmurHasher;
 
-    fn build_hasher(&self) -> Self::Hasher { MurmurHasher::default() }
+    fn build_hasher(&self) -> Self::Hasher {
+        MurmurHasher::default()
+    }
 }
 
 impl PredictionContextCache {
@@ -647,5 +652,7 @@ impl PredictionContextCache {
     }
 
     #[doc(hidden)]
-    pub fn length(&self) -> usize { self.cache.read().unwrap().len() }
+    pub fn length(&self) -> usize {
+        self.cache.read().unwrap().len()
+    }
 }

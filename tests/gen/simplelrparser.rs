@@ -5,6 +5,7 @@
 #![allow(nonstandard_style)]
 #![allow(unused_imports)]
 #![allow(unused_mut)]
+#![allow(unused_braces)]
 use super::simplelrlistener::*;
 use antlr_rust::atn::{ATN, INVALID_ALT};
 use antlr_rust::atn_deserializer::ATNDeserializer;
@@ -56,7 +57,7 @@ lazy_static! {
 
 type BaseParserType<'input, I> = BaseParser<
     'input,
-    SimpleLRParserExt,
+    SimpleLRParserExt<'input>,
     I,
     SimpleLRParserContextType,
     dyn SimpleLRListener<'input> + 'input,
@@ -85,12 +86,16 @@ where
     I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
-    pub fn get_serialized_atn() -> &'static str { _serializedATN }
+    pub fn get_serialized_atn() -> &'static str {
+        _serializedATN
+    }
 
-    pub fn set_error_strategy(&mut self, strategy: H) { self.err_handler = strategy }
+    pub fn set_error_strategy(&mut self, strategy: H) {
+        self.err_handler = strategy
+    }
 
     pub fn with_strategy(input: I, strategy: H) -> Self {
-        antlr_rust::recognizer::check_version("0", "2");
+        antlr_rust::recognizer::check_version("0", "3");
         let interpreter = Arc::new(ParserATNSimulator::new(
             _ATN.clone(),
             _decision_to_DFA.clone(),
@@ -100,7 +105,9 @@ where
             base: BaseParser::new_base_parser(
                 input,
                 Arc::clone(&interpreter),
-                SimpleLRParserExt {},
+                SimpleLRParserExt {
+                    _pd: Default::default(),
+                },
             ),
             interpreter,
             _shared_context_cache: Box::new(PredictionContextCache::new()),
@@ -124,7 +131,9 @@ impl<'input, I> SimpleLRParser<'input, I, DefaultErrorStrategy<'input, SimpleLRP
 where
     I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
 {
-    pub fn new(input: I) -> Self { Self::with_strategy(input, DefaultErrorStrategy::new()) }
+    pub fn new(input: I) -> Self {
+        Self::with_strategy(input, DefaultErrorStrategy::new())
+    }
 }
 
 /// Trait for monomorphized trait object that corresponds to the nodes of parse tree generated for SimpleLRParser
@@ -134,17 +143,17 @@ pub trait SimpleLRParserContext<'input>:
 {
 }
 
+antlr_rust::coerce_from! { 'input : SimpleLRParserContext<'input> }
+
 impl<'input> SimpleLRParserContext<'input> for TerminalNode<'input, SimpleLRParserContextType> {}
 impl<'input> SimpleLRParserContext<'input> for ErrorNode<'input, SimpleLRParserContextType> {}
 
-#[antlr_rust::impl_tid]
-impl<'input> antlr_rust::TidAble<'input> for dyn SimpleLRParserContext<'input> + 'input {}
+antlr_rust::tid! { impl<'input> TidAble<'input> for dyn SimpleLRParserContext<'input> + 'input }
 
-#[antlr_rust::impl_tid]
-impl<'input> antlr_rust::TidAble<'input> for dyn SimpleLRListener<'input> + 'input {}
+antlr_rust::tid! { impl<'input> TidAble<'input> for dyn SimpleLRListener<'input> + 'input }
 
 pub struct SimpleLRParserContextType;
-antlr_rust::type_id! {SimpleLRParserContextType}
+antlr_rust::tid! {SimpleLRParserContextType}
 
 impl<'input> ParserNodeType<'input> for SimpleLRParserContextType {
     type TF = LocalTokenFactory<'input>;
@@ -158,7 +167,9 @@ where
 {
     type Target = BaseParserType<'input, I>;
 
-    fn deref(&self) -> &Self::Target { &self.base }
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
 }
 
 impl<'input, I, H> DerefMut for SimpleLRParser<'input, I, H>
@@ -166,30 +177,41 @@ where
     I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.base }
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.base
+    }
 }
 
-pub struct SimpleLRParserExt {}
+pub struct SimpleLRParserExt<'input> {
+    _pd: PhantomData<&'input str>,
+}
 
-impl SimpleLRParserExt {}
+impl<'input> SimpleLRParserExt<'input> {}
+antlr_rust::tid! { SimpleLRParserExt<'a> }
 
-impl<'input> TokenAware<'input> for SimpleLRParserExt {
+impl<'input> TokenAware<'input> for SimpleLRParserExt<'input> {
     type TF = LocalTokenFactory<'input>;
 }
 
 impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
-    ParserRecog<'input, BaseParserType<'input, I>> for SimpleLRParserExt
+    ParserRecog<'input, BaseParserType<'input, I>> for SimpleLRParserExt<'input>
 {
 }
 
 impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
-    Actions<'input, BaseParserType<'input, I>> for SimpleLRParserExt
+    Actions<'input, BaseParserType<'input, I>> for SimpleLRParserExt<'input>
 {
-    fn get_grammar_file_name(&self) -> &str { "SimpleLR.g4" }
+    fn get_grammar_file_name(&self) -> &str {
+        "SimpleLR.g4"
+    }
 
-    fn get_rule_names(&self) -> &[&str] { &ruleNames }
+    fn get_rule_names(&self) -> &[&str] {
+        &ruleNames
+    }
 
-    fn get_vocabulary(&self) -> &dyn Vocabulary { &**VOCABULARY }
+    fn get_vocabulary(&self) -> &dyn Vocabulary {
+        &**VOCABULARY
+    }
     fn sempred(
         _localctx: Option<&(dyn SimpleLRParserContext<'input> + 'input)>,
         rule_index: isize,
@@ -239,15 +261,21 @@ impl<'input, 'a> Listenable<dyn SimpleLRListener<'input> + 'a> for SContext<'inp
         listener.enter_every_rule(self);
         listener.enter_s(self);
     }
+    fn exit(&self, listener: &mut (dyn SimpleLRListener<'input> + 'a)) {
+        listener.exit_s(self);
+        listener.exit_every_rule(self);
+    }
 }
 
 impl<'input> CustomRuleContext<'input> for SContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = SimpleLRParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_s }
+    fn get_rule_index(&self) -> usize {
+        RULE_s
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_s }
 }
-antlr_rust::type_id! {SContextExt<'a>}
+antlr_rust::tid! {SContextExt<'a>}
 
 impl<'input> SContextExt<'input> {
     fn new(
@@ -286,7 +314,7 @@ where
         let mut _localctx = SContextExt::new(_parentctx.clone(), recog.base.get_state());
         recog.base.enter_rule(_localctx.clone(), 0, RULE_s);
         let mut _localctx: Rc<SContextAll> = _localctx;
-        let result: Result<(), ANTLRError> = try {
+        let result: Result<(), ANTLRError> = (|| {
             //recog.base.enter_outer_alt(_localctx.clone(), 1);
             recog.base.enter_outer_alt(None, 1);
             {
@@ -297,7 +325,8 @@ where
             let tmp = recog.input.lt(-1).cloned();
             recog.ctx.as_ref().unwrap().set_stop(tmp);
             println!("test");
-        };
+            Ok(())
+        })();
         match result {
             Ok(_) => {}
             Err(e @ ANTLRError::FallThrough(_)) => return Err(e),
@@ -329,15 +358,21 @@ impl<'input, 'a> Listenable<dyn SimpleLRListener<'input> + 'a> for AContext<'inp
         listener.enter_every_rule(self);
         listener.enter_a(self);
     }
+    fn exit(&self, listener: &mut (dyn SimpleLRListener<'input> + 'a)) {
+        listener.exit_a(self);
+        listener.exit_every_rule(self);
+    }
 }
 
 impl<'input> CustomRuleContext<'input> for AContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = SimpleLRParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_a }
+    fn get_rule_index(&self) -> usize {
+        RULE_a
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_a }
 }
-antlr_rust::type_id! {AContextExt<'a>}
+antlr_rust::tid! {AContextExt<'a>}
 
 impl<'input> AContextExt<'input> {
     fn new(
@@ -378,7 +413,9 @@ where
     I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
-    pub fn a(&mut self) -> Result<Rc<AContextAll<'input>>, ANTLRError> { self.a_rec(0) }
+    pub fn a(&mut self) -> Result<Rc<AContextAll<'input>>, ANTLRError> {
+        self.a_rec(0)
+    }
 
     fn a_rec(&mut self, _p: isize) -> Result<Rc<AContextAll<'input>>, ANTLRError> {
         let recog = self;
@@ -391,7 +428,7 @@ where
         let mut _localctx: Rc<AContextAll> = _localctx;
         let mut _prevctx = _localctx.clone();
         let _startState = 2;
-        let result: Result<(), ANTLRError> = try {
+        let result: Result<(), ANTLRError> = (|| {
             let mut _alt: isize;
             //recog.base.enter_outer_alt(_localctx.clone(), 1);
             recog.base.enter_outer_alt(None, 1);
@@ -434,7 +471,8 @@ where
                     _alt = recog.interpreter.adaptive_predict(0, &mut recog.base)?;
                 }
             }
-        };
+            Ok(())
+        })();
         match result {
             Ok(_) => {}
             Err(e @ ANTLRError::FallThrough(_)) => return Err(e),

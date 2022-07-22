@@ -51,6 +51,7 @@ ParserFile(file, parser, namedActions, contextSuperClass) ::= <<
 #![allow(nonstandard_style)]
 #![allow(unused_imports)]
 #![allow(unused_mut)]
+#![allow(unused_braces)]
 <namedActions.header>
 use antlr_rust::PredictionContextCache;
 use antlr_rust::parser::{Parser, BaseParser, ParserRecog, ParserNodeType};
@@ -100,9 +101,7 @@ use antlr_rust::tree::ParseTreeListener;
 use super::<file.parserName; format="low">::*;
 
 pub trait <file.grammarName>Listener\<'input> : ParseTreeListener\<'input,<file.parserName>ContextType>{
-
 <file.listenerNames:{lname |
-
 /**
 <if(file.listenerLabelRuleNames.(lname))>
  * Enter a parse tree produced by the {@code <lname>\}
@@ -126,6 +125,10 @@ fn exit_<lname>(&mut self, _ctx: &<lname; format="cap">Context\<'input>) { \}}; 
 
 }
 
+antlr_rust::coerce_from!{ 'input : <file.grammarName>Listener\<'input> }
+
+
+
 >>
 
 BaseListenerFile(file, header, namedActions) ::= <<>>
@@ -134,7 +137,7 @@ VisitorFile(file, header, namedActions) ::= <<
 #![allow(nonstandard_style)]
 <fileHeader(file.grammarFileName, file.ANTLRVersion)>
 <header>
-use antlr_rust::tree::{ParseTreeVisitor};
+use antlr_rust::tree::{ParseTreeVisitor,ParseTreeVisitorCompat};
 use super::<file.parserName; format="low">::*;
 
 /**
@@ -154,7 +157,35 @@ pub trait <file.grammarName>Visitor\<'input>: ParseTreeVisitor\<'input,<file.par
  */
 fn visit_<lname>(&mut self, ctx: &<lname; format="cap">Context\<'input>) { self.visit_children(ctx) \}
 }; separator="\n">
+}
 
+pub trait <file.grammarName>VisitorCompat\<'input>:ParseTreeVisitorCompat\<'input, Node= <file.parserName>ContextType>{
+	<file.visitorNames:{lname |
+/**
+<if(file.visitorLabelRuleNames.(lname))>
+ * Visit a parse tree produced by the {@code <lname>\}
+ * labeled alternative in {@link <file.parserName>#<file.visitorLabelRuleNames.(lname)>\}.
+<else>
+ * Visit a parse tree produced by {@link <file.parserName>#<lname>\}.
+<endif>
+ * @param ctx the parse tree
+ */
+	fn visit_<lname>(&mut self, ctx: &<lname; format="cap">Context\<'input>) -> Self::Return {
+		self.visit_children(ctx)
+	\}
+}; separator="\n">
+}
+
+impl\<'input,T> <file.grammarName>Visitor\<'input> for T
+where
+	T: <file.grammarName>VisitorCompat\<'input>
+{
+<file.visitorNames:{lname |
+	fn visit_<lname>(&mut self, ctx: &<lname; format="cap">Context\<'input>){
+		let result = \<Self as <file.grammarName>VisitorCompat>::visit_<lname>(self, ctx);
+        *\<Self as ParseTreeVisitorCompat>::temp_result(self) = result;
+	\}
+}; separator="\n">
 }
 >>
 
@@ -183,7 +214,7 @@ Parser_(parser, funcs, atn, sempredFuncs, ctor, superClass) ::= <<
 <namedActions.definitions>
 
 type BaseParserType\<'input, I> =
-	BaseParser\<'input,<parser.name>Ext, I, <parser.name>ContextType <if(file.genListener)>, dyn <parser.grammarName>Listener\<'input> + 'input<endif> >;
+	BaseParser\<'input,<parser.name>Ext\<'input>, I, <parser.name>ContextType <if(file.genListener)>, dyn <parser.grammarName>Listener\<'input> + 'input<endif> >;
 
 type TokenType\<'input> = \<<TokenFactory()> as TokenFactory\<'input>\>::Tok;
 <if(namedActions.tokenfactory)>
@@ -219,7 +250,7 @@ where
     }
 
     pub fn with_strategy(input: I, strategy: H) -> Self {
-		antlr_rust::recognizer::check_version("0","2");
+		antlr_rust::recognizer::check_version("0","3");
 		let interpreter = Arc::new(ParserATNSimulator::new(
 			_ATN.clone(),
 			_decision_to_DFA.clone(),
@@ -230,6 +261,7 @@ where
 				input,
 				Arc::clone(&interpreter),
 				<parser.name>Ext{
+					_pd: Default::default(),
 					<namedActions.init>
 				}
 			),
@@ -268,6 +300,8 @@ pub trait <parser.name>Context\<'input>:
 	ParserRuleContext\<'input, TF=<TokenFactory()>, Ctx=<parser.name>ContextType>
 {}
 
+antlr_rust::coerce_from!{ 'input : <parser.name>Context\<'input> }
+
 <if(file.genVisitor)>
 impl\<'input, 'x, T> VisitableDyn\<T> for dyn <parser.name>Context\<'input> + 'input
 where
@@ -282,14 +316,12 @@ where
 impl\<'input> <parser.name>Context\<'input> for TerminalNode\<'input,<parser.name>ContextType> {}
 impl\<'input> <parser.name>Context\<'input> for ErrorNode\<'input,<parser.name>ContextType> {}
 
-#[antlr_rust::impl_tid]
-impl\<'input> antlr_rust::TidAble\<'input> for dyn <parser.name>Context\<'input> + 'input{}
+antlr_rust::tid! { impl\<'input> TidAble\<'input> for dyn <parser.name>Context\<'input> + 'input }
 
-#[antlr_rust::impl_tid]
-impl\<'input> antlr_rust::TidAble\<'input> for dyn <parser.grammarName>Listener\<'input> + 'input{}
+antlr_rust::tid! { impl\<'input> TidAble\<'input> for dyn <parser.grammarName>Listener\<'input> + 'input }
 
 pub struct <parser.name>ContextType;
-antlr_rust::type_id!{<parser.name>ContextType}
+antlr_rust::tid!{<parser.name>ContextType}
 
 impl\<'input> ParserNodeType\<'input> for <parser.name>ContextType{
 	type TF = <TokenFactory()>;
@@ -322,22 +354,23 @@ where
     }
 }
 
-pub struct <parser.name>Ext{
+pub struct <parser.name>Ext\<'input>{
+	_pd: PhantomData\<&'input str>,
 	<namedActions.fields>
 }
 
-impl <parser.name>Ext{
+impl\<'input> <parser.name>Ext\<'input>{
 	<namedActions.members>
 }
+antlr_rust::tid! { <parser.name>Ext\<'a> }
 
-
-impl\<'input> TokenAware\<'input> for <parser.name>Ext{
+impl\<'input> TokenAware\<'input> for <parser.name>Ext\<'input>{
 	type TF = <TokenFactory()>;
 }
 
-impl\<'input,I: TokenStream\<'input, TF = <TokenFactory()> > + TidAble\<'input>\> ParserRecog\<'input, BaseParserType\<'input,I>\> for <parser.name>Ext{}
+impl\<'input,I: TokenStream\<'input, TF = <TokenFactory()> > + TidAble\<'input>\> ParserRecog\<'input, BaseParserType\<'input,I>\> for <parser.name>Ext\<'input>{}
 
-impl\<'input,I: TokenStream\<'input, TF = <TokenFactory()> > + TidAble\<'input>\> Actions\<'input, BaseParserType\<'input,I>\> for <parser.name>Ext{
+impl\<'input,I: TokenStream\<'input, TF = <TokenFactory()> > + TidAble\<'input>\> Actions\<'input, BaseParserType\<'input,I>\> for <parser.name>Ext\<'input>{
 	fn get_grammar_file_name(&self) -> & str{ "<parser.grammarFileName>"}
 
    	fn get_rule_names(&self) -> &[& str] {&ruleNames}
@@ -461,7 +494,7 @@ pub enum <currentRule.ctxType>All\<'input>{
 	<altLabelCtxs:{l | <altLabelCtxs.(l).struct.name>(<altLabelCtxs.(l).struct.name>\<'input>),
 	}>Error(<ruleCtx.struct.name>\<'input>)
 }
-antlr_rust::type_id!{<currentRule.ctxType>All\<'a>}
+antlr_rust::tid!{<currentRule.ctxType>All\<'a>}
 
 impl\<'input> antlr_rust::parser_rule_context::DerefSeal for <currentRule.ctxType>All\<'input>{}
 
@@ -517,7 +550,7 @@ where
         let mut _localctx: Rc\<<currentRule.ctxType>All> = _localctx;
 		<namedActions.init>
 		<locals; separator="\n">
-		let result: Result\<(), ANTLRError> = try {
+		let result: Result\<(), ANTLRError> = (|| {
 
 	<if(currentRule.hasLookaheadBlock)>
 			let mut _alt: isize;
@@ -525,7 +558,8 @@ where
 			<code>
 			<postamble; separator="\n">
 			<namedActions.after>
-		};
+			Ok(())
+		})();
 		match result {
 		Ok(_)=>{},
 		<if(exceptions)>
@@ -576,14 +610,15 @@ where
 		let _startState = <currentRule.startState>;
 		<namedActions.init>
 		<locals; separator="\n">
-		let result: Result\<(), ANTLRError> = try {
+		let result: Result\<(), ANTLRError> = (|| {
 	<if(currentRule.hasLookaheadBlock)>
 			let mut _alt: isize;
 	<endif>
 			<code>
 			<postamble; separator="\n">
 			<namedActions.after>
-		};
+			Ok(())
+		})();
 		match result {
 		Ok(_) => {},
 		<if(exceptions)>
@@ -913,7 +948,7 @@ let temp = <labelref(a.label,{.clone().unwrap()})>;
 <ctx_mut_action(a.label,{.<a.listName>.push(temp);})> >>
 
 TokenDecl(t) ::= "<t.name>: Option\<<TokenLabelType()>>"
-TokenTypeDecl(t) ::= "let mut <t.name>: isize;"
+TokenTypeDecl(t) ::= "let mut <t.name>: isize = -1;"
 TokenListDecl(t) ::= "<t.name>:Vec\<<TokenLabelType()>>"
 RuleContextDecl(r) ::= "<r.name>: Option\<Rc\<<r.ctxName>All\<'input>>>"
 RuleContextListDecl(rdecl) ::= "<rdecl.name>:Vec\<Rc\<<rdecl.ctxName>All\<'input>>>"
@@ -982,7 +1017,11 @@ impl\<'input> <parser.name>Context\<'input> for <struct.name>\<'input>{}
 <if(parser.file.genListener)>
 impl\<'input,'a> Listenable\<dyn <parser.grammarName>Listener\<'input> + 'a> for <struct.name>\<'input>{
 	<! a bit scuffed but prevents rewriting other targets !>
-	<trunc(dispatchMethods); separator="\n">
+	<if(parser.file.genVisitor)>
+		<trunc(dispatchMethods); separator="\n">
+	<else>
+		<dispatchMethods>
+	<endif>
 }
 <endif>
 
@@ -998,7 +1037,7 @@ impl\<'input> CustomRuleContext\<'input> for <struct.name>Ext\<'input>{
 	fn get_rule_index(&self) -> usize { RULE_<struct.derivedFromName> }
 	//fn type_rule_index() -> usize where Self: Sized { RULE_<struct.derivedFromName> }
 }
-antlr_rust::type_id!{<struct.name>Ext\<'a>}
+antlr_rust::tid!{<struct.name>Ext\<'a>}
 
 impl\<'input> <struct.name>Ext\<'input>{
 	fn new(parent: Option\<Rc\<dyn <parser.name>Context\<'input> + 'input > >, invoking_state: isize<ctorAttrs:{a | , <a>}>) -> Rc\<<struct.name>All\<'input>\> {
@@ -1049,7 +1088,7 @@ pub struct <struct.name>Ext\<'input>{
 }>	ph:PhantomData\<&'input str>
 }
 
-antlr_rust::type_id!{<struct.name>Ext\<'a>}
+antlr_rust::tid!{<struct.name>Ext\<'a>}
 
 impl\<'input> <parser.name>Context\<'input> for <struct.name>\<'input>{}
 
@@ -1260,10 +1299,11 @@ pub type LocalTokenFactory\<'input> = CommonTokenFactory;
 
 type From\<'a> = \<LocalTokenFactory\<'a> as TokenFactory\<'a> >::From;
 
-#[derive(Tid)]
 pub struct <lexer.name>\<'input, Input:CharStream\<From\<'input> >\> {
 	base: BaseLexer\<'input,<lexer.name>Actions,Input,<TokenFactory()>\>,
 }
+
+antlr_rust::tid! { impl\<'input,Input> TidAble\<'input> for <lexer.name>\<'input,Input> where Input:CharStream\<From\<'input> > }
 
 impl\<'input, Input:CharStream\<From\<'input> >\> Deref for <lexer.name>\<'input,Input>{
 	type Target = BaseLexer\<'input,<lexer.name>Actions,Input,<TokenFactory()>\>;
@@ -1297,7 +1337,7 @@ impl\<'input, Input:CharStream\<From\<'input> >\> <lexer.name>\<'input,Input>{
     }
 
 	pub fn new_with_token_factory(input: Input, tf: &'input <TokenFactory()>) -> Self {
-		antlr_rust::recognizer::check_version("0","2");
+		antlr_rust::recognizer::check_version("0","3");
     	Self {
 			base: BaseLexer::new_base_lexer(
 				input,

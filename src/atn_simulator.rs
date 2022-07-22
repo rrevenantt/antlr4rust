@@ -40,9 +40,15 @@ impl BaseATNSimulator {
 }
 
 impl IATNSimulator for BaseATNSimulator {
-    fn shared_context_cache(&self) -> &PredictionContextCache { self.shared_context_cache.deref() }
+    fn shared_context_cache(&self) -> &PredictionContextCache {
+        self.shared_context_cache.deref()
+    }
 
-    fn atn(&self) -> &ATN { self.atn.as_ref() }
+    fn atn(&self) -> &ATN {
+        self.atn.as_ref()
+    }
 
-    fn decision_to_dfa(&self) -> &Vec<RwLock<DFA>> { self.decision_to_dfa.as_ref() }
+    fn decision_to_dfa(&self) -> &Vec<RwLock<DFA>> {
+        self.decision_to_dfa.as_ref()
+    }
 }

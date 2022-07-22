@@ -5,6 +5,7 @@
 #![allow(nonstandard_style)]
 #![allow(unused_imports)]
 #![allow(unused_mut)]
+#![allow(unused_braces)]
 use super::csvlistener::*;
 use super::csvvisitor::*;
 use antlr_rust::atn::{ATN, INVALID_ALT};
@@ -71,8 +72,13 @@ lazy_static! {
     ));
 }
 
-type BaseParserType<'input, I> =
-    BaseParser<'input, CSVParserExt, I, CSVParserContextType, dyn CSVListener<'input> + 'input>;
+type BaseParserType<'input, I> = BaseParser<
+    'input,
+    CSVParserExt<'input>,
+    I,
+    CSVParserContextType,
+    dyn CSVListener<'input> + 'input,
+>;
 
 type TokenType<'input> = <LocalTokenFactory<'input> as TokenFactory<'input>>::Tok;
 
@@ -98,19 +104,29 @@ where
     I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
-    pub fn get_serialized_atn() -> &'static str { _serializedATN }
+    pub fn get_serialized_atn() -> &'static str {
+        _serializedATN
+    }
 
-    pub fn set_error_strategy(&mut self, strategy: H) { self.err_handler = strategy }
+    pub fn set_error_strategy(&mut self, strategy: H) {
+        self.err_handler = strategy
+    }
 
     pub fn with_strategy(input: I, strategy: H) -> Self {
-        antlr_rust::recognizer::check_version("0", "2");
+        antlr_rust::recognizer::check_version("0", "3");
         let interpreter = Arc::new(ParserATNSimulator::new(
             _ATN.clone(),
             _decision_to_DFA.clone(),
             _shared_context_cache.clone(),
         ));
         Self {
-            base: BaseParser::new_base_parser(input, Arc::clone(&interpreter), CSVParserExt {}),
+            base: BaseParser::new_base_parser(
+                input,
+                Arc::clone(&interpreter),
+                CSVParserExt {
+                    _pd: Default::default(),
+                },
+            ),
             interpreter,
             _shared_context_cache: Box::new(PredictionContextCache::new()),
             err_handler: strategy,
@@ -133,7 +149,9 @@ impl<'input, I> CSVParser<'input, I, DefaultErrorStrategy<'input, CSVParserConte
 where
     I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
 {
-    pub fn new(input: I) -> Self { Self::with_strategy(input, DefaultErrorStrategy::new()) }
+    pub fn new(input: I) -> Self {
+        Self::with_strategy(input, DefaultErrorStrategy::new())
+    }
 }
 
 /// Trait for monomorphized trait object that corresponds to the nodes of parse tree generated for CSVParser
@@ -143,6 +161,8 @@ pub trait CSVParserContext<'input>:
     + ParserRuleContext<'input, TF = LocalTokenFactory<'input>, Ctx = CSVParserContextType>
 {
 }
+
+antlr_rust::coerce_from! { 'input : CSVParserContext<'input> }
 
 impl<'input, 'x, T> VisitableDyn<T> for dyn CSVParserContext<'input> + 'input
 where
@@ -156,14 +176,12 @@ where
 impl<'input> CSVParserContext<'input> for TerminalNode<'input, CSVParserContextType> {}
 impl<'input> CSVParserContext<'input> for ErrorNode<'input, CSVParserContextType> {}
 
-#[antlr_rust::impl_tid]
-impl<'input> antlr_rust::TidAble<'input> for dyn CSVParserContext<'input> + 'input {}
+antlr_rust::tid! { impl<'input> TidAble<'input> for dyn CSVParserContext<'input> + 'input }
 
-#[antlr_rust::impl_tid]
-impl<'input> antlr_rust::TidAble<'input> for dyn CSVListener<'input> + 'input {}
+antlr_rust::tid! { impl<'input> TidAble<'input> for dyn CSVListener<'input> + 'input }
 
 pub struct CSVParserContextType;
-antlr_rust::type_id! {CSVParserContextType}
+antlr_rust::tid! {CSVParserContextType}
 
 impl<'input> ParserNodeType<'input> for CSVParserContextType {
     type TF = LocalTokenFactory<'input>;
@@ -177,7 +195,9 @@ where
 {
     type Target = BaseParserType<'input, I>;
 
-    fn deref(&self) -> &Self::Target { &self.base }
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
 }
 
 impl<'input, I, H> DerefMut for CSVParser<'input, I, H>
@@ -185,30 +205,41 @@ where
     I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>,
     H: ErrorStrategy<'input, BaseParserType<'input, I>>,
 {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.base }
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.base
+    }
 }
 
-pub struct CSVParserExt {}
+pub struct CSVParserExt<'input> {
+    _pd: PhantomData<&'input str>,
+}
 
-impl CSVParserExt {}
+impl<'input> CSVParserExt<'input> {}
+antlr_rust::tid! { CSVParserExt<'a> }
 
-impl<'input> TokenAware<'input> for CSVParserExt {
+impl<'input> TokenAware<'input> for CSVParserExt<'input> {
     type TF = LocalTokenFactory<'input>;
 }
 
 impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
-    ParserRecog<'input, BaseParserType<'input, I>> for CSVParserExt
+    ParserRecog<'input, BaseParserType<'input, I>> for CSVParserExt<'input>
 {
 }
 
 impl<'input, I: TokenStream<'input, TF = LocalTokenFactory<'input>> + TidAble<'input>>
-    Actions<'input, BaseParserType<'input, I>> for CSVParserExt
+    Actions<'input, BaseParserType<'input, I>> for CSVParserExt<'input>
 {
-    fn get_grammar_file_name(&self) -> &str { "CSV.g4" }
+    fn get_grammar_file_name(&self) -> &str {
+        "CSV.g4"
+    }
 
-    fn get_rule_names(&self) -> &[&str] { &ruleNames }
+    fn get_rule_names(&self) -> &[&str] {
+        &ruleNames
+    }
 
-    fn get_vocabulary(&self) -> &dyn Vocabulary { &**VOCABULARY }
+    fn get_vocabulary(&self) -> &dyn Vocabulary {
+        &**VOCABULARY
+    }
 }
 //------------------- csvFile ----------------
 pub type CsvFileContextAll<'input> = CsvFileContext<'input>;
@@ -234,16 +265,20 @@ impl<'input, 'a> Listenable<dyn CSVListener<'input> + 'a> for CsvFileContext<'in
 }
 
 impl<'input, 'a> Visitable<dyn CSVVisitor<'input> + 'a> for CsvFileContext<'input> {
-    fn accept(&self, visitor: &mut (dyn CSVVisitor<'input> + 'a)) { visitor.visit_csvFile(self); }
+    fn accept(&self, visitor: &mut (dyn CSVVisitor<'input> + 'a)) {
+        visitor.visit_csvFile(self);
+    }
 }
 
 impl<'input> CustomRuleContext<'input> for CsvFileContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = CSVParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_csvFile }
+    fn get_rule_index(&self) -> usize {
+        RULE_csvFile
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_csvFile }
 }
-antlr_rust::type_id! {CsvFileContextExt<'a>}
+antlr_rust::tid! {CsvFileContextExt<'a>}
 
 impl<'input> CsvFileContextExt<'input> {
     fn new(
@@ -294,8 +329,8 @@ where
         let mut _localctx = CsvFileContextExt::new(_parentctx.clone(), recog.base.get_state());
         recog.base.enter_rule(_localctx.clone(), 0, RULE_csvFile);
         let mut _localctx: Rc<CsvFileContextAll> = _localctx;
-        let mut _la: isize;
-        let result: Result<(), ANTLRError> = try {
+        let mut _la: isize = -1;
+        let result: Result<(), ANTLRError> = (|| {
             //recog.base.enter_outer_alt(_localctx.clone(), 1);
             recog.base.enter_outer_alt(None, 1);
             {
@@ -330,7 +365,8 @@ where
                     }
                 }
             }
-        };
+            Ok(())
+        })();
         match result {
             Ok(_) => {}
             Err(e @ ANTLRError::FallThrough(_)) => return Err(e),
@@ -369,16 +405,20 @@ impl<'input, 'a> Listenable<dyn CSVListener<'input> + 'a> for HdrContext<'input>
 }
 
 impl<'input, 'a> Visitable<dyn CSVVisitor<'input> + 'a> for HdrContext<'input> {
-    fn accept(&self, visitor: &mut (dyn CSVVisitor<'input> + 'a)) { visitor.visit_hdr(self); }
+    fn accept(&self, visitor: &mut (dyn CSVVisitor<'input> + 'a)) {
+        visitor.visit_hdr(self);
+    }
 }
 
 impl<'input> CustomRuleContext<'input> for HdrContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = CSVParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_hdr }
+    fn get_rule_index(&self) -> usize {
+        RULE_hdr
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_hdr }
 }
-antlr_rust::type_id! {HdrContextExt<'a>}
+antlr_rust::tid! {HdrContextExt<'a>}
 
 impl<'input> HdrContextExt<'input> {
     fn new(
@@ -417,7 +457,7 @@ where
         let mut _localctx = HdrContextExt::new(_parentctx.clone(), recog.base.get_state());
         recog.base.enter_rule(_localctx.clone(), 2, RULE_hdr);
         let mut _localctx: Rc<HdrContextAll> = _localctx;
-        let result: Result<(), ANTLRError> = try {
+        let result: Result<(), ANTLRError> = (|| {
             //recog.base.enter_outer_alt(_localctx.clone(), 1);
             recog.base.enter_outer_alt(None, 1);
             {
@@ -425,7 +465,8 @@ where
                 recog.base.set_state(14);
                 recog.row()?;
             }
-        };
+            Ok(())
+        })();
         match result {
             Ok(_) => {}
             Err(e @ ANTLRError::FallThrough(_)) => return Err(e),
@@ -464,16 +505,20 @@ impl<'input, 'a> Listenable<dyn CSVListener<'input> + 'a> for RowContext<'input>
 }
 
 impl<'input, 'a> Visitable<dyn CSVVisitor<'input> + 'a> for RowContext<'input> {
-    fn accept(&self, visitor: &mut (dyn CSVVisitor<'input> + 'a)) { visitor.visit_row(self); }
+    fn accept(&self, visitor: &mut (dyn CSVVisitor<'input> + 'a)) {
+        visitor.visit_row(self);
+    }
 }
 
 impl<'input> CustomRuleContext<'input> for RowContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = CSVParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_row }
+    fn get_rule_index(&self) -> usize {
+        RULE_row
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_row }
 }
-antlr_rust::type_id! {RowContextExt<'a>}
+antlr_rust::tid! {RowContextExt<'a>}
 
 impl<'input> RowContextExt<'input> {
     fn new(
@@ -518,8 +563,8 @@ where
         let mut _localctx = RowContextExt::new(_parentctx.clone(), recog.base.get_state());
         recog.base.enter_rule(_localctx.clone(), 4, RULE_row);
         let mut _localctx: Rc<RowContextAll> = _localctx;
-        let mut _la: isize;
-        let result: Result<(), ANTLRError> = try {
+        let mut _la: isize = -1;
+        let result: Result<(), ANTLRError> = (|| {
             //recog.base.enter_outer_alt(_localctx.clone(), 1);
             recog.base.enter_outer_alt(None, 1);
             {
@@ -558,7 +603,8 @@ where
                 recog.base.set_state(27);
                 recog.base.match_token(T__2, &mut recog.err_handler)?;
             }
-        };
+            Ok(())
+        })();
         match result {
             Ok(_) => {}
             Err(e @ ANTLRError::FallThrough(_)) => return Err(e),
@@ -597,16 +643,20 @@ impl<'input, 'a> Listenable<dyn CSVListener<'input> + 'a> for FieldContext<'inpu
 }
 
 impl<'input, 'a> Visitable<dyn CSVVisitor<'input> + 'a> for FieldContext<'input> {
-    fn accept(&self, visitor: &mut (dyn CSVVisitor<'input> + 'a)) { visitor.visit_field(self); }
+    fn accept(&self, visitor: &mut (dyn CSVVisitor<'input> + 'a)) {
+        visitor.visit_field(self);
+    }
 }
 
 impl<'input> CustomRuleContext<'input> for FieldContextExt<'input> {
     type TF = LocalTokenFactory<'input>;
     type Ctx = CSVParserContextType;
-    fn get_rule_index(&self) -> usize { RULE_field }
+    fn get_rule_index(&self) -> usize {
+        RULE_field
+    }
     //fn type_rule_index() -> usize where Self: Sized { RULE_field }
 }
-antlr_rust::type_id! {FieldContextExt<'a>}
+antlr_rust::tid! {FieldContextExt<'a>}
 
 impl<'input> FieldContextExt<'input> {
     fn new(
@@ -655,7 +705,7 @@ where
         let mut _localctx = FieldContextExt::new(_parentctx.clone(), recog.base.get_state());
         recog.base.enter_rule(_localctx.clone(), 6, RULE_field);
         let mut _localctx: Rc<FieldContextAll> = _localctx;
-        let result: Result<(), ANTLRError> = try {
+        let result: Result<(), ANTLRError> = (|| {
             recog.base.set_state(32);
             recog.err_handler.sync(&mut recog.base)?;
             match recog.base.input.la(1) {
@@ -687,7 +737,8 @@ where
                     &mut recog.base,
                 )))?,
             }
-        };
+            Ok(())
+        })();
         match result {
             Ok(_) => {}
             Err(e @ ANTLRError::FallThrough(_)) => return Err(e),

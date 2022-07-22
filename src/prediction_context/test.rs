@@ -4,9 +4,13 @@ use std::collections::VecDeque;
 
 use super::*;
 
-fn root_is_wildcard() -> bool { true }
+fn root_is_wildcard() -> bool {
+    true
+}
 
-fn full_ctx() -> bool { false }
+fn full_ctx() -> bool {
+    false
+}
 
 #[test]
 fn test_e_e() {

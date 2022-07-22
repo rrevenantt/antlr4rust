@@ -87,7 +87,9 @@ impl VocabularyImpl {
 }
 
 impl Vocabulary for VocabularyImpl {
-    fn get_max_token_type(&self) -> isize { self.max_token_type }
+    fn get_max_token_type(&self) -> isize {
+        self.max_token_type
+    }
 
     fn get_literal_name(&self, token_type: isize) -> Option<&str> {
         self.literal_names
@@ -121,11 +123,19 @@ pub(crate) static DUMMY_VOCAB: DummyVocab = DummyVocab;
 pub(crate) struct DummyVocab;
 
 impl Vocabulary for DummyVocab {
-    fn get_max_token_type(&self) -> isize { unimplemented!() }
+    fn get_max_token_type(&self) -> isize {
+        unimplemented!()
+    }
 
-    fn get_literal_name(&self, _token_type: isize) -> Option<&str> { unimplemented!() }
+    fn get_literal_name(&self, _token_type: isize) -> Option<&str> {
+        unimplemented!()
+    }
 
-    fn get_symbolic_name(&self, _token_type: isize) -> Option<&str> { unimplemented!() }
+    fn get_symbolic_name(&self, _token_type: isize) -> Option<&str> {
+        unimplemented!()
+    }
 
-    fn get_display_name(&self, token_type: isize) -> Cow<'_, str> { token_type.to_string().into() }
+    fn get_display_name(&self, token_type: isize) -> Cow<'_, str> {
+        token_type.to_string().into()
+    }
 }

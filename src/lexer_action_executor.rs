@@ -14,7 +14,9 @@ pub(crate) struct LexerActionExecutor {
 }
 
 impl Hash for LexerActionExecutor {
-    fn hash<H: Hasher>(&self, state: &mut H) { state.write_u64(self.cached_hash) }
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_u64(self.cached_hash)
+    }
 }
 
 impl LexerActionExecutor {

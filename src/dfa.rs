@@ -12,8 +12,12 @@ use crate::vocabulary::Vocabulary;
 
 ///Helper trait for scope management and temporary values not living long enough
 pub(crate) trait ScopeExt: Sized {
-    fn convert_with<T, F: FnOnce(Self) -> T>(self, f: F) -> T { f(self) }
-    fn run<T, F: FnOnce(&Self) -> T>(&self, f: F) -> T { f(self) }
+    fn convert_with<T, F: FnOnce(Self) -> T>(self, f: F) -> T {
+        f(self)
+    }
+    fn run<T, F: FnOnce(&Self) -> T>(&self, f: F) -> T {
+        f(self)
+    }
 
     //apply
     fn modify_with<F: FnOnce(&mut Self)>(mut self, f: F) -> Self {
@@ -128,7 +132,9 @@ impl DFA {
         }
     }
 
-    pub fn is_precedence_dfa(&self) -> bool { self.is_precedence_dfa }
+    pub fn is_precedence_dfa(&self) -> bool {
+        self.is_precedence_dfa
+    }
 
     pub fn set_precedence_dfa(&mut self, precedence_dfa: bool) {
         self.is_precedence_dfa = precedence_dfa

@@ -40,11 +40,15 @@ pub struct DFAState {
 }
 
 impl PartialEq for DFAState {
-    fn eq(&self, other: &Self) -> bool { self.configs == other.configs }
+    fn eq(&self, other: &Self) -> bool {
+        self.configs == other.configs
+    }
 }
 
 impl Hash for DFAState {
-    fn hash<H: Hasher>(&self, state: &mut H) { self.configs.hash(state); }
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.configs.hash(state);
+    }
 }
 
 impl DFAState {

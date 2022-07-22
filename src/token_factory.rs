@@ -80,11 +80,15 @@ pub trait TokenFactory<'a>: TidAble<'a> + Sized {
 }
 
 /// Default token factory
-#[derive(Default, Tid, Debug)]
+#[derive(Default, Debug)]
 pub struct CommonTokenFactory;
 
+better_any::tid! {CommonTokenFactory}
+
 impl Default for &'_ CommonTokenFactory {
-    fn default() -> Self { &**COMMON_TOKEN_FACTORY_DEFAULT }
+    fn default() -> Self {
+        &**COMMON_TOKEN_FACTORY_DEFAULT
+    }
 }
 
 impl<'a> TokenFactory<'a> for CommonTokenFactory {
@@ -132,15 +136,21 @@ impl<'a> TokenFactory<'a> for CommonTokenFactory {
         })
     }
 
-    fn create_invalid() -> Self::Tok { INVALID_COMMON.clone() }
+    fn create_invalid() -> Self::Tok {
+        INVALID_COMMON.clone()
+    }
 
-    fn get_data(from: Self::From) -> Cow<'a, Self::Data> { from }
+    fn get_data(from: Self::From) -> Cow<'a, Self::Data> {
+        from
+    }
 }
 
 /// Token factory that produces heap allocated
 /// `OwningToken`s
-#[derive(Default, Tid, Debug)]
+#[derive(Default, Debug)]
 pub struct OwningTokenFactory;
+
+better_any::tid! {OwningTokenFactory}
 
 impl<'a> TokenFactory<'a> for OwningTokenFactory {
     type Inner = OwningToken;
@@ -187,9 +197,13 @@ impl<'a> TokenFactory<'a> for OwningTokenFactory {
         })
     }
 
-    fn create_invalid() -> Self::Tok { INVALID_OWNING.clone() }
+    fn create_invalid() -> Self::Tok {
+        INVALID_OWNING.clone()
+    }
 
-    fn get_data(from: Self::From) -> Cow<'a, Self::Data> { from.into() }
+    fn get_data(from: Self::From) -> Cow<'a, Self::Data> {
+        from.into()
+    }
 }
 
 // pub struct DynFactory<'input,TF:TokenFactory<'.into()input>>(TF) where TF::Tok:CoerceUnsized<Box<dyn Token+'input>>;
@@ -220,12 +234,13 @@ pub type ArenaCommonFactory<'a> = ArenaFactory<'a, CommonTokenFactory, CommonTok
 /// const INVALID_TOKEN:CustomToken = ...
 /// ```
 // Box is used here because it is almost always should be used for token factory
-#[derive(Tid)]
 pub struct ArenaFactory<'input, TF, T> {
     arena: Arena<T>,
     factory: TF,
     pd: PhantomData<&'input str>,
 }
+
+better_any::tid! {impl<'input,TF,T> TidAble<'input> for ArenaFactory<'input,TF,T>}
 
 impl<'input, TF: Debug, T> Debug for ArenaFactory<'input, TF, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -282,9 +297,13 @@ where
         self.arena.alloc(*token)
     }
 
-    fn create_invalid() -> &'input Tok { <&Tok as Default>::default() }
+    fn create_invalid() -> &'input Tok {
+        <&Tok as Default>::default()
+    }
 
-    fn get_data(from: Self::From) -> Cow<'input, Self::Data> { TF::get_data(from) }
+    fn get_data(from: Self::From) -> Cow<'input, Self::Data> {
+        TF::get_data(from)
+    }
 }
 
 #[doc(hidden)]

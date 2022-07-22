@@ -68,31 +68,44 @@ pub type LocalTokenFactory<'input> = antlr_rust::token_factory::ArenaCommonFacto
 
 type From<'a> = <LocalTokenFactory<'a> as TokenFactory<'a>>::From;
 
-#[derive(Tid)]
 pub struct CSVLexer<'input, Input: CharStream<From<'input>>> {
     base: BaseLexer<'input, CSVLexerActions, Input, LocalTokenFactory<'input>>,
 }
 
+antlr_rust::tid! { impl<'input,Input> TidAble<'input> for CSVLexer<'input,Input> where Input:CharStream<From<'input> > }
+
 impl<'input, Input: CharStream<From<'input>>> Deref for CSVLexer<'input, Input> {
     type Target = BaseLexer<'input, CSVLexerActions, Input, LocalTokenFactory<'input>>;
 
-    fn deref(&self) -> &Self::Target { &self.base }
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
 }
 
 impl<'input, Input: CharStream<From<'input>>> DerefMut for CSVLexer<'input, Input> {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.base }
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.base
+    }
 }
 
 impl<'input, Input: CharStream<From<'input>>> CSVLexer<'input, Input> {
-    fn get_rule_names(&self) -> &'static [&'static str] { &ruleNames }
-    fn get_literal_names(&self) -> &[Option<&str>] { &_LITERAL_NAMES }
+    fn get_rule_names(&self) -> &'static [&'static str] {
+        &ruleNames
+    }
+    fn get_literal_names(&self) -> &[Option<&str>] {
+        &_LITERAL_NAMES
+    }
 
-    fn get_symbolic_names(&self) -> &[Option<&str>] { &_SYMBOLIC_NAMES }
+    fn get_symbolic_names(&self) -> &[Option<&str>] {
+        &_SYMBOLIC_NAMES
+    }
 
-    fn get_grammar_file_name(&self) -> &'static str { "CSVLexer.g4" }
+    fn get_grammar_file_name(&self) -> &'static str {
+        "CSVLexer.g4"
+    }
 
     pub fn new_with_token_factory(input: Input, tf: &'input LocalTokenFactory<'input>) -> Self {
-        antlr_rust::recognizer::check_version("0", "2");
+        antlr_rust::recognizer::check_version("0", "3");
         Self {
             base: BaseLexer::new_base_lexer(
                 input,
@@ -141,17 +154,29 @@ impl<'input> TokenAware<'input> for CSVLexerActions {
 impl<'input, Input: CharStream<From<'input>>> TokenSource<'input> for CSVLexer<'input, Input> {
     type TF = LocalTokenFactory<'input>;
 
-    fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok { self.base.next_token() }
+    fn next_token(&mut self) -> <Self::TF as TokenFactory<'input>>::Tok {
+        self.base.next_token()
+    }
 
-    fn get_line(&self) -> isize { self.base.get_line() }
+    fn get_line(&self) -> isize {
+        self.base.get_line()
+    }
 
-    fn get_char_position_in_line(&self) -> isize { self.base.get_char_position_in_line() }
+    fn get_char_position_in_line(&self) -> isize {
+        self.base.get_char_position_in_line()
+    }
 
-    fn get_input_stream(&mut self) -> Option<&mut dyn IntStream> { self.base.get_input_stream() }
+    fn get_input_stream(&mut self) -> Option<&mut dyn IntStream> {
+        self.base.get_input_stream()
+    }
 
-    fn get_source_name(&self) -> String { self.base.get_source_name() }
+    fn get_source_name(&self) -> String {
+        self.base.get_source_name()
+    }
 
-    fn get_token_factory(&self) -> &'input Self::TF { self.base.get_token_factory() }
+    fn get_token_factory(&self) -> &'input Self::TF {
+        self.base.get_token_factory()
+    }
 }
 
 lazy_static! {

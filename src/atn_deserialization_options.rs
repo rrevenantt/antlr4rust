@@ -6,7 +6,9 @@ pub struct ATNDeserializationOptions {
 }
 
 impl ATNDeserializationOptions {
-    pub fn is_verify(&self) -> bool { self.verify_atn }
+    pub fn is_verify(&self) -> bool {
+        self.verify_atn
+    }
 }
 
 impl Default for ATNDeserializationOptions {

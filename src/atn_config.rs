@@ -32,8 +32,8 @@ impl PartialEq for ATNConfig {
     fn eq(&self, other: &Self) -> bool {
         self.get_state() == other.get_state()
             && self.get_alt() == other.get_alt()
-            && (Arc::ptr_eq(self.get_context().unwrap(), other.get_context().unwrap())
-                || self.get_context() == other.get_context())
+            // Arc is optimized to not do a deep equalitiy if arc pointers are equal so that's enough
+            && self.context == other.context
             && self.get_type() == other.get_type()
             && self.semantic_context == other.semantic_context
             && self.precedence_filter_suppressed == other.precedence_filter_suppressed
@@ -202,25 +202,41 @@ impl ATNConfig {
         new
     }
 
-    pub fn get_state(&self) -> ATNStateRef { self.state }
+    pub fn get_state(&self) -> ATNStateRef {
+        self.state
+    }
 
-    pub fn get_alt(&self) -> isize { self.alt }
+    pub fn get_alt(&self) -> isize {
+        self.alt
+    }
 
-    pub(crate) fn get_type(&self) -> &ATNConfigType { &self.config_type }
+    pub(crate) fn get_type(&self) -> &ATNConfigType {
+        &self.config_type
+    }
 
-    pub fn get_context(&self) -> Option<&Arc<PredictionContext>> { self.context.as_ref() }
+    pub fn get_context(&self) -> Option<&Arc<PredictionContext>> {
+        self.context.as_ref()
+    }
 
-    pub fn take_context(&mut self) -> Arc<PredictionContext> { self.context.take().unwrap() }
+    pub fn take_context(&mut self) -> Arc<PredictionContext> {
+        self.context.take().unwrap()
+    }
 
-    pub fn set_context(&mut self, _v: Arc<PredictionContext>) { self.context = Some(_v); }
+    pub fn set_context(&mut self, _v: Arc<PredictionContext>) {
+        self.context = Some(_v);
+    }
 
-    pub fn get_reaches_into_outer_context(&self) -> isize { self.reaches_into_outer_context }
+    pub fn get_reaches_into_outer_context(&self) -> isize {
+        self.reaches_into_outer_context
+    }
 
     pub fn set_reaches_into_outer_context(&mut self, _v: isize) {
         self.reaches_into_outer_context = _v
     }
 
-    pub fn is_precedence_filter_suppressed(&self) -> bool { self.precedence_filter_suppressed }
+    pub fn is_precedence_filter_suppressed(&self) -> bool {
+        self.precedence_filter_suppressed
+    }
 
     pub fn set_precedence_filter_suppressed(&mut self, _v: bool) {
         self.precedence_filter_suppressed = _v;

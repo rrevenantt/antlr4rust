@@ -29,6 +29,7 @@ use crate::token::TOKEN_EOF;
 use crate::transition::{
     ActionTransition, PredicateTransition, RuleTransition, Transition, TransitionType,
 };
+use crate::utils::cell_update;
 use parking_lot::{RwLock, RwLockUpgradableReadGuard, RwLockWriteGuard};
 
 #[allow(missing_docs)]
@@ -70,7 +71,9 @@ pub struct LexerATNSimulator {
 }
 
 impl ILexerATNSimulator for LexerATNSimulator {
-    fn reset(&mut self) { self.prev_accept.reset() }
+    fn reset(&mut self) {
+        self.prev_accept.reset()
+    }
 
     fn match_token<'input>(
         &mut self,
@@ -101,23 +104,29 @@ impl ILexerATNSimulator for LexerATNSimulator {
         result
     }
 
-    fn get_char_position_in_line(&self) -> isize { self.current_pos.char_position_in_line.get() }
+    fn get_char_position_in_line(&self) -> isize {
+        self.current_pos.char_position_in_line.get()
+    }
 
     fn set_char_position_in_line(&mut self, column: isize) {
         self.current_pos.char_position_in_line.set(column)
     }
 
-    fn get_line(&self) -> isize { self.current_pos.line.get() }
+    fn get_line(&self) -> isize {
+        self.current_pos.line.get()
+    }
 
-    fn set_line(&mut self, line: isize) { self.current_pos.char_position_in_line.set(line) }
+    fn set_line(&mut self, line: isize) {
+        self.current_pos.char_position_in_line.set(line)
+    }
 
     fn consume<T: IntStream + ?Sized>(&self, _input: &mut T) {
         let ch = _input.la(1);
         if ch == '\n' as isize {
-            self.current_pos.line.update(|x| x + 1);
+            cell_update(&self.current_pos.line, |x| x + 1);
             self.current_pos.char_position_in_line.set(0);
         } else {
-            self.current_pos.char_position_in_line.update(|x| x + 1);
+            cell_update(&self.current_pos.char_position_in_line, |x| x + 1);
         }
         _input.consume();
     }
@@ -128,11 +137,17 @@ impl ILexerATNSimulator for LexerATNSimulator {
 }
 
 impl IATNSimulator for LexerATNSimulator {
-    fn shared_context_cache(&self) -> &PredictionContextCache { self.base.shared_context_cache() }
+    fn shared_context_cache(&self) -> &PredictionContextCache {
+        self.base.shared_context_cache()
+    }
 
-    fn atn(&self) -> &ATN { self.base.atn() }
+    fn atn(&self) -> &ATN {
+        self.base.atn()
+    }
 
-    fn decision_to_dfa(&self) -> &Vec<RwLock<DFA>> { self.base.decision_to_dfa() }
+    fn decision_to_dfa(&self) -> &Vec<RwLock<DFA>> {
+        self.base.decision_to_dfa()
+    }
 }
 
 #[allow(missing_docs)]
@@ -697,10 +712,14 @@ impl LexerATNSimulator {
     }
 
     /// Returns current DFA that is currently used.
-    pub fn get_dfa(&self) -> &RwLock<DFA> { &self.decision_to_dfa()[self.mode] }
+    pub fn get_dfa(&self) -> &RwLock<DFA> {
+        &self.decision_to_dfa()[self.mode]
+    }
 
     /// Returns current DFA for particular lexer mode
-    pub fn get_dfa_for_mode(&self, mode: usize) -> &RwLock<DFA> { &self.decision_to_dfa()[mode] }
+    pub fn get_dfa_for_mode(&self, mode: usize) -> &RwLock<DFA> {
+        &self.decision_to_dfa()[mode]
+    }
 
     // fn get_token_name(&self, _tt: isize) -> String { unimplemented!() }
 

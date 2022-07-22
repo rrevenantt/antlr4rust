@@ -18,11 +18,15 @@ pub(crate) const INVALID: Interval = Interval { a: -1, b: -2 };
 
 impl Interval {
     /* stop is not included! */
-    fn new(a: isize, b: isize) -> Interval { Interval { a, b } }
+    fn new(a: isize, b: isize) -> Interval {
+        Interval { a, b }
+    }
 
     // fn contains(&self, _item: isize) -> bool { unimplemented!() }
 
-    fn length(&self) -> isize { self.b - self.a }
+    fn length(&self) -> isize {
+        self.b - self.a
+    }
 
     fn union(&self, another: &Interval) -> Interval {
         Interval {
@@ -42,10 +46,14 @@ impl Interval {
     }
 
     /** Does self.a start after other.b? May or may not be disjoint */
-    pub fn starts_after(&self, other: &Interval) -> bool { return self.a > other.a; }
+    pub fn starts_after(&self, other: &Interval) -> bool {
+        return self.a > other.a;
+    }
 
     /** Does self start completely after other? Disjoint */
-    pub fn starts_after_disjoint(&self, other: &Interval) -> bool { return self.a > other.b; }
+    pub fn starts_after_disjoint(&self, other: &Interval) -> bool {
+        return self.a > other.b;
+    }
 
     /** Does self start after other? NonDisjoint */
     pub fn starts_after_non_disjoint(&self, other: &Interval) -> bool {
@@ -97,11 +105,17 @@ impl IntervalSet {
         }
     }
 
-    pub fn get_min(&self) -> Option<isize> { self.intervals.first().map(|x| x.a) }
+    pub fn get_min(&self) -> Option<isize> {
+        self.intervals.first().map(|x| x.a)
+    }
 
-    pub fn add_one(&mut self, _v: isize) { self.add_range(_v, _v) }
+    pub fn add_one(&mut self, _v: isize) {
+        self.add_range(_v, _v)
+    }
 
-    pub fn add_range(&mut self, l: isize, h: isize) { self.add_interval(Interval { a: l, b: h }) }
+    pub fn add_range(&mut self, l: isize, h: isize) {
+        self.add_interval(Interval { a: l, b: h })
+    }
 
     pub fn add_interval(&mut self, added: Interval) {
         if added.length() < 0 {
@@ -287,7 +301,9 @@ impl IntervalSet {
     //        unimplemented!()
     //    }
     //
-    pub fn to_index_string(&self) -> String { self.to_token_string(&DUMMY_VOCAB) }
+    pub fn to_index_string(&self) -> String {
+        self.to_token_string(&DUMMY_VOCAB)
+    }
 
     pub fn to_token_string(&self, vocabulary: &dyn Vocabulary) -> String {
         if self.intervals.is_empty() {

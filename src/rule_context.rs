@@ -18,17 +18,23 @@ use std::any::type_name;
 /// Minimal rule context functionality required for parser to work properly
 pub trait RuleContext<'input>: CustomRuleContext<'input> {
     /// Internal parser state
-    fn get_invoking_state(&self) -> isize { -1 }
+    fn get_invoking_state(&self) -> isize {
+        -1
+    }
 
     /// Sets internal parser state
     fn set_invoking_state(&self, _t: isize) {}
 
     /// A context is empty if there is no invoking state; meaning nobody called
     /// current context. Which is usually true for the root of the syntax tree
-    fn is_empty(&self) -> bool { self.get_invoking_state() == -1 }
+    fn is_empty(&self) -> bool {
+        self.get_invoking_state() == -1
+    }
 
     /// Get parent context
-    fn get_parent_ctx(&self) -> Option<Rc<<Self::Ctx as ParserNodeType<'input>>::Type>> { None }
+    fn get_parent_ctx(&self) -> Option<Rc<<Self::Ctx as ParserNodeType<'input>>::Type>> {
+        None
+    }
 
     /// Set parent context
     fn set_parent(&self, _parent: &Option<Rc<<Self::Ctx as ParserNodeType<'input>>::Type>>) {}
@@ -59,17 +65,21 @@ where
 //         Self: Sized;
 // }
 
-#[derive(Tid, Debug)]
+#[derive(Debug)]
 #[doc(hidden)]
 pub struct EmptyCustomRuleContext<'a, TF: TokenFactory<'a> + 'a>(
     pub(crate) PhantomData<&'a TF::Tok>,
 );
 
+better_any::tid! { impl <'a,TF> TidAble<'a> for EmptyCustomRuleContext<'a,TF> where TF:TokenFactory<'a> + 'a}
+
 impl<'a, TF: TokenFactory<'a> + 'a> CustomRuleContext<'a> for EmptyCustomRuleContext<'a, TF> {
     type TF = TF;
     type Ctx = EmptyContextType<'a, TF>;
 
-    fn get_rule_index(&self) -> usize { usize::max_value() }
+    fn get_rule_index(&self) -> usize {
+        usize::max_value()
+    }
 }
 
 // unsafe impl<'a, TF: TokenFactory<'a> + 'a> Tid for EmptyCustomRuleContext<'a, TF> {
@@ -88,9 +98,11 @@ impl<'a, TF: TokenFactory<'a> + 'a> CustomRuleContext<'a> for EmptyCustomRuleCon
 pub type EmptyContext<'a, TF> =
     dyn ParserRuleContext<'a, TF = TF, Ctx = EmptyContextType<'a, TF>> + 'a;
 
-#[derive(Tid, Debug)]
+#[derive(Debug)]
 #[doc(hidden)] // public for implementation reasons
 pub struct EmptyContextType<'a, TF: TokenFactory<'a>>(pub PhantomData<&'a TF>);
+
+better_any::tid! { impl <'a,TF> TidAble<'a> for EmptyContextType<'a,TF> where TF:TokenFactory<'a> }
 
 impl<'a, TF: TokenFactory<'a>> ParserNodeType<'a> for EmptyContextType<'a, TF> {
     type TF = TF;
@@ -108,19 +120,34 @@ pub trait CustomRuleContext<'input> {
     /// Rule index that corresponds to this context type
     fn get_rule_index(&self) -> usize;
 
-    fn get_alt_number(&self) -> isize { INVALID_ALT }
+    fn get_alt_number(&self) -> isize {
+        INVALID_ALT
+    }
     fn set_alt_number(&self, _alt_number: isize) {}
+
+    /// Returns text representation of current node type,
+    /// rule name for context nodes and token text for terminal nodes
+    fn get_node_text(&self, rule_names: &[&str]) -> String {
+        let rule_index = self.get_rule_index();
+        let rule_name = rule_names[rule_index];
+        let alt_number = self.get_alt_number();
+        if alt_number != INVALID_ALT {
+            return format!("{}:{}", rule_name, alt_number);
+        }
+        return rule_name.to_owned();
+    }
     // fn enter(_ctx: &dyn Tree<'input, Node=Self>, _listener: &mut dyn Any) where Self: Sized {}
     // fn exit(_ctx: &dyn Tree<'input, Node=Self>, _listener: &mut dyn Any) where Self: Sized {}
 }
 
 /// Minimal parse tree node implementation, that stores only data required for correct parsing
-#[derive(Tid)]
 pub struct BaseRuleContext<'input, ExtCtx: CustomRuleContext<'input>> {
     pub(crate) parent_ctx: RefCell<Option<Weak<<ExtCtx::Ctx as ParserNodeType<'input>>::Type>>>,
     invoking_state: Cell<isize>,
     pub(crate) ext: ExtCtx,
 }
+
+better_any::tid! { impl <'input,Ctx> TidAble<'input> for BaseRuleContext<'input,Ctx> where Ctx:CustomRuleContext<'input>}
 
 #[allow(missing_docs)]
 impl<'input, ExtCtx: CustomRuleContext<'input>> BaseRuleContext<'input, ExtCtx> {
@@ -145,11 +172,15 @@ impl<'input, ExtCtx: CustomRuleContext<'input>> BaseRuleContext<'input, ExtCtx> 
 }
 
 impl<'input, Ctx: CustomRuleContext<'input>> Borrow<Ctx> for BaseRuleContext<'input, Ctx> {
-    fn borrow(&self) -> &Ctx { &self.ext }
+    fn borrow(&self) -> &Ctx {
+        &self.ext
+    }
 }
 
 impl<'input, Ctx: CustomRuleContext<'input>> BorrowMut<Ctx> for BaseRuleContext<'input, Ctx> {
-    fn borrow_mut(&mut self) -> &mut Ctx { &mut self.ext }
+    fn borrow_mut(&mut self) -> &mut Ctx {
+        &mut self.ext
+    }
 }
 
 impl<'input, ExtCtx: CustomRuleContext<'input>> CustomRuleContext<'input>
@@ -158,7 +189,9 @@ impl<'input, ExtCtx: CustomRuleContext<'input>> CustomRuleContext<'input>
     type TF = ExtCtx::TF;
     type Ctx = ExtCtx::Ctx;
 
-    fn get_rule_index(&self) -> usize { self.ext.get_rule_index() }
+    fn get_rule_index(&self) -> usize {
+        self.ext.get_rule_index()
+    }
 }
 
 // unsafe impl<'input, Ctx: CustomRuleContext<'input>> Tid for BaseRuleContext<'input, Ctx> {
@@ -175,9 +208,13 @@ impl<'input, ExtCtx: CustomRuleContext<'input>> CustomRuleContext<'input>
 impl<'input, ExtCtx: CustomRuleContext<'input>> RuleContext<'input>
     for BaseRuleContext<'input, ExtCtx>
 {
-    fn get_invoking_state(&self) -> isize { self.invoking_state.get() }
+    fn get_invoking_state(&self) -> isize {
+        self.invoking_state.get()
+    }
 
-    fn set_invoking_state(&self, t: isize) { self.invoking_state.set(t) }
+    fn set_invoking_state(&self, t: isize) {
+        self.invoking_state.set(t)
+    }
 
     fn get_parent_ctx(&self) -> Option<Rc<<ExtCtx::Ctx as ParserNodeType<'input>>::Type>> {
         self.parent_ctx

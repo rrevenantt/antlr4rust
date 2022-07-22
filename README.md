@@ -1,6 +1,6 @@
 # antlr4rust
-[![Crate](https://flat.badgen.net/crates/v/antlr-rust)](https://crates.io/crates/antlr_rust/0.2.0)
-[![docs](https://flat.badgen.net/badge/docs.rs/v0.2.0)](https://docs.rs/antlr-rust/0.2.0)
+[![Crate](https://flat.badgen.net/crates/v/antlr-rust)](https://crates.io/crates/antlr_rust/0.3.0-beta)
+[![docs](https://flat.badgen.net/badge/docs.rs/v0.3.0-beta)](https://docs.rs/antlr-rust/0.3.0-beta)
 ![ANTLR4 testsuite](https://github.com/rrevenantt/antlr4rust/workflows/ANTLR4%20testsuite/badge.svg?event=push)
 ![cargo test](https://github.com/rrevenantt/antlr4rust/workflows/cargo%20test/badge.svg)
 [![](https://tokei.rs/b1/github/rrevenantt/antlr4rust)](https://github.com/rrevenantt/antlr4rust)
@@ -27,29 +27,10 @@ But if you want to build or change generator yourself:
 For now development is going on in this repository 
 but eventually it will be merged to main ANTLR4 repo
 
-Currently, requires nightly version of rust. 
-This likely will be the case until `coerce_unsized` or some kind of coercion trait is stabilized. 
-There are other unstable features in use but only `CoerceUnsized` is essential. 
+Since version `0.3` works on stable rust.
+Previous versions are not maintained any more 
+so in case of nightly breakage you should migrate to the latest version. 
 
-Remaining things before merge:
- - API stabilization
-   - [ ] Rust api guidelines compliance  
-   - [ ] more tests for API because it is quite different from Java
-
-Can be done after merge: 
- - Documentation
-   - [ ] Some things are already documented but still far from perfect, also more links needed.
- - cfg to not build potentially unnecessary parts 
- (no Lexer if custom token stream, no ParserATNSimulator if LL(1) grammar)  
- - run rustfmt on generated parser
-###### Long term improvements
- - generate enum for labeled alternatives without redundant `Error` option
- - option to generate fields instead of getters by default and make visiting based on fields
- - make tree generic over pointer type and allow tree nodes to arena.
- (requires GAT, otherwise it would be a problem for users that want ownership for parse tree)
- - support stable rust
- - support no_std(although alloc would still be required)  
-  
 ### Usage
 
 You should use the ANTLR4 "tool" to generate a parser, that will use the ANTLR 
@@ -67,9 +48,8 @@ Then add following to `Cargo.toml` of the crate from which generated parser
 is going to be used:
 ```toml 
 [dependencies]
-antlr-rust = "=0.2"
+antlr-rust = "0.3"
 ```
-and `#![feature(try_blocks)]` in your project root module.  
  
 ### Parse Tree structure
 
@@ -117,9 +97,11 @@ Also while structs used by generated lexer and parser were customized to track a
 internals of the lexer cannot be customized enough yet and still track quite a lot of data that might not be used in particular case. 
 So there is still room for improvement.
 ```text
+lexers:
 large/large_xmlparser        time:   [1.8598 ms 1.8607 ms 1.8619 ms]                                   
 large/large_quick_xml        time:   [1.4623 ms 1.4645 ms 1.4675 ms]                                   
 large/large_antlr_xml_lexer  time:   [5.7866 ms 5.7877 ms 5.7891 ms]
+parsers:
 large/large_xmlrs            time:   [16.734 ms 16.748 ms 16.766 ms]
 large/large_minidom          time:   [7.0639 ms 7.0792 ms 7.0975 ms]                                
 large/large_roxmltree        time:   [4.9341 ms 4.9360 ms 4.9380 ms]                                   
@@ -140,3 +122,4 @@ BSD 3-clause.
 Unless you explicitly state otherwise, 
 any contribution intentionally submitted for inclusion in this project by you
 shall be licensed as above, without any additional terms or conditions.
+

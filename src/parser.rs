@@ -2,7 +2,7 @@
 use std::borrow::Borrow;
 use std::cell::{Cell, RefCell};
 use std::marker::PhantomData;
-use std::ops::{CoerceUnsized, Deref, DerefMut};
+use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -20,7 +20,9 @@ use crate::token::{Token, TOKEN_EOF};
 use crate::token_factory::{TokenAware, TokenFactory};
 use crate::token_stream::TokenStream;
 use crate::tree::{ErrorNode, Listenable, ParseTreeListener, TerminalNode};
+use crate::utils::cell_update;
 use crate::vocabulary::Vocabulary;
+use crate::{CoerceFrom, CoerceTo};
 use better_any::{Tid, TidAble};
 
 /// parser functionality required for `ParserATNSimulator` to work
@@ -104,10 +106,9 @@ pub trait ParserNodeType<'input>: TidAble<'input> + Sized {
 /// It is a member of generated parser struct, so
 /// almost always you don't need to create it yourself.
 /// Generated parser hides complexity of this struct and expose required flexibility via generic parameters
-#[derive(Tid)]
 pub struct BaseParser<
     'input,
-    Ext: 'static, //: ParserRecog<'input, Self> + 'static, // user provided behavior, such as semantic predicates
+    Ext, //: 'static, //: ParserRecog<'input, Self> + 'static, // user provided behavior, such as semantic predicates
     I: TokenStream<'input>, // input stream
     Ctx: ParserNodeType<'input, TF = I::TF>, // Ctx::Type is trait object type for tree node of the parser
     T: ParseTreeListener<'input, Ctx> + ?Sized = dyn ParseTreeListener<'input, Ctx>,
@@ -150,9 +151,16 @@ pub struct BaseParser<
     pd: PhantomData<fn() -> &'input str>,
 }
 
+better_any::tid! {
+    impl<'input, Ext, I, Ctx, T> TidAble<'input> for BaseParser<'input,Ext, I, Ctx, T>
+    where I: TokenStream<'input>,
+        Ctx: ParserNodeType<'input, TF = I::TF>,
+        T: ParseTreeListener<'input, Ctx> + ?Sized
+}
+
 impl<'input, Ext, I, Ctx, T> Deref for BaseParser<'input, Ext, I, Ctx, T>
 where
-    Ext: ParserRecog<'input, Self> + 'static,
+    Ext: ParserRecog<'input, Self>,
     I: TokenStream<'input>,
     Ctx: ParserNodeType<'input, TF = I::TF>,
     T: ParseTreeListener<'input, Ctx> + ?Sized,
@@ -160,18 +168,22 @@ where
 {
     type Target = Ext;
 
-    fn deref(&self) -> &Self::Target { &self.ext }
+    fn deref(&self) -> &Self::Target {
+        &self.ext
+    }
 }
 
 impl<'input, Ext, I, Ctx, T> DerefMut for BaseParser<'input, Ext, I, Ctx, T>
 where
-    Ext: ParserRecog<'input, Self> + 'static,
+    Ext: ParserRecog<'input, Self>,
     I: TokenStream<'input>,
     Ctx: ParserNodeType<'input, TF = I::TF>,
     T: ParseTreeListener<'input, Ctx> + ?Sized,
     // Ctx::Type: Listenable<T>,
 {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.ext }
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.ext
+    }
 }
 
 ///
@@ -179,7 +191,7 @@ pub trait ParserRecog<'a, P: Recognizer<'a>>: Actions<'a, P> {}
 
 impl<'input, Ext, I, Ctx, T> Recognizer<'input> for BaseParser<'input, Ext, I, Ctx, T>
 where
-    Ext: ParserRecog<'input, Self> + 'static,
+    Ext: ParserRecog<'input, Self>,
     I: TokenStream<'input>,
     Ctx: ParserNodeType<'input, TF = I::TF>,
     T: ParseTreeListener<'input, Ctx> + ?Sized,
@@ -196,18 +208,26 @@ where
         <Ext as Actions<'input, Self>>::sempred(localctx, rule_index, action_index, self)
     }
 
-    fn get_rule_names(&self) -> &[&str] { self.ext.get_rule_names() }
+    fn get_rule_names(&self) -> &[&str] {
+        self.ext.get_rule_names()
+    }
 
-    fn get_vocabulary(&self) -> &dyn Vocabulary { self.ext.get_vocabulary() }
+    fn get_vocabulary(&self) -> &dyn Vocabulary {
+        self.ext.get_vocabulary()
+    }
 
-    fn get_grammar_file_name(&self) -> &str { self.ext.get_grammar_file_name() }
+    fn get_grammar_file_name(&self) -> &str {
+        self.ext.get_grammar_file_name()
+    }
 
-    fn get_atn(&self) -> &ATN { self.interp.atn() }
+    fn get_atn(&self) -> &ATN {
+        self.interp.atn()
+    }
 }
 
 impl<'input, Ext, I, Ctx, T> TokenAware<'input> for BaseParser<'input, Ext, I, Ctx, T>
 where
-    Ext: ParserRecog<'input, Self> + 'static,
+    Ext: ParserRecog<'input, Self>,
     I: TokenStream<'input>,
     Ctx: ParserNodeType<'input, TF = I::TF>,
     T: ParseTreeListener<'input, Ctx> + ?Sized,
@@ -218,15 +238,18 @@ where
 
 impl<'input, Ext, I, Ctx, T> Parser<'input> for BaseParser<'input, Ext, I, Ctx, T>
 where
-    Ext: ParserRecog<'input, Self> + 'static,
+    Ext: ParserRecog<'input, Self>,
     I: TokenStream<'input>,
     Ctx: ParserNodeType<'input, TF = I::TF>,
     T: ParseTreeListener<'input, Ctx> + ?Sized,
-    Ctx::Type: Listenable<T>,
-    Rc<TerminalNode<'input, Ctx>>: CoerceUnsized<Rc<Ctx::Type>>,
-    Rc<ErrorNode<'input, Ctx>>: CoerceUnsized<Rc<Ctx::Type>>,
+    Ctx::Type:
+        Listenable<T> + CoerceFrom<TerminalNode<'input, Ctx>> + CoerceFrom<ErrorNode<'input, Ctx>>,
+    // TerminalNode<'input, Ctx>: CoerceTo<Ctx::Type>,
+    // ErrorNode<'input, Ctx>: CoerceTo<Ctx::Type>,
 {
-    fn get_interpreter(&self) -> &ParserATNSimulator { self.interp.as_ref() }
+    fn get_interpreter(&self) -> &ParserATNSimulator {
+        self.interp.as_ref()
+    }
 
     fn get_token_factory(&self) -> &'input Self::TF {
         // &**crate::common_token_factory::COMMON_TOKEN_FACTORY_DEFAULT
@@ -234,7 +257,9 @@ where
     }
 
     #[inline(always)]
-    fn get_parser_rule_context(&self) -> &Rc<Ctx::Type> { self.ctx.as_ref().unwrap() }
+    fn get_parser_rule_context(&self) -> &Rc<Ctx::Type> {
+        self.ctx.as_ref().unwrap()
+    }
 
     fn consume(&mut self, err_handler: &mut impl ErrorStrategy<'input, Self>) {
         let o = self.get_current_token().clone();
@@ -248,7 +273,7 @@ where
                 self.ctx
                     .as_deref()
                     .unwrap()
-                    .add_child(node.clone() as Rc<Ctx::Type>);
+                    .add_child(node.clone().coerce_rc_to());
                 for listener in &mut self.parse_listeners {
                     listener.visit_error_node(&*node)
                 }
@@ -257,7 +282,7 @@ where
                 self.ctx
                     .as_deref()
                     .unwrap()
-                    .add_child(node.clone() as Rc<Ctx::Type>);
+                    .add_child(node.clone().coerce_rc_to());
                 for listener in &mut self.parse_listeners {
                     listener.visit_terminal(&*node)
                 }
@@ -275,7 +300,9 @@ where
         &mut self.input //.as_mut()
     }
 
-    fn get_input_stream(&self) -> &dyn TokenStream<'input, TF = Self::TF> { &self.input }
+    fn get_input_stream(&self) -> &dyn TokenStream<'input, TF = Self::TF> {
+        &self.input
+    }
 
     #[inline]
     fn get_current_token(&self) -> &<Self::TF as TokenFactory<'input>>::Tok {
@@ -293,7 +320,9 @@ where
         self.error_listeners.borrow_mut().push(listener)
     }
 
-    fn remove_error_listeners(&mut self) { self.error_listeners.borrow_mut().clear(); }
+    fn remove_error_listeners(&mut self) {
+        self.error_listeners.borrow_mut().clear();
+    }
 
     fn notify_error_listeners(
         &self,
@@ -301,7 +330,7 @@ where
         offending_token: Option<isize>,
         err: Option<&ANTLRError>,
     ) {
-        self._syntax_errors.update(|it| it + 1);
+        cell_update(&self._syntax_errors, |it| it + 1);
         let offending_token: Option<&_> = match offending_token {
             None => Some(self.get_current_token().borrow()),
             Some(x) => Some(self.input.get(x).borrow()),
@@ -320,15 +349,23 @@ where
         })
     }
 
-    fn is_expected_token(&self, _symbol: isize) -> bool { unimplemented!() }
+    fn is_expected_token(&self, _symbol: isize) -> bool {
+        unimplemented!()
+    }
 
-    fn get_precedence(&self) -> isize { *self.precedence_stack.last().unwrap_or(&-1) }
+    fn get_precedence(&self) -> isize {
+        *self.precedence_stack.last().unwrap_or(&-1)
+    }
 
     #[inline(always)]
-    fn get_state(&self) -> isize { self.state }
+    fn get_state(&self) -> isize {
+        self.state
+    }
 
     #[inline(always)]
-    fn set_state(&mut self, v: isize) { self.state = v; }
+    fn set_state(&mut self, v: isize) {
+        self.state = v;
+    }
 
     fn get_rule_invocation_stack(&self) -> Vec<String> {
         let mut vec = Vec::new();
@@ -354,13 +391,14 @@ where
 #[allow(missing_docs)] // todo docs
 impl<'input, Ext, I, Ctx, T> BaseParser<'input, Ext, I, Ctx, T>
 where
-    Ext: ParserRecog<'input, Self> + 'static,
+    Ext: ParserRecog<'input, Self>,
     I: TokenStream<'input>,
     Ctx: ParserNodeType<'input, TF = I::TF>,
     T: ParseTreeListener<'input, Ctx> + ?Sized,
-    Ctx::Type: Listenable<T>,
-    Rc<TerminalNode<'input, Ctx>>: CoerceUnsized<Rc<Ctx::Type>>,
-    Rc<ErrorNode<'input, Ctx>>: CoerceUnsized<Rc<Ctx::Type>>,
+    Ctx::Type:
+        Listenable<T> + CoerceFrom<TerminalNode<'input, Ctx>> + CoerceFrom<ErrorNode<'input, Ctx>>,
+    //     TerminalNode<'input, Ctx>: CoerceTo<Ctx::Type>,
+    //     ErrorNode<'input, Ctx>: CoerceTo<Ctx::Type>,
 {
     pub fn new_base_parser(input: I, interpreter: Arc<ParserATNSimulator>, ext: Ext) -> Self {
         Self {
@@ -402,7 +440,7 @@ where
                 self.ctx
                     .as_ref()
                     .unwrap()
-                    .add_child(self.create_error_node(token.clone()) as Rc<Ctx::Type>);
+                    .add_child(self.create_error_node(token.clone()).coerce_rc_to());
             }
         }
         return Ok(token);
@@ -423,7 +461,7 @@ where
                 self.ctx
                     .as_ref()
                     .unwrap()
-                    .add_child(self.create_error_node(t.clone()) as Rc<Ctx::Type>);
+                    .add_child(self.create_error_node(t.clone()).coerce_rc_to());
             }
         }
         return Ok(t);
@@ -438,10 +476,10 @@ where
     /// todo
     pub fn add_parse_listener<L>(&mut self, listener: Box<L>) -> ListenerId<L>
     where
-        Box<L>: CoerceUnsized<Box<T>>,
+        L: CoerceTo<T>,
     {
         let id = ListenerId::new(&listener);
-        self.parse_listeners.push(listener);
+        self.parse_listeners.push(listener.coerce_box_to());
         id
     }
 
@@ -449,7 +487,7 @@ where
     /// `listener_id` is returned when listener is added via `add_parse_listener`
     pub fn remove_parse_listener<L>(&mut self, listener_id: ListenerId<L>) -> Box<L>
     where
-        Box<L>: CoerceUnsized<Box<T>>,
+        L: CoerceTo<T>,
     {
         let index = self
             .parse_listeners
@@ -460,7 +498,9 @@ where
     }
 
     /// Removes all added parse listeners without returning them
-    pub fn remove_parse_listeners(&mut self) { self.parse_listeners.clear() }
+    pub fn remove_parse_listeners(&mut self) {
+        self.parse_listeners.clear()
+    }
 
     pub fn trigger_enter_rule_event(&mut self) {
         let ctx = self.ctx.as_deref().unwrap();

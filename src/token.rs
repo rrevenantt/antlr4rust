@@ -35,16 +35,28 @@ pub trait Token: Debug + Display {
     type Data: ?Sized + InputData;
     // fn get_source(&self) -> Option<(Box<dyn TokenSource>, Box<dyn CharStream>)>;
     fn get_token_type(&self) -> isize;
-    fn get_channel(&self) -> isize { TOKEN_DEFAULT_CHANNEL }
-    fn get_start(&self) -> isize { 0 }
-    fn get_stop(&self) -> isize { 0 }
-    fn get_line(&self) -> isize { 0 }
-    fn get_column(&self) -> isize { 0 }
+    fn get_channel(&self) -> isize {
+        TOKEN_DEFAULT_CHANNEL
+    }
+    fn get_start(&self) -> isize {
+        0
+    }
+    fn get_stop(&self) -> isize {
+        0
+    }
+    fn get_line(&self) -> isize {
+        0
+    }
+    fn get_column(&self) -> isize {
+        0
+    }
 
     fn get_text(&self) -> &Self::Data;
     fn set_text(&mut self, _text: <Self::Data as ToOwned>::Owned) {}
 
-    fn get_token_index(&self) -> isize { 0 }
+    fn get_token_index(&self) -> isize {
+        0
+    }
     fn set_token_index(&self, _v: isize) {}
 
     // fn get_token_source(&self) -> &dyn TokenSource;
@@ -143,17 +155,29 @@ impl<T: Borrow<str> + Debug> Display for GenericToken<T> {
 impl<T: Borrow<str> + Debug> Token for GenericToken<T> {
     type Data = str;
 
-    fn get_token_type(&self) -> isize { self.token_type }
+    fn get_token_type(&self) -> isize {
+        self.token_type
+    }
 
-    fn get_channel(&self) -> isize { self.channel }
+    fn get_channel(&self) -> isize {
+        self.channel
+    }
 
-    fn get_start(&self) -> isize { self.start }
+    fn get_start(&self) -> isize {
+        self.start
+    }
 
-    fn get_stop(&self) -> isize { self.stop }
+    fn get_stop(&self) -> isize {
+        self.stop
+    }
 
-    fn get_line(&self) -> isize { self.line }
+    fn get_line(&self) -> isize {
+        self.line
+    }
 
-    fn get_column(&self) -> isize { self.column }
+    fn get_column(&self) -> isize {
+        self.column
+    }
 
     // fn get_source(&self) -> Option<(Box<dyn TokenSource>, Box<dyn CharStream>)> {
     //     unimplemented!()
@@ -167,11 +191,17 @@ impl<T: Borrow<str> + Debug> Token for GenericToken<T> {
         }
     }
 
-    fn set_text(&mut self, _text: String) { unimplemented!() }
+    fn set_text(&mut self, _text: String) {
+        unimplemented!()
+    }
 
-    fn get_token_index(&self) -> isize { self.token_index.load(Ordering::Relaxed) }
+    fn get_token_index(&self) -> isize {
+        self.token_index.load(Ordering::Relaxed)
+    }
 
-    fn set_token_index(&self, _v: isize) { self.token_index.store(_v, Ordering::Relaxed) }
+    fn set_token_index(&self, _v: isize) {
+        self.token_index.store(_v, Ordering::Relaxed)
+    }
 
     fn to_owned(&self) -> OwningToken {
         OwningToken {
@@ -189,11 +219,15 @@ impl<T: Borrow<str> + Debug> Token for GenericToken<T> {
 }
 
 impl Default for &'_ OwningToken {
-    fn default() -> Self { &**INVALID_OWNING }
+    fn default() -> Self {
+        &**INVALID_OWNING
+    }
 }
 
 impl Default for &'_ CommonToken<'_> {
-    fn default() -> Self { &**INVALID_COMMON }
+    fn default() -> Self {
+        &**INVALID_COMMON
+    }
 }
 
 //

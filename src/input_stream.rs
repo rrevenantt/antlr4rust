@@ -5,7 +5,7 @@ use crate::char_stream::{CharStream, InputData};
 use crate::int_stream::IntStream;
 use std::ops::Deref;
 
-use better_any::{impl_tid, TidAble};
+use better_any::TidAble;
 
 /// Default rust target input stream.
 ///
@@ -21,20 +21,25 @@ pub struct InputStream<Data: Deref> {
     index: isize,
 }
 
-#[impl_tid]
-impl<'a, T: ?Sized + 'static> TidAble<'a> for InputStream<&'a T> {}
-
-#[impl_tid]
-impl<'a, T: ?Sized + 'static> TidAble<'a> for InputStream<Box<T>> {}
+// #[impl_tid]
+// impl<'a, T: ?Sized + 'static> TidAble<'a> for InputStream<Box<T>> {}
+// #[impl_tid]
+// impl<'a, T: ?Sized + 'static> TidAble<'a> for InputStream<&'a T> {}
+better_any::tid! {impl<'a, T: 'static> TidAble<'a> for InputStream<&'a T> where T: ?Sized}
+better_any::tid! {impl<'a, T: 'static> TidAble<'a> for InputStream<Box<T>> where T: ?Sized}
 
 impl<'a, T: From<&'a str>> CharStream<T> for InputStream<&'a str> {
     #[inline]
-    fn get_text(&self, start: isize, stop: isize) -> T { self.get_text_inner(start, stop).into() }
+    fn get_text(&self, start: isize, stop: isize) -> T {
+        self.get_text_inner(start, stop).into()
+    }
 }
 
 impl<T: From<D::Owned>, D: ?Sized + InputData> CharStream<T> for InputStream<Box<D>> {
     #[inline]
-    fn get_text(&self, start: isize, stop: isize) -> T { self.get_text_owned(start, stop).into() }
+    fn get_text(&self, start: isize, stop: isize) -> T {
+        self.get_text_owned(start, stop).into()
+    }
 }
 /// `InputStream` over byte slice
 pub type ByteStream<'a> = InputStream<&'a [u8]>;
@@ -59,7 +64,9 @@ impl<'a, T> CharStream<String> for InputStream<&'a [T]>
 where
     [T]: InputData,
 {
-    fn get_text(&self, a: isize, b: isize) -> String { self.get_text_inner(a, b).to_display() }
+    fn get_text(&self, a: isize, b: isize) -> String {
+        self.get_text_inner(a, b).to_display()
+    }
 }
 
 impl<'a, 'b, T> CharStream<Cow<'b, str>> for InputStream<&'a [T]>
@@ -77,7 +84,9 @@ where
     [T]: InputData,
 {
     #[inline]
-    fn get_text(&self, a: isize, b: isize) -> &'a [T] { self.get_text_inner(a, b) }
+    fn get_text(&self, a: isize, b: isize) -> &'a [T] {
+        self.get_text_inner(a, b)
+    }
 }
 
 impl<Data: ?Sized + InputData> InputStream<Box<Data>> {
@@ -140,7 +149,9 @@ where
 {
     /// Resets input stream to start from the beginning of this slice
     #[inline]
-    pub fn reset(&mut self) { self.index = 0 }
+    pub fn reset(&mut self) {
+        self.index = 0
+    }
 }
 
 impl<'a, Data: Deref> IntStream for InputStream<Data>
@@ -180,21 +191,31 @@ where
     }
 
     #[inline]
-    fn mark(&mut self) -> isize { -1 }
+    fn mark(&mut self) -> isize {
+        -1
+    }
 
     #[inline]
     fn release(&mut self, _marker: isize) {}
 
     #[inline]
-    fn index(&self) -> isize { self.index }
+    fn index(&self) -> isize {
+        self.index
+    }
 
     #[inline]
-    fn seek(&mut self, index: isize) { self.index = index }
+    fn seek(&mut self, index: isize) {
+        self.index = index
+    }
 
     #[inline]
-    fn size(&self) -> isize { self.data_raw.len() as isize }
+    fn size(&self) -> isize {
+        self.data_raw.len() as isize
+    }
 
-    fn get_source_name(&self) -> String { self.name.clone() }
+    fn get_source_name(&self) -> String {
+        self.name.clone()
+    }
 }
 
 #[cfg(test)]
