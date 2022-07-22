@@ -5,6 +5,7 @@
 #![allow(nonstandard_style)]
 #![allow(unused_imports)]
 #![allow(unused_mut)]
+#![allow(unused_braces)]
 use super::csvlistener::*;
 use super::csvvisitor::*;
 use antlr_rust::atn::{ATN, INVALID_ALT};

@@ -51,6 +51,7 @@ ParserFile(file, parser, namedActions, contextSuperClass) ::= <<
 #![allow(nonstandard_style)]
 #![allow(unused_imports)]
 #![allow(unused_mut)]
+#![allow(unused_braces)]
 <namedActions.header>
 use antlr_rust::PredictionContextCache;
 use antlr_rust::parser::{Parser, BaseParser, ParserRecog, ParserNodeType};
@@ -138,7 +139,6 @@ VisitorFile(file, header, namedActions) ::= <<
 <header>
 use antlr_rust::tree::{ParseTreeVisitor,ParseTreeVisitorCompat};
 use super::<file.parserName; format="low">::*;
-use std::mem;
 
 /**
  * This interface defines a complete generic visitor for a parse tree produced
