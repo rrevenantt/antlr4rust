@@ -32,8 +32,8 @@ impl PartialEq for ATNConfig {
     fn eq(&self, other: &Self) -> bool {
         self.get_state() == other.get_state()
             && self.get_alt() == other.get_alt()
-            && (Arc::ptr_eq(self.get_context().unwrap(), other.get_context().unwrap())
-                || self.get_context() == other.get_context())
+            // Arc is optimized to not do a deep equalitiy if arc pointers are equal so that's enough
+            && self.context == other.context
             && self.get_type() == other.get_type()
             && self.semantic_context == other.semantic_context
             && self.precedence_filter_suppressed == other.precedence_filter_suppressed
