@@ -498,7 +498,7 @@ antlr_rust::tid!{<currentRule.ctxType>All\<'a>}
 
 impl\<'input> antlr_rust::parser_rule_context::DerefSeal for <currentRule.ctxType>All\<'input>{}
 
-impl\<'input> <parser.grammarName>ParserContext\<'input> for <currentRule.ctxType>All\<'input>{}
+impl\<'input> <parser.name>Context\<'input> for <currentRule.ctxType>All\<'input>{}
 
 impl\<'input> Deref for <currentRule.ctxType>All\<'input>{
 	type Target = dyn <currentRule.ctxType>Attrs\<'input> + 'input;
