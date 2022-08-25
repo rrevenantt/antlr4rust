@@ -19,7 +19,7 @@ or if you want to contribute to only runtime part you don't have to do build it 
 
 But if you want to build or change generator yourself:
 * `git clone -b rust-target https://github.com/rrevenantt/antlr4` - clone my antlr4 fork  
-* `git submodule update --init --recursive` - update Rust target submodule
+* `git submodule update --init --recursive --remote` - update Rust target submodule
 * `mvn -DskipTests install` - build generator
 
 ### Implementation status
