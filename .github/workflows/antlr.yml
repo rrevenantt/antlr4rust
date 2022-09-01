@@ -27,11 +27,6 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 1.8
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          default: true
       - name: Cache local Maven repository
         uses: actions/cache@v2
         with:
@@ -41,18 +36,24 @@ jobs:
             ${{ runner.os }}-maven-
       - name: Build with Maven
         run : mvn -DskipTests install -q
+      - uses: actions/upload-artifact@v2
+        with:
+          name: antlr-tool
+          path: tool/target/antlr4-4.8-2-SNAPSHOT-complete.jar
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
       - name : Maven tests
+        env:
+          ANTLR4_PATH: skip
         run: |
           mvn test -Dtest=rust.* -q
           rc=$?;
           cat target/surefire-reports/*.dumpstream || true;
           exit $rc
         working-directory: runtime-testsuite
-      - uses: actions/upload-artifact@v2
-        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
-        with:
-          name: antlr-tool
-          path: tool/target/antlr4-4.8-2-SNAPSHOT-complete.jar
 
   tests-rust:
     name: cargo test
@@ -62,6 +63,8 @@ jobs:
     strategy:
       matrix:
         rust_version: [ 1.52 , stable]
+    env:
+      ANTLR4_PATH: antlr4-4.8-2-SNAPSHOT-complete.jar
     steps:
       - uses: actions/checkout@v2
       - name: Install Rust
@@ -70,12 +73,23 @@ jobs:
           toolchain: ${{ matrix.rust_version }}
           default: true
           components: rustfmt
+      - name: Wait for antlr-tool being built
+        # todo find out better way to do that
+        run: sleep 60s
+      - uses: actions/download-artifact@v2
+        with:
+          name: antlr-tool
       - name: Build
-        run: cargo build --verbose
+        run: cargo build -vv
       - name: Run tests
         run: cargo test --verbose
       - name: Formatting
-        run: cargo fmt -- --check
+        run: |
+          cargo fmt
+          rm antlr4-4.8-2-SNAPSHOT-complete.jar
+          if [[ $(git status --porcelain | wc -l) != "0" ]]; then
+            exit 1
+          fi
       - uses: actions/checkout@v2
         if: ${{ github.event_name == 'push' }}
         with:
