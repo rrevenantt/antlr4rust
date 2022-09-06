@@ -16,7 +16,7 @@ exclude = ["/build.rs","/grammars","/templates"]
 
 [dependencies]
 lazy_static = "^1.4"
-uuid = { version = ">=0.8.2, <2.0.0", features = ["serde", "v4"] }
+uuid = "1.*"
 byteorder = "^1"
 murmur3 = "=0.4" # 0.5 is incompatible currently
 bit-set = "=0.5.*"
