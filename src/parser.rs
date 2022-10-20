@@ -147,7 +147,7 @@ pub struct BaseParser<
     _syntax_errors: Cell<isize>,
     error_listeners: RefCell<Vec<Box<dyn ErrorListener<'input, Self>>>>,
 
-    ext: Ext,
+    pub ext: Ext,
     pd: PhantomData<fn() -> &'input str>,
 }
 
