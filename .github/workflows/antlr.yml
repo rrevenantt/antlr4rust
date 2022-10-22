@@ -14,7 +14,7 @@ jobs:
     name: ANTLR4 testsuite
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           repository: rrevenantt/antlr4
           ref: rust-target
@@ -24,16 +24,17 @@ jobs:
           git checkout FETCH_HEAD
         working-directory: runtime/Rust
       - name: Set up JDK 1.8
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
-          java-version: 1.8
+          distribution: 'temurin'
+          java-version: '8'
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           default: true
       - name: Cache local Maven repository
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -48,7 +49,7 @@ jobs:
           cat target/surefire-reports/*.dumpstream || true;
           exit $rc
         working-directory: runtime-testsuite
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
         with:
           name: antlr-tool
@@ -60,23 +61,27 @@ jobs:
     outputs:
       new_version: ${{ steps.check_ver.outputs.new_version }}
     strategy:
+      fail-fast: false
       matrix:
-        rust_version: [ 1.52 , stable]
+        rust_version: [ 1.52, stable ]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ matrix.rust_version }}
           default: true
           components: rustfmt
+      - name: MSRV downgrade
+        if: ${{ matrix.rust_version == 1.52 }}
+        run: cargo update -p once_cell --precise 1.13.1
       - name: Build
         run: cargo build --verbose
       - name: Run tests
         run: cargo test --verbose
       - name: Formatting
         run: cargo fmt -- --check
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         if: ${{ github.event_name == 'push' }}
         with:
           ref: ${{ github.event.before }}
@@ -88,7 +93,7 @@ jobs:
           NEW_VER=$(cat Cargo.toml | sed -nE "s/^version.*\"([0-9a-z.\-]+)\".*$/\1/p")
           BASE_VER=$(cat base_branch/Cargo.toml | sed -nE "s/^version.*\"([0-9a-z.\-]+)\".*$/\1/p")
           if [[ "$NEW_VER" != "$BASE_VER" ]]; then
-            echo "::set-output name=new_version::$NEW_VER"
+            echo "{new_version}={$NEW_VER}" >> $GITHUB_OUTPUT
           fi
 
 
@@ -103,7 +108,7 @@ jobs:
       RELEASE_NAME: ${{ format('antlr4-4.8-2-Rust{0}',needs.tests-rust.outputs.new_version) }}
       PRERELEASE: ${{ contains(needs.tests-rust.outputs.new_version, '-') }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -112,29 +117,21 @@ jobs:
       - name: Cargo publish check
         run: |
           cargo publish --dry-run
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: antlr-tool
       - name: Create release
         id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.RELEASE_NAME }}
-          release_name: ${{ env.RELEASE_NAME }}
+          name: ${{ env.RELEASE_NAME }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           # make release a draft first in case `cargo publish` still fail
           draft: true
           prerelease: ${{ env.PRERELEASE }}
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: antlr4-4.8-2-SNAPSHOT-complete.jar
-          asset_name: antlr4-4.8-2-SNAPSHOT-complete.jar
-          asset_content_type: application/java-archive
+          files: |
+            antlr4-4.8-2-SNAPSHOT-complete.jar
       - name: Cargo publish
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_PUBLISH_TOKEN }}
