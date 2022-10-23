@@ -436,11 +436,17 @@ where
     T: ParseTreeListener<'input, Node> + 'a + ?Sized,
     Node::Type: Listenable<T>,
 {
+    pub fn walk_mut<Listener, Ctx>(mut listener: &mut Listener, t: &Ctx)
+    where
+        Listener: CoerceTo<T>,
+        Ctx: CoerceTo<Node::Type>,
+    {
+        Self::walk_inner(listener.coerce_mut_to(), t.coerce_ref_to());
+    }
+
     /// Walks recursively over tree `t` with `listener`
     pub fn walk<Listener, Ctx>(mut listener: Box<Listener>, t: &Ctx) -> Box<Listener>
     where
-        // for<'x> &'x mut Listener: CoerceUnsized<&'x mut T>,
-        // for<'x> &'x Ctx: CoerceUnsized<&'x Node::Type>,
         Listener: CoerceTo<T>,
         Ctx: CoerceTo<Node::Type>,
     {

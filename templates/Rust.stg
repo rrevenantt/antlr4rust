@@ -1095,7 +1095,11 @@ impl\<'input> <parser.name>Context\<'input> for <struct.name>\<'input>{}
 <if(parser.file.genListener)>
 impl\<'input,'a> Listenable\<dyn <parser.grammarName>Listener\<'input> + 'a> for <struct.name>\<'input>{
 	<! a bit scuffed but prevents rewriting other targets !>
-	<trunc(dispatchMethods); separator="\n">
+	<if(parser.file.genVisitor)>
+		<trunc(dispatchMethods); separator="\n">
+	<else>
+		<dispatchMethods>
+	<endif>
 }
 <endif>
 
