@@ -962,8 +962,9 @@ fn <t.name>(&self) -> Option\<Rc\<TerminalNode\<'input,<parser.name>ContextType>
 ContextTokenListGetterDecl(t)  ::=<<
 /// Retrieves all `TerminalNode`s corresponding to token <t.name> in current rule
 fn <t.name>_all(&self) -> Vec\<Rc\<TerminalNode\<'input,<parser.name>ContextType>\>>  where Self:Sized{
-	self.children_of_type()
-}>>
+	self.get_tokens(<t.name>)
+}
+>>
 ContextTokenListIndexedGetterDecl(t)  ::= <<
 /// Retrieves 'i's TerminalNode corresponding to token <t.name>, starting from 0.
 /// Returns `None` if number of children corresponding to token <t.name> is less or equal than `i`.
