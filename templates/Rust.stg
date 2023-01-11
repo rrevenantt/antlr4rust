@@ -829,13 +829,22 @@ InvokeRule(r, argExprsChunks) ::= <<
 
 MatchToken(m) ::= <<
 <self()>.base.set_state(<m.stateNumber>);
-<LabelsAssign(m.labels,{<self()>.base.match_token(<m.name>,&mut <self()>.err_handler)?})>
+<LabelsAssignWithBorrowing(m.labels,{<self()>.base.match_token(<m.name>,&mut <self()>.err_handler)?})>
 >>
 
 LabelsAssign(labels,assign) ::= <<
 <if(labels)>
 let tmp = <assign>;
 <labels:{l | <labelref(l,{ = Some(tmp.clone());})> };separator="\n">
+<else>
+<assign>;
+<endif>
+>>
+
+LabelsAssignWithBorrowing(labels,assign) ::= <<
+<if(labels)>
+let tmp = <assign>;
+<labels:{l | <labelref(l,{ = Some(&tmp);})> };separator="\n">
 <else>
 <assign>;
 <endif>
@@ -850,7 +859,7 @@ CommonSetStuff(m, expr, capture, invert) ::= <<
 <if(m.labels)><m.labels:{l | <labelref(l,{ = <self()>.base.input.lt(1).cloned();})>};separator="\n"><endif>
 <capture>
 if { <if(invert)><m.varName> \<= 0 || <else>!<endif>(<expr>) } {
-	<LabelsAssign(m.labels,{<self()>.err_handler.recover_inline(&mut <self()>.base)?})>
+	<LabelsAssignWithBorrowing(m.labels,{<self()>.err_handler.recover_inline(&mut <self()>.base)?})>
 }
 else {
 	if  <self()>.base.input.la(1)==TOKEN_EOF { <self()>.base.matched_eof = true };
