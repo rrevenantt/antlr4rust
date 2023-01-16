@@ -54,6 +54,7 @@ ParserFile(file, parser, namedActions, contextSuperClass) ::= <<
 #![allow(unused_braces)]
 <namedActions.header>
 use antlr_rust::PredictionContextCache;
+use antlr_rust::error_listener::ErrorListener;
 use antlr_rust::parser::{Parser, BaseParser, ParserRecog, ParserNodeType};
 use antlr_rust::token_stream::TokenStream;
 use antlr_rust::TokenSource;
@@ -271,6 +272,13 @@ where
         }
     }
 
+    pub fn add_error_listener(&mut self, listener: Box\<(dyn ErrorListener\<'input, BaseParser\<'input, <parser.name>Ext\<'input>, I, <parser.name>ContextType, (dyn <parser.grammarName>Listener\<'input> + 'input)>\> + 'static)>) {
+        self.base.add_error_listener(listener)
+    }
+
+	pub fn remove_error_listeners(&mut self) {
+        self.base.remove_error_listeners()
+    }
 }
 
 type DynStrategy\<'input,I> = Box\<dyn ErrorStrategy\<'input,BaseParserType\<'input,I>\> + 'input>;
