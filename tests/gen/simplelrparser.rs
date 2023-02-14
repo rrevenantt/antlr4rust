@@ -10,6 +10,7 @@ use super::simplelrlistener::*;
 use antlr_rust::atn::{ATN, INVALID_ALT};
 use antlr_rust::atn_deserializer::ATNDeserializer;
 use antlr_rust::dfa::DFA;
+use antlr_rust::error_listener::ErrorListener;
 use antlr_rust::error_strategy::{DefaultErrorStrategy, ErrorStrategy};
 use antlr_rust::errors::*;
 use antlr_rust::int_stream::EOF;
@@ -113,6 +114,28 @@ where
             _shared_context_cache: Box::new(PredictionContextCache::new()),
             err_handler: strategy,
         }
+    }
+
+    pub fn add_error_listener(
+        &mut self,
+        listener: Box<
+            (dyn ErrorListener<
+                'input,
+                BaseParser<
+                    'input,
+                    SimpleLRParserExt<'input>,
+                    I,
+                    SimpleLRParserContextType,
+                    (dyn SimpleLRListener<'input> + 'input),
+                >,
+            > + 'static),
+        >,
+    ) {
+        self.base.add_error_listener(listener)
+    }
+
+    pub fn remove_error_listeners(&mut self) {
+        self.base.remove_error_listeners()
     }
 }
 
